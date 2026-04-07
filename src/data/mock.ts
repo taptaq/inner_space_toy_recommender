@@ -14,6 +14,7 @@ export type Product = {
   link?: string;
   tags?: string[];
   reason?: string; // AI 推荐理由
+  personaAnalysis?: string; // 适用人群分析
 };
 
 export const products: Product[] = [];

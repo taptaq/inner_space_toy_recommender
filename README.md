@@ -1,20 +1,44 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# “适用人群”展示功能与交互重构技术文档
 
-# Run and deploy your AI Studio app
+## 🎯 业务背景
 
-This contains everything you need to run your app locally.
+为了提升“内太空智能选品向导”的用户体验，在展示推荐产品时，需要直观展现该物理装备适配的目标用户群体或适用场景。
 
-View your app in AI Studio: https://ai.studio/apps/7887153c-c217-4f1c-bfad-1f9707beecf0
+---
 
-## Run Locally
+## 🛠️ 技术实现链路
 
-**Prerequisites:**  Node.js
+该特性的实现横跨了数据存取、结构定义以及前端渲染三层：
 
+### 1. 后端数据透传 (Backend API)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+**定位**：`src/server/index.ts`
+
+- **改造内容**：调整了往期产品同步接口 `/api/recommender/toys` 的连表 SQL 查询，将属于 `public.products` 表中的 `persona_analysis` 正式拉入前端域。
+- **结构映射**：为适应前端驼峰命名规范，下发表层将其映射为 `personaAnalysis` 字段。
+
+### 2. 前端模型扩充 (Data Model)
+
+**定位**：`src/data/mock.ts`
+
+- **改造内容**：全面升级了核心领域模型 `Product` 的 TypeScript 定义。
+- **结构扩展**：新增 `personaAnalysis?: string;` 属性，确保前后端数据握手时持有强类型的边界保护。
+
+### 3. 高性能前端渲染与全息浮窗特性 (UI)
+
+**定位**：`src/App.tsx`的`ProductCardContent`组件
+
+- **空间管理方案**：在极易折叠信息的属性区域，为“适用人群”插入了一个独立的毛玻璃深空背景框 (`bg-cyan-950/40`)，并设置文本的最多呈现行数 `line-clamp-3`。
+- **全息浮窗提示 (Tooltip)**：
+  - 弃用了依赖三方库或低配的 `title` 原生属性，转而利用 Tailwind 的原生伪状态(`group-hover`) 铸造了纯 CSS 高性能悬浮提示窗。
+  - **交互体验**：当用户将鼠标移入 (`cursor-help`) 该面板时，会自动在顶部弹出一个带箭头的绝对定位模态流 (`backdrop-blur-md`, `border-cyan-500/50`)，无裁切地展示完整分析报告。
+
+---
+
+## 💡 使用说明 ও 维护建议
+
+> [!TIP]
+>
+> 1. **数据动态获取**：目前的容错机制极其鲁棒。即使某个装备数据库中没有存放 `persona_analysis` 字段，界面上该毛玻璃版块也会“无感知”隐藏，完全不影响布局和其他渲染。
+> 2. **AI清洗配合**：若您希望持续运营，建议在未来的 `cleaner.ts` 大模型采集脚本中，强化对 `persona_analysis` 字段的提炼指令，让系统分析出来的“适用人群”词库保持简练而深刻的科技风格。
+> 3. **UI扩展**：如果您后续想要提升字体的科技感或是修改弹窗延时动效，请直接调整 `<div className="... transition-all duration-300">` 中的时间修饰符。

@@ -70,6 +70,26 @@ function ProductCardContent({ product }: { product: Product }) {
           <span>材质: {product.material}</span>
         </div>
 
+        {product.personaAnalysis && (
+          <div className="mb-3 p-2 rounded bg-cyan-950/40 border border-cyan-500/20 group/tooltip relative cursor-help">
+            <h4 className="text-[9px] text-cyan-500 mb-0.5 tracking-wider font-mono">
+              适用人群
+            </h4>
+            <p className="text-[10px] text-cyan-100/70 leading-relaxed line-clamp-3">
+              {product.personaAnalysis}
+            </p>
+
+            {/* 自定义全息浮窗提示 */}
+            <div className="opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-[calc(100%+32px)] p-3 bg-slate-900/95 border border-cyan-500/50 rounded-lg shadow-2xl shadow-cyan-900/30 backdrop-blur-md pointer-events-none">
+              <p className="text-[10.5px] text-cyan-50 leading-relaxed">
+                {product.personaAnalysis}
+              </p>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-cyan-500/50"></div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-slate-900"></div>
+            </div>
+          </div>
+        )}
+
         {product.tags && product.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-4">
             {product.tags.slice(0, 3).map((tag, i) => (
