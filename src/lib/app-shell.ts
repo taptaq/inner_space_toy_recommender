@@ -6,6 +6,11 @@ export const APP_STATE_STORAGE_KEY = "inner-space-recommender-app-state-v1";
 export const PRODUCTS_CACHE_STORAGE_KEY =
   "inner-space-recommender-products-cache-v1";
 
+type ProductsCachePayload = {
+  updatedAt: number;
+  products: Product[];
+};
+
 export const PRICE_RANGE_OPTIONS = [
   { value: "all", label: "全部价格" },
   { value: "under100", label: "100元以下" },
@@ -23,6 +28,45 @@ export function readJsonStorage<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+export function readProductsCache(): Product[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(PRODUCTS_CACHE_STORAGE_KEY);
+    if (!raw) return [];
+    return normalizeProductsPayload(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+export function normalizeProductsPayload(payload: unknown): Product[] {
+  if (Array.isArray(payload)) return payload as Product[];
+  if (
+    payload &&
+    typeof payload === "object" &&
+    Array.isArray((payload as ProductsCachePayload).products)
+  ) {
+    return (payload as ProductsCachePayload).products;
+  }
+  return [];
+}
+
+export function writeProductsCache(products: Product[]) {
+  if (typeof window === "undefined" || products.length === 0) return;
+  window.localStorage.setItem(
+    PRODUCTS_CACHE_STORAGE_KEY,
+    JSON.stringify({
+      updatedAt: Date.now(),
+      products,
+    } satisfies ProductsCachePayload),
+  );
+}
+
+export function clearProductsCache() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(PRODUCTS_CACHE_STORAGE_KEY);
 }
 
 export function detectRoute(pathname: string): AppRoute {

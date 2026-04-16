@@ -22,11 +22,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TARGET_URL = 'https://darentang.tmall.com/search.htm?search=y&orderType=coefp_desc';
-const MAX_ITEMS = Number(process.env.DARENTANG_MAX_ITEMS || 200);
+const TARGET_URL = 'https://xiaoguaishou.tmall.com/shop/view_shop.htm?appUid=RAzN8HWNuv49Lh1ynGgZvWJQwrYsuoBnCj1DnZKDSJGqWWNt187&spm=a21n57.1.hoverItem.2';
+const MAX_ITEMS = Number(process.env.XIAOGUAISHOU_MAX_ITEMS || 200);
 const DELAY_BETWEEN_PAGES = 3000;
-const BUFFER_PATH = path.resolve(__dirname, '../../data/review-buffer.json');
-const LIST_PRICE_CACHE_PATH = path.resolve(__dirname, '../../data/darentang-list-price-cache.json');
+const BUFFER_PATH = path.resolve(__dirname, '../../data/xiaoguaishou-review-buffer.json');
+const LIST_PRICE_CACHE_PATH = path.resolve(__dirname, '../../data/xiaoguaishou-list-price-cache.json');
+const LEGACY_LIST_AREA_SELECTOR = '.J_TItems';
+const LEGACY_LIST_CARD_SELECTOR = '.J_TItems dl.item';
+const SHELF_LIST_AREA_SELECTOR = '.product_shelf, [class*="ProductShelf"], [class*="product_shelf"]';
+const SHELF_LIST_CARD_SELECTOR =
+  '.product_shelf [class*="cardContainer"], [class*="ProductShelf"] [class*="cardContainer"], [class*="product_shelf"] [class*="cardContainer"]';
+const LIST_READY_SELECTOR = `${LEGACY_LIST_CARD_SELECTOR}, ${SHELF_LIST_CARD_SELECTOR}`;
 
 type ListPriceCacheEntry = {
   itemId: string;
@@ -217,6 +223,27 @@ ${lines}
 6. 不要输出 markdown，不要输出解释`;
 }
 
+function buildShopSearchUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (!/tmall\.com$/i.test(parsed.hostname) || !parsed.pathname.includes('/shop/view_shop.htm')) {
+      return url;
+    }
+    return `${parsed.origin}/search.htm?search=y&orderType=coefp_desc`;
+  } catch {
+    return url;
+  }
+}
+
+function getListAreaLocator(page: any) {
+  return page.locator(`${LEGACY_LIST_AREA_SELECTOR}, ${SHELF_LIST_AREA_SELECTOR}`).first();
+}
+
+function getListCardLocator(page: any, item: any) {
+  const selector = item?.listDomKind === 'shelf' ? SHELF_LIST_CARD_SELECTOR : LEGACY_LIST_CARD_SELECTOR;
+  return page.locator(selector).nth(item.domIndex);
+}
+
 /**
  * 使用 Qwen VL 对一组图片进行多图合并分析
  */
@@ -244,7 +271,7 @@ async function ocrWithQwenVL(imageUrls: string[], prompt: string = TOY_DETAIL_OC
 }
 
 /**
- * 使用 GLM-4V 进行视觉分析
+ * 使用 GLM-4.6V-FlashX 进行视觉分析
  */
 async function ocrWithGLMV(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_PROMPT): Promise<string> {
   const apiKey = process.env.GLM_API_KEY;
@@ -635,7 +662,7 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
   await page.goto(listPageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(3000);
   await solveSliderCaptcha(page);
-  await page.waitForSelector('.J_TItems', { timeout: 20000 });
+  await page.waitForSelector(LIST_READY_SELECTOR, { timeout: 20000 });
 
   const hasDomIndex = typeof item.domIndex === 'number' && item.domIndex >= 0;
   if (!hasDomIndex && !item.itemId) {
@@ -644,11 +671,16 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
 
   const card =
     hasDomIndex
-      ? page.locator('.J_TItems dl.item').nth(item.domIndex)
+      ? getListCardLocator(page, item)
       : page.locator(`a[href*="id=${item.itemId || ''}"]`).first();
 
   await card.scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(600);
+  await page
+    .evaluate(() => {
+      document.querySelectorAll('.J_MIDDLEWARE_FRAME_WIDGET').forEach((node) => node.remove());
+    })
+    .catch(() => {});
 
   await card
     .evaluate((dl: Element) => {
@@ -659,11 +691,11 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
     .catch(() => {});
 
   const clickTarget = card
-    .locator('dt.photo a, a.J_TGoldData, a.J_GoldData, dd.detail a.item-name')
+    .locator('dt.photo a, a.J_TGoldData, a.J_GoldData, dd.detail a.item-name, [class*="title"], img')
     .first();
   const fallbackClickTarget =
     hasDomIndex
-      ? clickTarget
+      ? (item?.listDomKind === 'shelf' ? card : clickTarget)
       : page.locator(`a[href*="id=${item.itemId || ''}"]`).first();
 
   const popupOrNavigation = Promise.race([
@@ -678,7 +710,7 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
     page.waitForTimeout(10000).then(() => ({ type: 'timeout' as const })),
   ]);
 
-  await fallbackClickTarget.click({ timeout: 15000 });
+  await fallbackClickTarget.click({ timeout: 15000, force: item?.listDomKind === 'shelf' });
   const clickResult = await popupOrNavigation;
 
   if (clickResult?.type === 'popup') {
@@ -705,7 +737,7 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
 }
 
 async function runCrawler() {
-  console.log('--- 启动 Playwright 无头抓取引擎 [Target: 大人糖 Tmall] ---');
+  console.log('--- 启动 Playwright 无头抓取引擎 [Target: 小怪兽 Tmall] ---');
   const listPriceCache = loadListPriceCache();
   console.log(`--- 列表价格缓存已加载: ${Object.keys(listPriceCache).length} 条 ---`);
 
@@ -775,17 +807,27 @@ async function runCrawler() {
     // 阶段一：全量列表抓取
     console.log('[阶段一] 正在进行全店地毯式扫描，获取完整商品清单...');
     while (true) {
-      const pageUrl = currentPage === 1 ? TARGET_URL : nextPageUrl;
+      let pageUrl = currentPage === 1 ? TARGET_URL : nextPageUrl;
       console.log(`\n[雷达] 正在搜索列表 (第 ${currentPage} 页): ${pageUrl}`);
 
       try {
         await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.waitForTimeout(5000);
         await solveSliderCaptcha(page);
-        await page.waitForSelector('.J_TItems', { timeout: 20000 });
+        await page.waitForSelector(LIST_READY_SELECTOR, { timeout: 20000 });
       } catch (e) {
-        console.error('  [致命] 列表页加载超时或被拦截');
-        throw e;
+        const fallbackSearchUrl = currentPage === 1 ? buildShopSearchUrl(pageUrl) : pageUrl;
+        if (fallbackSearchUrl !== pageUrl) {
+          console.warn(`  [列表页兜底] 店铺首页未直接出现商品列表，改跳搜索页: ${fallbackSearchUrl}`);
+          pageUrl = fallbackSearchUrl;
+          await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+          await page.waitForTimeout(5000);
+          await solveSliderCaptcha(page);
+          await page.waitForSelector(LIST_READY_SELECTOR, { timeout: 20000 });
+        } else {
+          console.error('  [致命] 列表页加载超时或被拦截');
+          throw e;
+        }
       }
 
       const pageItems = (await page.evaluate(`(() => {
@@ -820,8 +862,9 @@ async function runCrawler() {
         var results = [];
         var seen = new Set();
         var push = function(item) {
-          var key = item.itemId || item.href || item.title;
-          if (!item.href || !key || seen.has(key)) return;
+          var key = item.itemId || item.href || ((item.listDomKind || 'unknown') + ':' + item.domIndex + ':' + item.title);
+          if (!key || seen.has(key)) return;
+          if (!item.href && item.listDomKind !== 'shelf') return;
           seen.add(key);
           results.push(item);
         };
@@ -844,7 +887,18 @@ async function runCrawler() {
           var coverImage = (coverImg && coverImg.src) || '';
           if (coverImage && coverImage.indexOf('http') !== 0) coverImage = 'https:' + coverImage;
           var rawPriceText = ((dl.querySelector('.c-price') || {}).textContent || '').trim();
-          push({ domIndex: domIndex, itemId: getItemId(href), href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText });
+          push({ domIndex: domIndex, itemId: getItemId(href), href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText, listDomKind: 'legacy' });
+        });
+
+        Array.from(document.querySelectorAll('.product_shelf [class*="cardContainer"], [class*="ProductShelf"] [class*="cardContainer"], [class*="product_shelf"] [class*="cardContainer"]')).forEach(function(card, domIndex) {
+          if (isRecommended(card)) return;
+          var titleEl = card.querySelector('[class*="title"]');
+          var title = (titleEl && titleEl.textContent && titleEl.textContent.trim()) || '未知产品';
+          var heroImg = card.querySelector('img');
+          var coverImage = (heroImg && (heroImg.src || heroImg.getAttribute('data-src'))) || '';
+          if (coverImage && coverImage.indexOf('http') !== 0) coverImage = 'https:' + coverImage;
+          var rawPriceText = ((card.querySelector('[class*="priceContainer"], [class*="price"], .text-price') || {}).textContent || '').trim();
+          push({ domIndex: domIndex, itemId: '', href: '', title: title, coverImage: coverImage, rawPriceText: rawPriceText, listDomKind: 'shelf' });
         });
 
         Array.from(document.querySelectorAll('a[href*="detail.tmall.com/item.htm"], a[href*="//detail.tmall.com/item.htm"]')).forEach(function(anchor) {
@@ -864,7 +918,7 @@ async function runCrawler() {
           if (coverImage && coverImage.indexOf('http') !== 0) coverImage = 'https:' + coverImage;
           var priceEl = card && card.querySelector('.c-price, [class*="price"]');
           var rawPriceText = ((priceEl && priceEl.textContent) || '').trim();
-          push({ domIndex: -1, itemId: itemId, href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText });
+          push({ domIndex: -1, itemId: itemId, href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText, listDomKind: 'anchor' });
         });
 
         return results;
@@ -875,12 +929,15 @@ async function runCrawler() {
         title: string;
         coverImage: string;
         rawPriceText: string;
+        listDomKind: string;
       }>);
 
       const normalizedPageItems = pageItems.map((item) => {
         const numericPrice = extractNumericPrice(item.rawPriceText || '');
         return {
           domIndex: item.domIndex,
+          itemId: item.itemId,
+          listDomKind: item.listDomKind,
           listPageUrl: pageUrl,
           href: item.href,
           title: item.title,
@@ -914,7 +971,7 @@ async function runCrawler() {
 
       if (pendingPriceItems.length > 0) {
         try {
-          const listArea = page.locator('.J_TItems').first();
+          const listArea = getListAreaLocator(page);
           const buffer = await listArea.screenshot({ type: 'png' });
           const dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
           const wholePageMatches = await rescueListPricesFromWholePage(
@@ -955,7 +1012,7 @@ async function runCrawler() {
         const cacheKey = buildListPriceCacheKey(item.href, item.title);
 
         try {
-          const priceArea = page.locator('.J_TItems dl.item').nth(item.domIndex).locator('.cprice-area').first();
+          const priceArea = getListCardLocator(page, item).locator('.cprice-area, [class*="priceContainer"], [class*="price"], .text-price').first();
           const buffer = await priceArea.screenshot({ type: 'png' });
           const dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
           const rescuedPrice = await rescueNumericPriceFromImage(dataUrl);
@@ -1093,6 +1150,9 @@ async function runCrawler() {
             finalDetailUrl = await openDetailByClickingListItem(page, context, item);
           } catch (clickErr: any) {
             console.warn(`  [详情链接] 列表点击失败，回退 href 直达: ${clickErr.message || clickErr}`);
+            if (!originalDetailUrl) {
+              throw clickErr;
+            }
             await page.goto(originalDetailUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
             finalDetailUrl = page.url() || originalDetailUrl;
           }
@@ -1312,8 +1372,8 @@ async function runCrawler() {
 
           if (!detailParamsText && ocrText) {
             const ocrParamPairs = extractParamPairsFromOcrText(ocrText);
-            if (item.title.includes('大人糖')) {
-              ocrParamPairs.push(['品牌', '大人糖']);
+            if (item.title.includes('小怪兽')) {
+              ocrParamPairs.push(['品牌', '小怪兽']);
             }
             rawParamPairTotal += ocrParamPairs.length;
             if (ocrParamPairs.length > 0) paramSectionHitCount++;

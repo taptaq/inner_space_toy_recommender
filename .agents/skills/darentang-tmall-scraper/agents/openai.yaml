@@ -1,0 +1,7 @@
+interface:
+  display_name: "天猫品牌抓取（大人糖/小怪兽）"
+  short_description: "维护大人糖/小怪兽天猫抓取并生成同模版品牌爬虫目录"
+  default_prompt: "Use $darentang-tmall-scraper to maintain the current Darentang or Xiaoguaishou Tmall scraper, including ProductShelf/cardContainer list pages, or scaffold a new brand scraper under src/scraper/<brand-slug>."
+
+policy:
+  allow_implicit_invocation: true

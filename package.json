@@ -15,7 +15,9 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "debug:param-chain": "tsx -r dotenv/config src/scraper/darentang/debug-param-chain.ts",
-    "scrape:darentang": "tsx -r dotenv/config src/scraper/darentang/crawler.ts"
+    "debug:param-chain:xiaoguaishou": "tsx -r dotenv/config src/scraper/xiaoguaishou/debug-param-chain.ts",
+    "scrape:darentang": "tsx -r dotenv/config src/scraper/darentang/crawler.ts",
+    "scrape:xiaoguaishou": "tsx -r dotenv/config src/scraper/xiaoguaishou/crawler.ts"
   },
   "dependencies": {
     "@esbuild/darwin-x64": "^0.28.0",

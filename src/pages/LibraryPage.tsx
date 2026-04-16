@@ -11,6 +11,9 @@ export function LibraryPage({
   filterMaterial,
   filterPriceRange,
   filterMaxDb,
+  isLoading,
+  error,
+  onReload,
   onFilterGenderChange,
   onFilterBrandChange,
   onFilterOriginChange,
@@ -26,6 +29,9 @@ export function LibraryPage({
   filterMaterial: string;
   filterPriceRange: string;
   filterMaxDb: number;
+  isLoading: boolean;
+  error: string | null;
+  onReload: () => void;
   onFilterGenderChange: (value: string) => void;
   onFilterBrandChange: (value: string) => void;
   onFilterOriginChange: (value: string) => void;
@@ -34,6 +40,8 @@ export function LibraryPage({
   onFilterMaxDbChange: (value: number) => void;
   onBack: () => void;
 }) {
+  const products = Array.isArray(allProducts) ? allProducts : [];
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8 relative overflow-hidden overflow-y-auto w-full">
       <div className="fixed top-[-10%] left-[-10%] w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -55,6 +63,13 @@ export function LibraryPage({
           <p className="text-slate-400 text-sm">
             收录当前系统链接的所有真实物理装备
           </p>
+          <button
+            onClick={onReload}
+            disabled={isLoading}
+            className="mt-4 inline-flex items-center justify-center rounded-full border border-cyan-400/50 bg-cyan-500/20 px-5 py-2 text-[12px] font-semibold tracking-[0.18em] text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.16)] hover:border-cyan-300/70 hover:bg-cyan-400/25 hover:text-white disabled:border-slate-700 disabled:bg-slate-900/40 disabled:text-slate-500 transition-all"
+          >
+            {isLoading ? "正在同步装备库..." : "重新同步装备库"}
+          </button>
         </div>
 
         <div className="glass-panel rounded-2xl p-6 mb-10 border border-white/5 bg-white/5">
@@ -85,7 +100,7 @@ export function LibraryPage({
                 className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-cyan-500/50 appearance-none"
               >
                 <option value="all">所有品牌</option>
-                {Array.from(new Set(allProducts.map((product) => product.brand)))
+                {Array.from(new Set(products.map((product) => product.brand)))
                   .sort()
                   .map((brand) => (
                     <option key={brand} value={brand}>
@@ -122,7 +137,7 @@ export function LibraryPage({
                 <option value="all">所有材质</option>
                 {Array.from(
                   new Set(
-                    allProducts.map((product) => {
+                    products.map((product) => {
                       if (product.material.includes("硅胶")) return "硅胶";
                       if (product.material.includes("ABS")) return "ABS";
                       if (product.material.includes("TPE")) return "TPE";
@@ -178,8 +193,42 @@ export function LibraryPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {allProducts
+        {isLoading && products.length === 0 ? (
+          <div className="glass-panel rounded-2xl p-10 text-center border border-cyan-500/20 bg-cyan-500/5">
+            <div className="text-cyan-300 text-sm tracking-widest mb-2">
+              正在加载全息装备库
+            </div>
+            <div className="text-slate-500 text-xs">
+              仅在首次进入页面或手动同步时请求数据库
+            </div>
+          </div>
+        ) : error ? (
+          <div className="glass-panel rounded-2xl p-10 text-center border border-red-500/20 bg-red-500/5">
+            <div className="text-red-300 text-sm tracking-widest mb-3">
+              {error}
+            </div>
+            <button
+              onClick={onReload}
+              className="text-xs text-cyan-300 hover:text-cyan-200 transition-colors"
+            >
+              重新尝试连接
+            </button>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="glass-panel rounded-2xl p-10 text-center border border-white/5 bg-white/5">
+            <div className="text-slate-300 text-sm tracking-widest mb-2">
+              暂无装备数据
+            </div>
+            <button
+              onClick={onReload}
+              className="text-xs text-cyan-300 hover:text-cyan-200 transition-colors"
+            >
+              同步装备库
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products
             .filter((product) => {
               const matchGender =
                 filterGender === "all" || product.gender === filterGender;
@@ -209,7 +258,7 @@ export function LibraryPage({
                 matchPrice
               );
             })
-            .map((product) => {
+              .map((product) => {
               const productUrl = product.sourceUrl || product.link;
               return productUrl ? (
                 <a
@@ -229,8 +278,9 @@ export function LibraryPage({
                   <ProductCardContent product={product} />
                 </div>
               );
-            })}
-        </div>
+              })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,17 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
 import OpenAI from "openai";
 import { questions, AnswerState, Product, Question } from "./data/mock";
 import {
   AppRoute,
   APP_STATE_STORAGE_KEY,
-  PRODUCTS_CACHE_STORAGE_KEY,
   RankedProduct,
   detectRoute,
+  normalizeProductsPayload,
+  readProductsCache,
   readJsonStorage,
+  writeProductsCache,
 } from "./lib/app-shell";
 import { LoadingPage } from "./pages/LoadingPage";
 import { HomePage } from "./pages/HomePage";
@@ -35,10 +37,7 @@ export default function App() {
     filterMaterial?: string;
     filterPriceRange?: string;
   }>(APP_STATE_STORAGE_KEY, {});
-  const cachedProducts = readJsonStorage<Product[]>(
-    PRODUCTS_CACHE_STORAGE_KEY,
-    [],
-  );
+  const cachedProducts = readProductsCache();
 
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
     detectRoute(window.location.pathname),
@@ -50,6 +49,8 @@ export default function App() {
   const [allProducts, setAllProducts] = useState<Product[]>(cachedProducts);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(cachedProducts.length > 0);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const productsFetchRef = useRef<Promise<Product[]> | null>(null);
 
   // 过滤器状态
   const [filterGender, setFilterGender] = useState<string>(
@@ -137,10 +138,10 @@ export default function App() {
   }, [currentRoute, step, activeQuestions.length]);
 
   useEffect(() => {
-    if (currentRoute === "/library" && !hasFetched && !isLoading) {
+    if (currentRoute === "/library" && allProducts.length === 0 && !isLoading) {
       void fetchProducts();
     }
-  }, [currentRoute, hasFetched, isLoading]);
+  }, [currentRoute, allProducts.length, isLoading]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -172,25 +173,47 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    window.localStorage.setItem(
-      PRODUCTS_CACHE_STORAGE_KEY,
-      JSON.stringify(allProducts),
-    );
+    writeProductsCache(allProducts);
   }, [allProducts]);
 
-  const fetchProducts = () => {
-    if (hasFetched && allProducts.length > 0) return Promise.resolve(allProducts);
-    if (cachedProducts.length > 0) {
-      setAllProducts(cachedProducts);
+  const fetchProducts = (options?: { force?: boolean }) => {
+    const force = options?.force === true;
+    if (!force && allProducts.length > 0) {
       setHasFetched(true);
-      return Promise.resolve(cachedProducts);
+      return Promise.resolve(allProducts);
     }
+
+    const latestCachedProducts = readProductsCache();
+    if (!force && latestCachedProducts.length > 0) {
+      setAllProducts(latestCachedProducts);
+      setHasFetched(true);
+      setProductsError(null);
+      return Promise.resolve(latestCachedProducts);
+    }
+
+    if (force) {
+      setAllProducts([]);
+      setHasFetched(false);
+    }
+
+    if (productsFetchRef.current) return productsFetchRef.current;
+
     setIsLoading(true);
+    setProductsError(null);
     setLoadingStep(1); // 连接星港
-    return new Promise<Product[]>((resolve) => {
+    productsFetchRef.current = new Promise<Product[]>((resolve) => {
       fetch("/api/recommender/toys")
-        .then((response) => response.json())
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data?.error || data?.details || "装备库接口异常");
+          }
+          return normalizeProductsPayload(data);
+        })
         .then((data) => {
+          if (!Array.isArray(data)) {
+            throw new Error("装备库接口返回格式异常");
+          }
           setLoadingStep(2); // 数据解密
           setTimeout(() => {
             setLoadingStep(3); // 载入晶体
@@ -198,6 +221,7 @@ export default function App() {
               setAllProducts(data);
               setIsLoading(false);
               setHasFetched(true);
+              setProductsError(null);
               resolve(data);
             }, 1200); // 仪式感时间
           }, 800);
@@ -205,10 +229,15 @@ export default function App() {
         .catch((error) => {
           console.error("Failed to fetch products:", error);
           setLoadingStep(-1); // 链路中断
+          setProductsError("装备库数据加载失败，请稍后重试。");
           setIsLoading(false);
           resolve([]); // Resolve anyway to allow user to try again or see error state
+        })
+        .finally(() => {
+          productsFetchRef.current = null;
         });
     });
+    return productsFetchRef.current;
   };
 
   const handleOptionSelect = (field: string, value: any, tag: string) => {
@@ -521,7 +550,7 @@ ${JSON.stringify(context.candidateProducts, null, 2)}
     navigateTo("/quiz");
   };
 
-  if (isLoading) {
+  if (isLoading && currentRoute !== "/library") {
     return <LoadingPage loadingStep={loadingStep} />;
   }
 
@@ -535,6 +564,9 @@ ${JSON.stringify(context.candidateProducts, null, 2)}
         filterMaterial={filterMaterial}
         filterPriceRange={filterPriceRange}
         filterMaxDb={filterMaxDb}
+        isLoading={isLoading}
+        error={productsError}
+        onReload={() => fetchProducts({ force: true })}
         onFilterGenderChange={setFilterGender}
         onFilterBrandChange={setFilterBrand}
         onFilterOriginChange={setFilterOrigin}
@@ -563,11 +595,7 @@ ${JSON.stringify(context.candidateProducts, null, 2)}
                 navigateTo("/quiz");
               }}
               onBrowseLibrary={() => {
-                if (!hasFetched) {
-                  fetchProducts().then(() => navigateTo("/library"));
-                } else {
-                  navigateTo("/library");
-                }
+                navigateTo("/library");
               }}
             />
           )}
