@@ -355,7 +355,7 @@ ${JSON.stringify(context.candidateProducts, null, 2)}
       );
     } catch (e) {
       console.warn(
-        "⚠️ [AI] Qwen 链路中断，正在启动 GLM-4.6V-FLASHX 兜底...",
+        "⚠️ [AI] Qwen 链路中断，正在启动 GLM-4.6V 兜底...",
         e,
       );
     }
@@ -370,7 +370,7 @@ ${JSON.stringify(context.candidateProducts, null, 2)}
         dangerouslyAllowBrowser: true,
       });
       const response = await openai.chat.completions.create({
-        model: "GLM-4.6V-FlashX",
+        model: "glm-4.6v",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.1,
       });

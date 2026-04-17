@@ -35,7 +35,7 @@ try {
 }
 
 async function callGlmFallback(prompt: string) {
-  console.log('⚠️ [Fallback] 正在切换至 GLM-4.6V-FLASHX 兜底链路...');
+  console.log('⚠️ [Fallback] 正在切换至 glm-4.6v 兜底链路...');
   const apiKey = process.env.GLM_API_KEY;
   if (!apiKey) throw new Error('GLM_API_KEY 未配置');
 
@@ -45,7 +45,7 @@ async function callGlmFallback(prompt: string) {
   });
 
   const response = await glm.chat.completions.create({
-    model: 'GLM-4.6V-FlashX',
+    model: 'glm-4.6v',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.1,
   });
@@ -119,12 +119,59 @@ const extractCanonicalName = (rawDescription: string, fallbackName: string): str
   return candidate || fallbackName;
 };
 
+const isPlaceholderProductName = (value: string): boolean => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return true;
+  return [
+    '未知产品',
+    '未知商品',
+    '未命名产品',
+    '未命名商品',
+    '无标题',
+    'unknown product',
+  ].includes(normalized);
+};
+
+const isToyLikeProduct = (text: string): boolean => {
+  const normalized = (text || '').toLowerCase();
+  return [
+    '飞机杯',
+    '训练器',
+    '按摩器',
+    '跳蛋',
+    '震动棒',
+    '震动器',
+    '吮吸',
+    '自慰器',
+    '倒模',
+    '前列腺',
+    '龟头',
+    '阴茎',
+    '名器',
+    '伸缩杯',
+    '绚风杯',
+    '遥控跳蛋',
+    '穿戴',
+    '锁精环',
+    '延时训练',
+    '器具',
+    '玩具',
+  ].some((hint) => normalized.includes(hint));
+};
+
 const inferDefaultMaterial = (name: string, rawDescription: string): string => {
+  const nameText = `${name || ''}`.toLowerCase();
   const text = `${name || ''}\n${rawDescription || ''}`.toLowerCase();
-  if (text.includes('润滑液') || text.includes('润滑剂') || text.includes('水基') || text.includes('玻尿酸')) {
+  if (isToyLikeProduct(nameText)) {
+    if (text.includes('tpe')) return 'TPE';
+    if (text.includes('abs')) return 'ABS';
+    if (text.includes('硅胶')) return '硅胶';
+    return '亲肤硅胶';
+  }
+  if (nameText.includes('润滑液') || nameText.includes('润滑剂') || nameText.includes('水基') || nameText.includes('玻尿酸')) {
     return '水基配方';
   }
-  if (text.includes('避孕套') || text.includes('安全套') || text.includes('套套') || text.includes('乳胶')) {
+  if (nameText.includes('避孕套') || nameText.includes('安全套') || nameText.includes('套套') || nameText.includes('乳胶')) {
     return '天然橡胶乳胶';
   }
   if (isBedPadProduct(text)) {
@@ -173,6 +220,7 @@ const isApparelLikeProduct = (text: string): boolean => {
 
 const isCareConsumableProduct = (text: string): boolean => {
   const normalized = (text || '').toLowerCase();
+  if (isToyLikeProduct(normalized)) return false;
   return [
     '避孕套',
     '安全套',
@@ -483,12 +531,16 @@ export async function runCleaner() {
 
   for (const item of bufferData) {
     const canonicalName = String(extractCanonicalName(item.rawDescription, item.name) || '').trim();
-    if (!canonicalName) {
-      console.warn('[跳过] 商品名为空，不执行清洗与入库。');
+    if (isPlaceholderProductName(canonicalName)) {
+      console.warn(`[跳过] 商品名无效 (${canonicalName || 'empty'})，不执行清洗与入库。`);
       continue;
     }
     const classifierText = `${canonicalName}\n${item.rawDescription || ''}`;
-    const productKind = isCareConsumableProduct(classifierText)
+    const productKind = isToyLikeProduct(canonicalName)
+      ? 'toy'
+      : isCareConsumableProduct(canonicalName)
+      ? 'care'
+      : isCareConsumableProduct(classifierText)
       ? 'care'
       : isBedPadProduct(classifierText)
         ? 'pad'
@@ -644,8 +696,6 @@ ${item.rawDescription}
       const processedProduct = {
         name: canonicalName,
         price: numericPrice,
-        listUrl: item.listUrl || item.sourceUrl,
-        listPageUrl: item.listPageUrl,
         sourceUrl: item.sourceUrl,
         image: item.coverImage,
         specs: parsedSpecs,
@@ -691,6 +741,7 @@ ${item.rawDescription}
          gender:        resolvedGender,
          material:      parsedSpecs.material || inferDefaultMaterial(canonicalName, item.rawDescription),
          image_url:     item.coverImage || null,
+         raw_description: item.rawDescription || null,
          updated_at:    new Date(),
       };
 

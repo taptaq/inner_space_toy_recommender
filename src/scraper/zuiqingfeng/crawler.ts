@@ -30,22 +30,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TARGET_URL = 'https://darentang.tmall.com/search.htm?search=y&orderType=coefp_desc';
-const MAX_ITEMS = Number(process.env.DARENTANG_MAX_ITEMS || 200);
+const TARGET_URL = 'https://zuiqingfeng.tmall.com/category.htm?spm=a1z10.5-b-s.w4011-14956746985.1.52c11a13kjTwIT';
+const MAX_ITEMS = Number(process.env.ZUIQINGFENG_MAX_ITEMS || 200);
+const MAX_LIST_PAGES = 3;
 const DELAY_BETWEEN_PAGES = 3000;
-const BUFFER_PATH = path.resolve(__dirname, '../../data/review-buffer.json');
-const LIST_PRICE_CACHE_PATH = path.resolve(__dirname, '../../data/darentang-list-price-cache.json');
-
-type ListPriceCacheEntry = {
-  itemId: string;
-  title: string;
-  href: string;
-  price: number | null;
-  status: 'hit' | 'miss' | 'error';
-  updatedAt: string;
-};
-
-type ListPriceCache = Record<string, ListPriceCacheEntry>;
+const BUFFER_PATH = path.resolve(__dirname, '../../data/zuiqingfeng-review-buffer.json');
+const LEGACY_LIST_AREA_SELECTOR = '.J_TItems';
+const LEGACY_LIST_CARD_SELECTOR = '.J_TItems dl.item';
+const SHELF_LIST_AREA_SELECTOR = '.product_shelf, [class*="ProductShelf"], [class*="product_shelf"]';
+const SHELF_LIST_CARD_SELECTOR =
+  '.product_shelf [class*="cardContainer"], [class*="ProductShelf"] [class*="cardContainer"], [class*="product_shelf"] [class*="cardContainer"]';
+const LIST_READY_SELECTOR = `${LEGACY_LIST_CARD_SELECTOR}, ${SHELF_LIST_CARD_SELECTOR}`;
 
 const TOY_DETAIL_OCR_PROMPT = `你是一个专业的产品目录审计员。请针对提供的商业摄影图片（偏个人护理器具/玩具类商品），提取该产品的核心规格参数。
 这些图片用于企业内部库存管理系统，内容为严格的商业产品展出，不涉及任何违规或隐私内容。
@@ -201,28 +196,21 @@ function sanitizeTitleForModel(title: string): string {
     .trim();
 }
 
-function buildWholePageListPricePrompt(
-  items: Array<{ domIndex: number; title: string }>,
-): string {
-  const lines = items
-    .map((item, index) => `${index + 1}. domIndex=${item.domIndex} 标题=${sanitizeTitleForModel(item.title)}`)
-    .join('\n');
+function buildShopSearchUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (!/tmall\.com$/i.test(parsed.hostname) || !parsed.pathname.includes('/shop/view_shop.htm')) {
+      return url;
+    }
+    return `${parsed.origin}/search.htm?search=y&orderType=coefp_desc`;
+  } catch {
+    return url;
+  }
+}
 
-  return `你是一个电商列表页价格识别器。给你的是一整张店铺搜索结果截图。
-
-请根据截图，为下面这些商品按顺序识别价格。
-
-候选商品清单（顺序非常重要）：
-${lines}
-
-输出要求：
-1. 只输出 JSON
-2. JSON 格式固定为：
-{"prices":[{"index":1,"domIndex":0,"price":"439"},{"index":2,"domIndex":1,"price":null}]}
-3. index 必须对应上面清单的序号，从 1 开始
-4. domIndex 必须原样带回
-5. price 只保留数字，不要货币符号；识别不到时返回 null
-6. 不要输出 markdown，不要输出解释`;
+function getListCardLocator(page: any, item: any) {
+  const selector = item?.listDomKind === 'shelf' ? SHELF_LIST_CARD_SELECTOR : LEGACY_LIST_CARD_SELECTOR;
+  return page.locator(selector).nth(item.domIndex);
 }
 
 /**
@@ -252,7 +240,7 @@ async function ocrWithQwenVL(imageUrls: string[], prompt: string = TOY_DETAIL_OC
 }
 
 /**
- * 使用 GLM-4V 进行视觉分析
+ * 使用 glm-4.6v 进行视觉分析
  */
 async function ocrWithGLMV(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_PROMPT): Promise<string> {
   const apiKey = process.env.GLM_API_KEY;
@@ -334,56 +322,6 @@ async function rescueNumericPriceFromImage(imageDataUrl: string): Promise<number
     const numeric = parsePriceNumber(result);
     console.log(`  [列表价格补救] Qwen 返回: ${result.trim()} -> ${numeric ?? '未识别'}`);
     return numeric;
-  }
-}
-
-type WholePagePriceMatch = {
-  index: number;
-  domIndex: number;
-  price: string | number | null;
-};
-
-function parseWholePagePriceMatches(raw: string): WholePagePriceMatch[] {
-  const cleaned = String(raw || '').trim();
-  if (!cleaned) return [];
-
-  const normalized = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();
-  const candidates = [normalized];
-  const jsonSlice = normalized.match(/\{[\s\S]*\}/)?.[0];
-  if (jsonSlice && jsonSlice !== normalized) candidates.push(jsonSlice);
-
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate) as { prices?: WholePagePriceMatch[] };
-      if (Array.isArray(parsed?.prices)) {
-        return parsed.prices.filter((item) => item && Number.isFinite(Number(item.index)));
-      }
-    } catch {}
-  }
-
-  return [];
-}
-
-async function rescueListPricesFromWholePage(
-  imageDataUrl: string,
-  items: Array<{ domIndex: number; title: string }>,
-): Promise<WholePagePriceMatch[]> {
-  if (!imageDataUrl || items.length === 0) return [];
-  const prompt = buildWholePageListPricePrompt(items);
-  console.log(`  [列表价格整页] 待识别商品数: ${items.length}，启动整页 OCR...`);
-
-  try {
-    const result = await ocrWithGLMV([imageDataUrl], prompt);
-    const matches = parseWholePagePriceMatches(result);
-    console.log(`  [列表价格整页] GLM 返回 ${matches.length} 条价格候选`);
-    if (matches.length > 0) return matches;
-    throw new Error('GLM 未返回可解析 JSON');
-  } catch (err: any) {
-    console.warn(`  [列表价格整页] GLM 失败 (${err.message})，改用 Qwen-VL...`);
-    const result = await ocrWithQwenVL([imageDataUrl], prompt);
-    const matches = parseWholePagePriceMatches(result);
-    console.log(`  [列表价格整页] Qwen 返回 ${matches.length} 条价格候选`);
-    return matches;
   }
 }
 
@@ -532,6 +470,11 @@ function parsePriceNumber(raw: string): number | null {
   return numeric ? Number(numeric) : null;
 }
 
+function isIgnorableListProduct(title: string): boolean {
+  const normalized = String(title || '').trim().toLowerCase();
+  return ['购物金', '运费险', '补差价', '定金', '礼品卡'].some((hint) => normalized.includes(hint));
+}
+
 function choosePreferredDetailUrl(...candidates: Array<string | null | undefined>): string {
   const normalized = candidates
     .map((value) => String(value || '').trim())
@@ -557,28 +500,6 @@ function extractTmallItemId(rawUrl: string | null | undefined): string {
   } catch {
     return value.match(/[?&]id=(\d+)/)?.[1] || '';
   }
-}
-
-function buildListPriceCacheKey(href: string, title: string): string {
-  const itemId = extractTmallItemId(href);
-  if (itemId) return `tmall-item:${itemId}`;
-  return `title:${String(title || '').trim().toLowerCase()}`;
-}
-
-function loadListPriceCache(): ListPriceCache {
-  try {
-    if (!fs.existsSync(LIST_PRICE_CACHE_PATH)) return {};
-    return JSON.parse(fs.readFileSync(LIST_PRICE_CACHE_PATH, 'utf-8')) as ListPriceCache;
-  } catch (error) {
-    console.warn(`  [列表价格缓存] 读取失败，已忽略并继续: ${error}`);
-    return {};
-  }
-}
-
-function saveListPriceCache(cache: ListPriceCache) {
-  const dir = path.dirname(LIST_PRICE_CACHE_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(LIST_PRICE_CACHE_PATH, JSON.stringify(cache, null, 2));
 }
 
 function persistReviewBuffer(bufferData: unknown[]) {
@@ -643,7 +564,7 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
   await page.goto(listPageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(3000);
   await solveSliderCaptcha(page);
-  await page.waitForSelector('.J_TItems', { timeout: 20000 });
+  await page.waitForSelector(LIST_READY_SELECTOR, { timeout: 20000 });
 
   const hasDomIndex = typeof item.domIndex === 'number' && item.domIndex >= 0;
   if (!hasDomIndex && !item.itemId) {
@@ -652,11 +573,16 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
 
   const card =
     hasDomIndex
-      ? page.locator('.J_TItems dl.item').nth(item.domIndex)
+      ? getListCardLocator(page, item)
       : page.locator(`a[href*="id=${item.itemId || ''}"]`).first();
 
   await card.scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(600);
+  await page
+    .evaluate(() => {
+      document.querySelectorAll('.J_MIDDLEWARE_FRAME_WIDGET').forEach((node) => node.remove());
+    })
+    .catch(() => {});
 
   await card
     .evaluate((dl: Element) => {
@@ -667,11 +593,11 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
     .catch(() => {});
 
   const clickTarget = card
-    .locator('dt.photo a, a.J_TGoldData, a.J_GoldData, dd.detail a.item-name')
+    .locator('dt.photo a, a.J_TGoldData, a.J_GoldData, dd.detail a.item-name, [class*="title"], img')
     .first();
   const fallbackClickTarget =
     hasDomIndex
-      ? clickTarget
+      ? (item?.listDomKind === 'shelf' ? card : clickTarget)
       : page.locator(`a[href*="id=${item.itemId || ''}"]`).first();
 
   const popupOrNavigation = Promise.race([
@@ -686,7 +612,7 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
     page.waitForTimeout(10000).then(() => ({ type: 'timeout' as const })),
   ]);
 
-  await fallbackClickTarget.click({ timeout: 15000 });
+  await fallbackClickTarget.click({ timeout: 15000, force: item?.listDomKind === 'shelf' });
   const clickResult = await popupOrNavigation;
 
   if (clickResult?.type === 'popup') {
@@ -713,11 +639,10 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
 }
 
 async function runCrawler() {
-  console.log('--- 启动 Playwright 无头抓取引擎 [Target: 大人糖 Tmall] ---');
-  const listPriceCache = loadListPriceCache();
+  console.log('--- 启动 Playwright 无头抓取引擎 [Target: 醉清风-谜姬 Tmall] ---');
   const existingBufferEntries = loadReviewBufferEntries(BUFFER_PATH);
   const reviewBufferLookup = buildReviewBufferLookup(existingBufferEntries, extractTmallItemId);
-  console.log(`--- 列表价格缓存已加载: ${Object.keys(listPriceCache).length} 条 ---`);
+  console.log(`--- 列表页仅收集商品卡片，价格统一在详情页提取；当前最多扫描前 ${MAX_LIST_PAGES} 页 ---`);
   console.log(`--- 详情缓存已加载: ${existingBufferEntries.length} 条，本次可复用 ${reviewBufferLookup.size} 个索引键 ---`);
 
   const browser = await chromium.launch({
@@ -786,17 +711,27 @@ async function runCrawler() {
     // 阶段一：全量列表抓取
     console.log('[阶段一] 正在进行全店地毯式扫描，获取完整商品清单...');
     while (true) {
-      const pageUrl = currentPage === 1 ? TARGET_URL : nextPageUrl;
+      let pageUrl = currentPage === 1 ? TARGET_URL : nextPageUrl;
       console.log(`\n[雷达] 正在搜索列表 (第 ${currentPage} 页): ${pageUrl}`);
 
       try {
         await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.waitForTimeout(5000);
         await solveSliderCaptcha(page);
-        await page.waitForSelector('.J_TItems', { timeout: 20000 });
+        await page.waitForSelector(LIST_READY_SELECTOR, { timeout: 20000 });
       } catch (e) {
-        console.error('  [致命] 列表页加载超时或被拦截');
-        throw e;
+        const fallbackSearchUrl = currentPage === 1 ? buildShopSearchUrl(pageUrl) : pageUrl;
+        if (fallbackSearchUrl !== pageUrl) {
+          console.warn(`  [列表页兜底] 店铺首页未直接出现商品列表，改跳搜索页: ${fallbackSearchUrl}`);
+          pageUrl = fallbackSearchUrl;
+          await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+          await page.waitForTimeout(5000);
+          await solveSliderCaptcha(page);
+          await page.waitForSelector(LIST_READY_SELECTOR, { timeout: 20000 });
+        } else {
+          console.error('  [致命] 列表页加载超时或被拦截');
+          throw e;
+        }
       }
 
       const pageItems = (await page.evaluate(`(() => {
@@ -831,8 +766,9 @@ async function runCrawler() {
         var results = [];
         var seen = new Set();
         var push = function(item) {
-          var key = item.itemId || item.href || item.title;
-          if (!item.href || !key || seen.has(key)) return;
+          var key = item.itemId || item.href || ((item.listDomKind || 'unknown') + ':' + item.domIndex + ':' + item.title);
+          if (!key || seen.has(key)) return;
+          if (!item.href && item.listDomKind !== 'shelf') return;
           seen.add(key);
           results.push(item);
         };
@@ -855,7 +791,18 @@ async function runCrawler() {
           var coverImage = (coverImg && coverImg.src) || '';
           if (coverImage && coverImage.indexOf('http') !== 0) coverImage = 'https:' + coverImage;
           var rawPriceText = ((dl.querySelector('.c-price') || {}).textContent || '').trim();
-          push({ domIndex: domIndex, itemId: getItemId(href), href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText });
+          push({ domIndex: domIndex, itemId: getItemId(href), href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText, listDomKind: 'legacy' });
+        });
+
+        Array.from(document.querySelectorAll('.product_shelf [class*="cardContainer"], [class*="ProductShelf"] [class*="cardContainer"], [class*="product_shelf"] [class*="cardContainer"]')).forEach(function(card, domIndex) {
+          if (isRecommended(card)) return;
+          var titleEl = card.querySelector('[class*="title"]');
+          var title = (titleEl && titleEl.textContent && titleEl.textContent.trim()) || '未知产品';
+          var heroImg = card.querySelector('img');
+          var coverImage = (heroImg && (heroImg.src || heroImg.getAttribute('data-src'))) || '';
+          if (coverImage && coverImage.indexOf('http') !== 0) coverImage = 'https:' + coverImage;
+          var rawPriceText = ((card.querySelector('[class*="priceContainer"], [class*="price"], .text-price') || {}).textContent || '').trim();
+          push({ domIndex: domIndex, itemId: '', href: '', title: title, coverImage: coverImage, rawPriceText: rawPriceText, listDomKind: 'shelf' });
         });
 
         Array.from(document.querySelectorAll('a[href*="detail.tmall.com/item.htm"], a[href*="//detail.tmall.com/item.htm"]')).forEach(function(anchor) {
@@ -875,7 +822,7 @@ async function runCrawler() {
           if (coverImage && coverImage.indexOf('http') !== 0) coverImage = 'https:' + coverImage;
           var priceEl = card && card.querySelector('.c-price, [class*="price"]');
           var rawPriceText = ((priceEl && priceEl.textContent) || '').trim();
-          push({ domIndex: -1, itemId: itemId, href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText });
+          push({ domIndex: -1, itemId: itemId, href: href, title: title, coverImage: coverImage, rawPriceText: rawPriceText, listDomKind: 'anchor' });
         });
 
         return results;
@@ -886,130 +833,30 @@ async function runCrawler() {
         title: string;
         coverImage: string;
         rawPriceText: string;
+        listDomKind: string;
       }>);
 
-      const normalizedPageItems = pageItems.map((item) => {
-        const numericPrice = extractNumericPrice(item.rawPriceText || '');
-        return {
+      const normalizedPageItems = pageItems
+        .filter((item) => !isIgnorableListProduct(item.title))
+        .map((item) => ({
           domIndex: item.domIndex,
+          itemId: item.itemId,
+          listDomKind: item.listDomKind,
           listPageUrl: pageUrl,
           href: item.href,
           title: item.title,
           coverImage: item.coverImage,
-          price: numericPrice ? Number(numericPrice) : null,
-        };
-      });
+          price: null,
+        }));
       console.log(`  [列表商品] 本页候选: ${normalizedPageItems.map((item, index) => `${index + 1}.${item.title}`).join(' | ')}`);
-
-      const pendingPriceItems: typeof normalizedPageItems = [];
-
-      for (const item of normalizedPageItems) {
-        if (item.price !== null) continue;
-        if (typeof item.domIndex !== 'number' || item.domIndex < 0) {
-          console.log(`  [列表价格] 非标准卡片跳过列表 OCR，后续尝试详情价格: ${item.title}`);
-          continue;
-        }
-        const cacheKey = buildListPriceCacheKey(item.href, item.title);
-        const cachedEntry = listPriceCache[cacheKey];
-          if (cachedEntry) {
-            if (cachedEntry.price !== null) {
-              item.price = cachedEntry.price;
-              console.log(`  [列表价格缓存] 命中: ${item.title} -> ${cachedEntry.price}`);
-            } else {
-            console.log(`  [列表价格缓存] 命中历史空结果，跳过 OCR: ${item.title}`);
-          }
-          continue;
-        }
-        pendingPriceItems.push(item);
-      }
-
-      if (pendingPriceItems.length > 0) {
-        try {
-          const listArea = page.locator('.J_TItems').first();
-          const buffer = await listArea.screenshot({ type: 'png' });
-          const dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
-          const wholePageMatches = await rescueListPricesFromWholePage(
-            dataUrl,
-            pendingPriceItems.map((item) => ({ domIndex: item.domIndex, title: item.title })),
-          );
-
-          const wholePagePriceMap = new Map<number, number>();
-          for (const match of wholePageMatches) {
-            const numericPrice = parsePriceNumber(String(match.price ?? ''));
-            if (numericPrice === null) continue;
-            wholePagePriceMap.set(Number(match.domIndex), numericPrice);
-          }
-
-          for (const item of pendingPriceItems) {
-            const wholePagePrice = wholePagePriceMap.get(item.domIndex);
-            if (wholePagePrice === undefined) continue;
-            const cacheKey = buildListPriceCacheKey(item.href, item.title);
-            item.price = wholePagePrice;
-            listPriceCache[cacheKey] = {
-              itemId: extractTmallItemId(item.href),
-              title: item.title,
-              href: item.href,
-              price: wholePagePrice,
-              status: 'hit',
-              updatedAt: new Date().toISOString(),
-            };
-            console.log(`  [列表价格整页] 已回填: ${item.title} -> ${wholePagePrice}`);
-          }
-          saveListPriceCache(listPriceCache);
-        } catch (err: any) {
-          console.warn(`  [列表价格整页] 整页截图/OCR 失败，将回退单项识别: ${err.message || err}`);
-        }
-      }
-
-      for (const item of pendingPriceItems) {
-        if (item.price !== null) continue;
-        const cacheKey = buildListPriceCacheKey(item.href, item.title);
-
-        try {
-          const priceArea = page.locator('.J_TItems dl.item').nth(item.domIndex).locator('.cprice-area').first();
-          const buffer = await priceArea.screenshot({ type: 'png' });
-          const dataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
-          const rescuedPrice = await rescueNumericPriceFromImage(dataUrl);
-          if (rescuedPrice !== null) {
-            item.price = rescuedPrice;
-            listPriceCache[cacheKey] = {
-              itemId: extractTmallItemId(item.href),
-              title: item.title,
-              href: item.href,
-              price: rescuedPrice,
-              status: 'hit',
-              updatedAt: new Date().toISOString(),
-            };
-            saveListPriceCache(listPriceCache);
-            console.log(`  [列表价格] OCR 已回填: ${item.title} -> ${rescuedPrice}`);
-          } else {
-            listPriceCache[cacheKey] = {
-              itemId: extractTmallItemId(item.href),
-              title: item.title,
-              href: item.href,
-              price: null,
-              status: 'miss',
-              updatedAt: new Date().toISOString(),
-            };
-            saveListPriceCache(listPriceCache);
-            console.log(`  [列表价格] OCR 未识别出价格: ${item.title}`);
-          }
-        } catch (err: any) {
-          listPriceCache[cacheKey] = {
-            itemId: extractTmallItemId(item.href),
-            title: item.title,
-            href: item.href,
-            price: null,
-            status: 'error',
-            updatedAt: new Date().toISOString(),
-          };
-          saveListPriceCache(listPriceCache);
-          console.warn(`  [列表价格] 价格区域截图/OCR 失败: ${item.title} (${err.message || err})`);
-        }
-      }
 
       console.log(`  -> 取得 ${normalizedPageItems.length} 个正选产品`);
       listItems.push(...normalizedPageItems);
+
+      if (currentPage >= MAX_LIST_PAGES) {
+        console.log(`  [分页] 已达到抓取页数上限 ${MAX_LIST_PAGES}，停止继续翻页。`);
+        break;
+      }
 
       // 翻页逻辑：升级为“定向安全锁代” (Counter + Directional + Validation)
       await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));
@@ -1132,6 +979,9 @@ async function runCrawler() {
             finalDetailUrl = await openDetailByClickingListItem(page, context, item);
           } catch (clickErr: any) {
             console.warn(`  [详情链接] 列表点击失败，回退 href 直达: ${clickErr.message || clickErr}`);
+            if (!originalDetailUrl) {
+              throw clickErr;
+            }
             await page.goto(originalDetailUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
             finalDetailUrl = page.url() || originalDetailUrl;
           }
@@ -1197,6 +1047,25 @@ async function runCrawler() {
             const numericPrice = parsePriceNumber(validatedPrice);
             console.log(`  [详情价格] 从 [${priceSource}] 成功捕捉实时售价: ${numericPrice} (原列表价: ${item.price ?? '未提取'})`);
             item.price = numericPrice;
+          } else {
+            try {
+              const detailPriceArea = page
+                .locator(
+                  '[class*="priceWrap"] [class*="text"], .tm-price, [class*="Price--priceText"], [class*="priceText"], .c-price',
+                )
+                .first();
+              const priceBuffer = await detailPriceArea.screenshot({ type: 'png' });
+              const priceDataUrl = `data:image/png;base64,${priceBuffer.toString('base64')}`;
+              const rescuedDetailPrice = await rescueNumericPriceFromImage(priceDataUrl);
+              if (rescuedDetailPrice !== null) {
+                item.price = rescuedDetailPrice;
+                console.log(`  [详情价格] DOM/源码未命中，已通过详情价格截图 OCR 回填: ${rescuedDetailPrice}`);
+              } else {
+                console.log('  [详情价格] DOM/源码/OCR 均未识别出有效价格');
+              }
+            } catch (priceErr: any) {
+              console.warn(`  [详情价格] 详情价格截图 OCR 失败: ${priceErr.message || priceErr}`);
+            }
           }
 
           // 激活懒加载
@@ -1351,8 +1220,8 @@ async function runCrawler() {
 
           if (!detailParamsText && ocrText) {
             const ocrParamPairs = extractParamPairsFromOcrText(ocrText);
-            if (item.title.includes('大人糖')) {
-              ocrParamPairs.push(['品牌', '大人糖']);
+            if (/(?:醉清风|谜姬)/.test(item.title)) {
+              ocrParamPairs.push(['品牌', '醉清风-谜姬']);
             }
             rawParamPairTotal += ocrParamPairs.length;
             if (ocrParamPairs.length > 0) paramSectionHitCount++;

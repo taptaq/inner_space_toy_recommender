@@ -15,6 +15,14 @@ import {
   scrapeParamPairsFromIceContext,
   scrapeParamPairsInPage,
 } from './param-extraction';
+import {
+  buildReviewBufferLookup,
+  findCachedReviewBufferEntry,
+  indexReviewBufferEntry,
+  loadReviewBufferEntries,
+  mergeCachedReviewBufferEntry,
+  type ReviewBufferEntry,
+} from '../shared/review-buffer-cache';
 import { tryRevealTmallParamTabs } from './tmall-param-ui';
 
 dotenv.config();
@@ -271,7 +279,7 @@ async function ocrWithQwenVL(imageUrls: string[], prompt: string = TOY_DETAIL_OC
 }
 
 /**
- * 使用 GLM-4.6V-FlashX 进行视觉分析
+ * 使用 glm-4.6v 进行视觉分析
  */
 async function ocrWithGLMV(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_PROMPT): Promise<string> {
   const apiKey = process.env.GLM_API_KEY;
@@ -289,7 +297,7 @@ async function ocrWithGLMV(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_
   });
 
   const response = await glm.chat.completions.create({
-    model: 'GLM-4.6V-FlashX',
+    model: 'glm-4.6v',
     messages: [{ role: 'user', content }],
     temperature: 0.1,
   });
@@ -320,7 +328,7 @@ async function orchestrateOCR(
     }
   }
 
-  console.log(`  [识别] 启动 GLM-4.6V-FLASHX 分辨能力进行首轮解析...`);
+  console.log(`  [识别] 启动 glm-4.6v 分辨能力进行首轮解析...`);
   try {
     const result = await ocrWithGLMV(imageUrls, prompt);
     if (result && result.length > 50) {
@@ -739,7 +747,10 @@ async function openDetailByClickingListItem(page: any, context: any, item: any):
 async function runCrawler() {
   console.log('--- 启动 Playwright 无头抓取引擎 [Target: 小怪兽 Tmall] ---');
   const listPriceCache = loadListPriceCache();
+  const existingBufferEntries = loadReviewBufferEntries(BUFFER_PATH);
+  const reviewBufferLookup = buildReviewBufferLookup(existingBufferEntries, extractTmallItemId);
   console.log(`--- 列表价格缓存已加载: ${Object.keys(listPriceCache).length} 条 ---`);
+  console.log(`--- 详情缓存已加载: ${existingBufferEntries.length} 条，本次可复用 ${reviewBufferLookup.size} 个索引键 ---`);
 
   const browser = await chromium.launch({
     headless: false,
@@ -1107,12 +1118,40 @@ async function runCrawler() {
     console.log(`\n[阶段二] 搜索完成。共汇总 ${listItems.length} 个有效商品，开始逐一访问详情...`);
 
     const targetItems = listItems.slice(0, MAX_ITEMS);
-    const bufferData = [];
+    const bufferData: ReviewBufferEntry[] = [];
+    let skippedByCache = 0;
     console.log(`[缓冲] 本次目标商品数: ${targetItems.length}`);
 
     for (let i = 0; i < targetItems.length; i++) {
       const item = targetItems[i];
       console.log(`\n[探测] (${i + 1}/${targetItems.length}) ${item.title}`);
+
+      const cachedEntry = findCachedReviewBufferEntry(
+        reviewBufferLookup,
+        {
+          itemId: item.itemId,
+          href: item.href,
+          title: item.title,
+        },
+        extractTmallItemId,
+      );
+      if (cachedEntry) {
+        const reusedEntry = mergeCachedReviewBufferEntry(cachedEntry, {
+          sourceUrl: choosePreferredDetailUrl(item.href),
+          title: item.title,
+          price: item.price ?? null,
+          coverImage: item.coverImage,
+          genderHint: guessGender(item.title),
+          imagePlaceholder: 'bg-gradient-to-br from-pink-900/40 to-rose-900/40',
+        });
+        bufferData.push(reusedEntry);
+        indexReviewBufferEntry(reviewBufferLookup, reusedEntry, extractTmallItemId);
+        skippedByCache++;
+        persistReviewBuffer(bufferData);
+        console.log(`  [缓冲命中] 已复用本地缓存并跳过详情抓取 (${skippedByCache}) ${item.title}`);
+        await page.waitForTimeout(DELAY_BETWEEN_PAGES);
+        continue;
+      }
 
       let ocrText = '';
       let detailParamsText = '';
@@ -1433,9 +1472,7 @@ async function runCrawler() {
         }
       }
 
-      bufferData.push({
-        listUrl: item.href,
-        listPageUrl: item.listPageUrl,
+      const nextEntry: ReviewBufferEntry = {
         sourceUrl: choosePreferredDetailUrl(finalDetailUrl, item.href),
         name: item.title,
         price: item.price ?? null,
@@ -1444,7 +1481,9 @@ async function runCrawler() {
         rawDescription: sanitizeRawDescriptionText(ocrText) || '信息未获取',
         imagePlaceholder: 'bg-gradient-to-br from-pink-900/40 to-rose-900/40',
         isReviewed: false,
-      });
+      };
+      bufferData.push(nextEntry);
+      indexReviewBufferEntry(reviewBufferLookup, nextEntry, extractTmallItemId);
       persistReviewBuffer(bufferData);
       console.log(`  [缓冲] 已写入 (${bufferData.length}/${targetItems.length}) ${item.title}`);
 
@@ -1452,7 +1491,7 @@ async function runCrawler() {
     }
 
     persistReviewBuffer(bufferData);
-    console.log(`[缓冲] 最终写入 ${bufferData.length} 条，目标 ${targetItems.length} 条`);
+    console.log(`[缓冲] 最终写入 ${bufferData.length} 条，目标 ${targetItems.length} 条，缓存跳过 ${skippedByCache} 条`);
     console.log(`\n--- 抓取完成，数据存入: ${BUFFER_PATH} ---`);
     await runCleaner();
   } catch (error) {

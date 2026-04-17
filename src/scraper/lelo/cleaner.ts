@@ -36,7 +36,7 @@ try {
 }
 
 async function callGlmFallback(prompt: string) {
-  console.log('⚠️ [Fallback] 正在切换至 GLM-4.6V-FLASHX 兜底链路...');
+  console.log('⚠️ [Fallback] 正在切换至 glm-4.6v 兜底链路...');
   const apiKey = process.env.GLM_API_KEY;
   if (!apiKey) throw new Error('GLM_API_KEY 未配置');
 
@@ -46,7 +46,7 @@ async function callGlmFallback(prompt: string) {
   });
 
   const response = await glm.chat.completions.create({
-    model: 'GLM-4.6V-FlashX',
+    model: 'glm-4.6v',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.1,
   });
@@ -93,6 +93,19 @@ const mapAppearance = (raw: string): string => {
   return 'normal';
 };
 
+const isPlaceholderProductName = (value: string): boolean => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return true;
+  return [
+    '未知产品',
+    '未知商品',
+    '未命名产品',
+    '未命名商品',
+    '无标题',
+    'unknown product',
+  ].includes(normalized);
+};
+
 export async function runCleaner() {
   console.log('\n======================================================');
   console.log('--- 启动 AI 降维清洗与数据库注入模块 [Phase 4] ---');
@@ -131,6 +144,10 @@ export async function runCleaner() {
   for (const item of bufferData) {
     if (item.isReviewed) {
       console.log(`[跳过] 商品 ${item.name} 已被标记为已审核。`);
+      continue;
+    }
+    if (isPlaceholderProductName(item.name)) {
+      console.log(`[跳过] 商品名无效 (${item.name || 'empty'})，不执行清洗与入库。`);
       continue;
     }
 
@@ -249,6 +266,7 @@ ${item.rawDescription}
          gender:        mapGender(item.genderHint || parsedSpecs.gender || parsedSpecs.targetAudience || 'unisex'),
          material:      parsedSpecs.material     || '未知',
          image_url:     processedProduct.image   || null,
+         raw_description: item.rawDescription || null,
          updated_at:    new Date(),
       };
 

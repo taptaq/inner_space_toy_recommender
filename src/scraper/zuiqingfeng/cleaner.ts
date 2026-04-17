@@ -11,14 +11,54 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const BUFFER_PATH = path.resolve(__dirname, '../../data/review-buffer.json');
-const CLEANED_PATH = path.resolve(__dirname, '../../data/cleaned-data.json');
+const BUFFER_PATH = path.resolve(__dirname, '../../data/zuiqingfeng-review-buffer.json');
+const CLEANED_PATH = path.resolve(__dirname, '../../data/zuiqingfeng-cleaned-data.json');
 
 // --- Prisma 7 适配器初始化 ---
 // 使用 DIRECT_URL (5432) 绕过连接池，防止在 AI 等待期间因闲置被 PgBouncer 断开
 const pool = new pg.Pool({ connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isTransientDbError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /Connection terminated|ECONNRESET|server closed the connection|terminating connection|Can't reach database|P1001|P1017/i.test(message);
+};
+
+async function reconnectPrisma() {
+  await prisma.$disconnect().catch(() => {});
+  await sleep(800);
+  await prisma.$connect();
+}
+
+async function ensurePrismaConnection() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (error) {
+    if (!isTransientDbError(error)) throw error;
+    console.warn('[DB] 检测到连接已断开，正在重建 Prisma 连接...');
+    await reconnectPrisma();
+  }
+}
+
+async function withDbRetry<T>(label: string, action: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await ensurePrismaConnection();
+      return await action();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientDbError(error) || attempt === 3) break;
+      console.warn(`[DB] ${label} 遇到瞬断，重连后重试 (${attempt}/3)...`);
+      await reconnectPrisma();
+      await sleep(1000 * attempt);
+    }
+  }
+  throw lastError;
+}
 
 // 设置可变的 OpenAI 客户端
 let openai: OpenAI | null = null;
@@ -475,7 +515,7 @@ const mergeSpecsWithDefaults = (defaults: any, parsed: any) => ({
 
 export async function runCleaner() {
   console.log('\n======================================================');
-  console.log('--- 启动 大人糖 (Darentang) AI 清洗与入库模块 ---');
+  console.log('--- 启动 醉清风-谜姬 (Zuiqingfeng) AI 清洗与入库模块 ---');
   console.log('======================================================');
 
   // --- 数据库健康检查 ---
@@ -501,27 +541,27 @@ export async function runCleaner() {
     return;
   }
 
-  // --- 预搜索 大人糖 在 competitors 表中的 ID ---
+  // --- 预搜索 醉清风-谜姬 在 competitors 表中的 ID ---
   let brandId: string | null = null;
   try {
     const competitor = await prisma.competitors.findFirst({
-      where: { name: { contains: '大人糖', mode: 'insensitive' } }
+      where: { name: { contains: '醉清风-谜姬', mode: 'insensitive' } }
     });
     if (competitor) {
       brandId = competitor.id;
-      console.log(`[关联] 已定位 大人糖 竞品 ID: ${brandId}`);
+      console.log(`[关联] 已定位 醉清风-谜姬 竞品 ID: ${brandId}`);
     } else {
         // 如果不存在，尝试创建一个基础记录
-        console.log('[创建] 数据库中未发现「大人糖」，正在初始化记录...');
+        console.log('[创建] 数据库中未发现「醉清风-谜姬」，正在初始化记录...');
         const newBrand = await prisma.competitors.create({
             data: {
-                name: '大人糖',
-                description: '大人糖（Darentang）是中国原创情趣品牌，致力于为女性提供高品质、审美感强的成人玩具。',
+                name: '醉清风-谜姬',
+                description: '醉清风-谜姬是一个综合情趣用品店铺品牌抓取源，覆盖男用器具、女用玩具、服饰和护理耗材等品类。',
                 is_domestic: true
             }
         });
         brandId = newBrand.id;
-        console.log(`[创建] 已创建 大人糖 竞品记录 (ID: ${brandId})`);
+        console.log(`[创建] 已创建 醉清风-谜姬 竞品记录 (ID: ${brandId})`);
     }
   } catch (err) {
     console.warn('[警告] Competitors 关联失败，将继续非关联抓取。');
@@ -552,7 +592,7 @@ export async function runCleaner() {
     
     const prompt = productKind === 'care'
       ? `
-你是一个个人护理耗材商品目录数据清洗助手。现有抓取至「大人糖 (Darentang)」天猫店的安全套/润滑液/护理用品类商品描述：
+你是一个个人护理耗材商品目录数据清洗助手。现有抓取至「醉清风-谜姬 (Zuiqingfeng)」天猫店的安全套/润滑液/护理用品类商品描述：
 
 【商品名称】: ${canonicalName}
 【原始价格抓取】: ${item.price ?? ''}
@@ -577,7 +617,7 @@ ${item.rawDescription}
 `
       : productKind === 'pad'
       ? `
-你是一个家居床品防护垫商品目录数据清洗助手。现有抓取至「大人糖 (Darentang)」天猫店的床事垫/防水垫/护理垫类商品描述：
+你是一个家居床品防护垫商品目录数据清洗助手。现有抓取至「醉清风-谜姬 (Zuiqingfeng)」天猫店的床事垫/防水垫/护理垫类商品描述：
 
 【商品名称】: ${canonicalName}
 【原始价格抓取】: ${item.price ?? ''}
@@ -602,7 +642,7 @@ ${item.rawDescription}
 `
       : productKind === 'apparel'
       ? `
-你是一个服装商品目录数据清洗助手。现有抓取至「大人糖 (Darentang)」天猫店的服饰类商品描述：
+你是一个服装商品目录数据清洗助手。现有抓取至「醉清风-谜姬 (Zuiqingfeng)」天猫店的服饰类商品描述：
 
 【商品名称】: ${canonicalName}
 【原始价格抓取】: ${item.price ?? ''}
@@ -626,7 +666,7 @@ ${item.rawDescription}
 }
 `
       : `
-你是一个专注处理个人护理器具参数的数据拆解机器人。现有抓取至「大人糖 (Darentang)」天猫店的纯文本描述：
+你是一个专注处理个人护理器具参数的数据拆解机器人。现有抓取至「醉清风-谜姬 (Zuiqingfeng)」天猫店的纯文本描述：
 
 【商品名称】: ${canonicalName}
 【原始价格抓取】: ${item.price ?? ''}
@@ -636,7 +676,7 @@ ${item.rawDescription}
 """
 
 请提取相关特征。结果必须是一个绝对合法的 JSON 对象。严禁返回任何 markdown 标记。
-注意：大人糖产品多为女性向。
+注意：醉清风-谜姬店铺是混合类目，不要默认判成女性向，也不要把服饰或护理耗材误判成器具。
 字段要求：
 {
   "max_db": 50,
@@ -645,7 +685,7 @@ ${item.rawDescription}
   "physical_form": "external",
   "motor_type": "gentle",
   "function_tags": ["静音", "便携"],
-  "gender": "${item.genderHint || 'female'}",
+  "gender": "${item.genderHint || 'male'}",
   "material": "${defaultSpecs.material}",
   "price_rmb": ${defaultSpecs.price_rmb ?? 'null'}
 }
@@ -690,7 +730,7 @@ ${item.rawDescription}
       const explicitGender = inferExplicitGender(`${canonicalName}\n${item.name || ''}\n${item.rawDescription || ''}`);
       const resolvedGender = productKind === 'care'
         ? 'unisex'
-        : mapGender(explicitGender || item.genderHint || parsedSpecs.gender || 'female');
+        : mapGender(explicitGender || item.genderHint || parsedSpecs.gender || 'male');
       parsedSpecs.gender = resolvedGender;
       
       const processedProduct = {
@@ -717,36 +757,38 @@ ${item.rawDescription}
         competitor_id: brandId
       };
 
-      const existingProduct = await prisma.products.findFirst({ where: { name: canonicalName } });
-      let originalId: string;
-      if (existingProduct) {
-        const u = await prisma.products.update({ where: { id: existingProduct.id }, data: productPayload });
-        originalId = u.id;
-      } else {
-        const c = await prisma.products.create({ data: productPayload });
-        originalId = c.id;
-      }
-
       // 2. Recommender_toys 表
-      const toyPayload = {
-         original_id:   originalId,
-         name:          canonicalName,
-         brand:         '大人糖',                                          
-         price:         numericPrice,
-         max_db:        productKind === 'toy' ? (parsedSpecs.max_db ?? 50) : null,
-         waterproof:    parsedSpecs.waterproof || null,
-         appearance:    mapAppearance(parsedSpecs.appearance),
-         physical_form: mapPhysicalForm(parsedSpecs.physical_form),
-         motor_type:    mapMotorType(parsedSpecs.motor_type),
-         gender:        resolvedGender,
-         material:      parsedSpecs.material || inferDefaultMaterial(canonicalName, item.rawDescription),
-         image_url:     item.coverImage || null,
-         raw_description: item.rawDescription || null,
-         updated_at:    new Date(),
-      };
+      await withDbRetry(`同步商品 ${canonicalName}`, async () => {
+        const existingProduct = await prisma.products.findFirst({ where: { name: canonicalName } });
+        let originalId: string;
+        if (existingProduct) {
+          const u = await prisma.products.update({ where: { id: existingProduct.id }, data: productPayload });
+          originalId = u.id;
+        } else {
+          const c = await prisma.products.create({ data: productPayload });
+          originalId = c.id;
+        }
 
-      await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-      await prisma.recommender_toys.create({ data: toyPayload });
+        const toyPayload = {
+           original_id:   originalId,
+           name:          canonicalName,
+           brand:         '醉清风-谜姬',
+           price:         numericPrice,
+           max_db:        productKind === 'toy' ? (parsedSpecs.max_db ?? 50) : null,
+           waterproof:    parsedSpecs.waterproof || null,
+           appearance:    mapAppearance(parsedSpecs.appearance),
+           physical_form: mapPhysicalForm(parsedSpecs.physical_form),
+           motor_type:    mapMotorType(parsedSpecs.motor_type),
+           gender:        resolvedGender,
+           material:      parsedSpecs.material || inferDefaultMaterial(canonicalName, item.rawDescription),
+           image_url:     item.coverImage || null,
+           raw_description: item.rawDescription || null,
+           updated_at:    new Date(),
+        };
+
+        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_toys.create({ data: toyPayload });
+      });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);
 
@@ -760,7 +802,7 @@ ${item.rawDescription}
   fs.writeFileSync(CLEANED_PATH, JSON.stringify(cleanedData, null, 2));
   
   await prisma.$disconnect();
-  console.log(`\n--- 大人糖 数据流水线任务结束 ---`);
+  console.log(`\n--- 醉清风-谜姬 数据流水线任务结束 ---`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

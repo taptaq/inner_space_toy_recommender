@@ -70,7 +70,7 @@ export function ProductCardContent({ product }: { product: Product }) {
 
         {product.tags && product.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-4">
-            {product.tags.slice(0, 3).map((tag, index) => (
+            {product.tags.map((tag, index) => (
               <span
                 key={index}
                 className="text-[9px] bg-indigo-500/10 text-indigo-300/70 border border-indigo-500/20 px-1.5 py-0.5 rounded-md"

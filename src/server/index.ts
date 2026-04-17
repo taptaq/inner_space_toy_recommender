@@ -28,7 +28,7 @@ app.get('/api/recommender/toys', async (req, res) => {
       SELECT 
         t.id, t.name, t.price, t.max_db, t.waterproof, 
         t.appearance, t.physical_form, t.motor_type, t.gender, 
-        t.brand, t.material, t.image_url,
+        t.brand, t.material, t.image_url, t.raw_description,
         p.link, p.tags, p.persona_analysis,
         c.is_domestic
       FROM public.recommender_toys t
@@ -50,6 +50,7 @@ app.get('/api/recommender/toys', async (req, res) => {
       gender: t.gender,
       brand: t.brand || '探索品牌',
       material: t.material || '亲肤材质',
+      rawDescription: t.raw_description || null,
       imagePlaceholder: t.image_url || 'bg-gradient-to-br from-indigo-900/40 to-blue-900/40',
       link: t.link,
       sourceUrl: t.link,

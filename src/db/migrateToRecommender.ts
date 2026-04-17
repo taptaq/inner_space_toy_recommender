@@ -39,6 +39,7 @@ async function migrate() {
         brand TEXT,
         material TEXT,
         image_url TEXT,
+        raw_description TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -94,17 +95,18 @@ async function migrate() {
         gender: row.gender === 'Male' ? 'male' : row.gender === 'Female' ? 'female' : 'unisex',
         brand: row.brand_name || '探索品牌',
         material: specs.material || '亲肤硅胶',
-        image_url: row.image || null
+        image_url: row.image || null,
+        raw_description: null,
       };
 
       await pool.query(`
         INSERT INTO public.recommender_toys 
-        (original_id, name, price, max_db, waterproof, appearance, physical_form, motor_type, gender, brand, material, image_url)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        (original_id, name, price, max_db, waterproof, appearance, physical_form, motor_type, gender, brand, material, image_url, raw_description)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       `, [
         data.original_id, data.name, data.price, data.max_db, 
         data.waterproof, data.appearance, data.physical_form, 
-        data.motor_type, data.gender, data.brand, data.material, data.image_url
+        data.motor_type, data.gender, data.brand, data.material, data.image_url, data.raw_description
       ]);
     }
 

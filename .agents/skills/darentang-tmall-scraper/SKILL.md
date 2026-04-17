@@ -1,18 +1,20 @@
 ---
 name: darentang-tmall-scraper
 description: >-
-  Run, debug, or extend the Darentang (大人糖) / Xiaoguaishou (小怪兽) Tmall
-  scraper pattern in inner_space_toy_recommender. Use when working on
-  src/scraper/darentang or src/scraper/xiaoguaishou, debug-param-chain.ts,
-  TMALL_COOKIE, Playwright detail-page capture, ProductShelf/cardContainer
-  shop-list pages, image/detail OCR, local tag extraction from rawDescription,
-  or Tmall parameter extraction including compact "参数信息" text blocks. Also
-  use when the user asks to generate, scaffold, copy, or clone a brand-specific
-  product scraping directory under src/scraper/<brand-slug> from the current
-  Tmall scraper pattern.
+  Run, debug, or extend the Darentang (大人糖) / Xiaoguaishou (小怪兽) /
+  Wangyichunfeng (网易春风) / Zuiqingfeng (醉清风-谜姬) Tmall scraper pattern in
+  inner_space_toy_recommender. Use when working on src/scraper/darentang,
+  src/scraper/xiaoguaishou, src/scraper/wangyichunfeng, or
+  src/scraper/zuiqingfeng, debug-param-chain.ts, TMALL_COOKIE, Playwright
+  detail-page capture, ProductShelf/cardContainer shop-list pages, legacy
+  .J_TItems search/category pages, image/detail OCR, local tag extraction from
+  rawDescription, or Tmall parameter extraction including compact "参数信息"
+  text blocks. Also use when the user asks to generate, scaffold, copy, or
+  clone a brand-specific product scraping directory under src/scraper/<brand-slug>
+  from the current Tmall scraper pattern.
 ---
 
-# 大人糖天猫抓取 Skill
+# 天猫品牌抓取 Skill
 
 用于两类任务：
 
@@ -23,6 +25,8 @@ description: >-
 
 - 主流程：[src/scraper/darentang/crawler.ts](src/scraper/darentang/crawler.ts)
 - 小怪兽主流程：[src/scraper/xiaoguaishou/crawler.ts](src/scraper/xiaoguaishou/crawler.ts)
+- 网易春风主流程：[src/scraper/wangyichunfeng/crawler.ts](src/scraper/wangyichunfeng/crawler.ts)
+- 醉清风-谜姬主流程：[src/scraper/zuiqingfeng/crawler.ts](src/scraper/zuiqingfeng/crawler.ts)
 - 参数调试入口：[src/scraper/darentang/debug-param-chain.ts](src/scraper/darentang/debug-param-chain.ts)
 - 参数解析：[src/scraper/darentang/param-extraction.ts](src/scraper/darentang/param-extraction.ts)
 - 参数区 Tab 展开：[src/scraper/darentang/tmall-param-ui.ts](src/scraper/darentang/tmall-param-ui.ts)
@@ -46,7 +50,7 @@ description: >-
 
 ## 这条链路现在怎么工作
 
-1. `crawler.ts` 从店铺搜索页或新版店铺首页货架流收集商品卡片。
+1. `crawler.ts` 从店铺搜索页、旧版类目页或新版店铺首页货架流收集商品卡片。
 2. 进入详情页后监听 `response`，积累 `alicdn` 图片 URL。
 3. 图文详情优先走 `orchestrateOCR()`；玩具类默认 `GLM-4.6V` 优先、`Qwen-VL` 兜底，服饰类、护理耗材类、床品防护垫类使用中性目录 prompt 并改为 `Qwen-VL` 优先，降低敏感词拦截和误判。
 4. 参数信息按四层兜底合并：
@@ -121,10 +125,12 @@ description: >-
    - `name` 为空跳过不入库。
    - `function_tags` 合并本地 `rawDescription` 标签、模型标签和默认标签，并过滤 `未提及`。
    - 性别先用本地显式关键词修正，再落库；男用飞机杯等为 `male`，护理耗材为 `unisex`。
+   - AI 清洗后再写库时，写入前先做 `SELECT 1` 健康检查；遇到 `Connection terminated unexpectedly` / `ECONNRESET` 等瞬断要 `$disconnect()` + `$connect()` 后最多重试 3 次，避免模型等待期间数据库空闲连接被服务端断开。
 3. 商品类型规则
    - `TOY`: 可解析 `max_db`，无明确分贝时用玩具默认值。
    - `APPAREL` / `CARE` / `PAD`: `max_db = null`。
    - `CARE`: `gender = unisex`。
+   - 品类判断优先看 `canonicalName` / 列表标题；如果标题命中 `训练器、飞机杯、跳蛋、按摩器、震动棒、自慰器、倒模、前列腺、龟头、阴茎、器具、玩具` 等主商品词，必须判为 `TOY`，不要被 `rawDescription` 套餐/赠品里的 `润滑液、玻尿酸、安全套` 带偏。
    - 新品牌若有其它大类，先增加分类函数和 OCR prompt，再同步 cleaner 默认规格。
 4. 参数字段
    - 保留 `材质 / 面料材质 / 材料` → `材质`。
@@ -203,11 +209,15 @@ description: >-
 # 全量爬取
 npm run scrape:darentang
 npm run scrape:xiaoguaishou
+npm run scrape:wangyichunfeng
+npm run scrape:zuiqingfeng
 
 # 只验证某个详情页的参数链路
 npm run debug:param-chain
 npm run debug:param-chain -- "https://detail.tmall.com/item.htm?id=..."
 npm run debug:param-chain:xiaoguaishou -- "https://detail.tmall.com/item.htm?id=..."
+npm run debug:param-chain:wangyichunfeng -- "https://detail.tmall.com/item.htm?id=..."
+npm run debug:param-chain:zuiqingfeng -- "https://detail.tmall.com/item.htm?id=..."
 
 # 类型检查
 npx tsc --noEmit
@@ -217,11 +227,16 @@ npx tsc --noEmit
 
 - `src/scraper/darentang`: 大人糖天猫，入口 `npm run scrape:darentang`，数据文件 `src/data/review-buffer.json` / `src/data/cleaned-data.json`。
 - `src/scraper/xiaoguaishou`: 小怪兽天猫，入口 `npm run scrape:xiaoguaishou`，列表地址 `https://xiaoguaishou.tmall.com/shop/view_shop.htm?appUid=RAzN8HWNuv49Lh1ynGgZvWJQwrYsuoBnCj1DnZKDSJGqWWNt187&spm=a21n57.1.hoverItem.2`，当前是新版 `ProductShelf/cardContainer` 货架流，滚动到底约 35 个商品，数据文件 `src/data/xiaoguaishou-review-buffer.json` / `src/data/xiaoguaishou-cleaned-data.json`，价格缓存 `src/data/xiaoguaishou-list-price-cache.json`。
+- `src/scraper/wangyichunfeng`: 网易春风天猫，入口 `npm run scrape:wangyichunfeng`，列表地址 `https://wangyichunfeng.tmall.com/search.htm?spm=a1z10.5-b.w5842-25615141197.2.854c33496fxx1i&search=y`，当前是旧版 `.J_TItems dl.item` 搜索页，实测首屏 8 个主商品、1 页结果，点击商品卡片后会补出带 `pisk` 的详情 URL，数据文件 `src/data/wangyichunfeng-review-buffer.json` / `src/data/wangyichunfeng-cleaned-data.json`，价格缓存 `src/data/wangyichunfeng-list-price-cache.json`。
+- `src/scraper/zuiqingfeng`: 醉清风-谜姬天猫，入口 `npm run scrape:zuiqingfeng`，列表地址 `https://zuiqingfeng.tmall.com/category.htm?spm=a1z10.5-b-s.w4011-14956746985.1.52c11a13kjTwIT`，当前是旧版 `.J_TItems dl.item` 类目页，实测主列表首屏约 `68` 个商品、分页状态 `1/40`，页面下方还有“本店内推荐”，抓取时只取主列表区，数据文件 `src/data/zuiqingfeng-review-buffer.json` / `src/data/zuiqingfeng-cleaned-data.json`，价格缓存 `src/data/zuiqingfeng-list-price-cache.json`。
 
 ## 环境变量
 
 - `TMALL_COOKIE`: 高优先级必需，过期会掉登录页或风控页
 - `DARENTANG_MAX_ITEMS`: 本次最多进入详情并入库的商品数，默认 `200`
+- `XIAOGUAISHOU_MAX_ITEMS`: 小怪兽本次最多进入详情并入库的商品数，默认 `200`
+- `WANGYICHUNFENG_MAX_ITEMS`: 网易春风本次最多进入详情并入库的商品数，默认 `200`
+- `ZUIQINGFENG_MAX_ITEMS`: 醉清风-谜姬本次最多进入详情并入库的商品数，默认 `200`
 - `GLM_API_KEY`: 详情图文主识别
 - `QWEN_API_KEY`: GLM 失败时兜底
 - `DEEPSEEK_API_KEY`: 图片不足时的文本整理兜底
@@ -234,6 +249,7 @@ npx tsc --noEmit
 2. 如果 `紧凑文本参数候选` 大于 0，优先检查 `normalizeParamKey()` 或白名单顺序。
 3. 如果图文失败但参数有值，优先看图片 URL 是否抓到，以及 `orchestrateOCR()` 的 API key。
 4. 如果详情页直接落登录/验证码，先更新 `TMALL_COOKIE`，不要先改解析器。
+5. 如果 cleaner 报 `Connection terminated unexpectedly`，通常是 AI 等待期间 Postgres/PgBouncer 关闭了空闲连接；优先给写库阶段加连接健康检查和瞬断重试，不要重新跑 OCR。
 
 ## 修改约定
 

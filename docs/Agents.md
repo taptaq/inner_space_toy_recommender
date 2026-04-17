@@ -20,7 +20,7 @@
 *   **级联降级策略 (Cascade Fallback)**：
     1.  🥇 **首选 (Primary)**: DeepSeek (`deepseek-chat`)
     2.  🥈 **次选 (Secondary)**: Qwen (`qwen-turbo`)
-    3.  🥉 **全息补偿 (Tertiary)**: glm (`glm-4.6V-flashX`)
+    3.  🥉 **全息补偿 (Tertiary)**: glm (`glm-4.6V`)
 
 ---
 

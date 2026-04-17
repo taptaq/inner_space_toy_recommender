@@ -16,8 +16,12 @@
     "lint": "tsc --noEmit",
     "debug:param-chain": "tsx -r dotenv/config src/scraper/darentang/debug-param-chain.ts",
     "debug:param-chain:xiaoguaishou": "tsx -r dotenv/config src/scraper/xiaoguaishou/debug-param-chain.ts",
+    "debug:param-chain:wangyichunfeng": "tsx -r dotenv/config src/scraper/wangyichunfeng/debug-param-chain.ts",
+    "debug:param-chain:zuiqingfeng": "tsx -r dotenv/config src/scraper/zuiqingfeng/debug-param-chain.ts",
     "scrape:darentang": "tsx -r dotenv/config src/scraper/darentang/crawler.ts",
-    "scrape:xiaoguaishou": "tsx -r dotenv/config src/scraper/xiaoguaishou/crawler.ts"
+    "scrape:xiaoguaishou": "tsx -r dotenv/config src/scraper/xiaoguaishou/crawler.ts",
+    "scrape:wangyichunfeng": "tsx -r dotenv/config src/scraper/wangyichunfeng/crawler.ts",
+    "scrape:zuiqingfeng": "tsx -r dotenv/config src/scraper/zuiqingfeng/crawler.ts"
   },
   "dependencies": {
     "@esbuild/darwin-x64": "^0.28.0",
