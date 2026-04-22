@@ -26,6 +26,7 @@
     "scrape:iroha": "tsx -r dotenv/config src/scraper/iroha/crawler.ts",
     "scrape:kistoy": "tsx -r dotenv/config src/scraper/kistoy/crawler.ts",
     "scrape:lovense-official": "tsx -r dotenv/config src/scraper/lovense-official/crawler.ts",
+    "scrape:nomitang-official": "tsx -r dotenv/config src/scraper/nomitang-official/crawler.ts",
     "scrape:tenga": "tsx -r dotenv/config src/scraper/tenga/crawler.ts",
     "scrape:svakom-official": "tsx -r dotenv/config src/scraper/svakom-official/crawler.ts",
     "scrape:wevibe": "tsx -r dotenv/config src/scraper/wevibe/crawler.ts",
