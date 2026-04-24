@@ -6,6 +6,29 @@ import type { BackupCandidate } from "../lib/recommendation-results";
 
 type ResultsBackupProduct = BackupCandidate;
 
+const MAX_RELAXATION_TIPS = 3;
+const MAX_SHOPPING_GUIDANCE_WITH_RELAXATION = 3;
+const MAX_SHOPPING_GUIDANCE_ONLY = 5;
+
+function normalizeGuidanceItem(item: string) {
+  return item.replace(/\s+/g, " ").trim();
+}
+
+function dedupeGuidanceItems(items: string[]) {
+  const seen = new Set<string>();
+
+  return items.reduce<string[]>((result, item) => {
+    const normalizedItem = normalizeGuidanceItem(item);
+    if (!normalizedItem || seen.has(normalizedItem)) {
+      return result;
+    }
+
+    seen.add(normalizedItem);
+    result.push(normalizedItem);
+    return result;
+  }, []);
+}
+
 function renderProductImage(
   product: Pick<RankedProduct, "imagePlaceholder" | "name">,
   iconClassName: string,
@@ -70,8 +93,21 @@ export function ResultsPage({
   recommendationTips: string[];
   onReset: () => void;
 }) {
-  const guidanceItems =
-    shoppingGuidance.length > 0 ? shoppingGuidance : recommendationTips;
+  const relaxationTips = dedupeGuidanceItems(recommendationTips).slice(
+    0,
+    MAX_RELAXATION_TIPS,
+  );
+  const relaxationTipSet = new Set(relaxationTips.map(normalizeGuidanceItem));
+  const shoppingGuidanceItems = dedupeGuidanceItems(shoppingGuidance)
+    .filter((item) => !relaxationTipSet.has(normalizeGuidanceItem(item)))
+    .slice(
+      0,
+      relaxationTips.length > 0
+        ? MAX_SHOPPING_GUIDANCE_WITH_RELAXATION
+        : MAX_SHOPPING_GUIDANCE_ONLY,
+    );
+  const hasGuidance =
+    relaxationTips.length > 0 || shoppingGuidanceItems.length > 0;
 
   return (
     <motion.div
@@ -99,7 +135,7 @@ export function ResultsPage({
         </p>
       </div>
 
-      {guidanceItems.length > 0 && (
+      {hasGuidance && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -107,19 +143,47 @@ export function ResultsPage({
         >
           <div className="flex items-center gap-2 mb-2 text-amber-400">
             <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-medium tracking-wide">选购建议</span>
+            <span className="text-sm font-medium tracking-wide">结果提示</span>
           </div>
-          <ul className="space-y-2">
-            {guidanceItems.map((tip, index) => (
-              <li
-                key={index}
-                className="flex items-start gap-2 text-sm leading-6 text-amber-100/85"
-              >
-                <span className="mt-1 shrink-0 text-amber-300">•</span>
-                <span className="break-words">{tip}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-4">
+            {relaxationTips.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-medium text-amber-200">
+                  放宽条件建议
+                </h3>
+                <ul className="space-y-2">
+                  {relaxationTips.map((tip, index) => (
+                    <li
+                      key={`relaxation-${index}`}
+                      className="flex items-start gap-2 text-sm leading-6 text-amber-100/85"
+                    >
+                      <span className="mt-1 shrink-0 text-amber-300">•</span>
+                      <span className="break-words">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {shoppingGuidanceItems.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-medium text-amber-200">
+                  选购建议
+                </h3>
+                <ul className="space-y-2">
+                  {shoppingGuidanceItems.map((tip, index) => (
+                    <li
+                      key={`shopping-${index}`}
+                      className="flex items-start gap-2 text-sm leading-6 text-amber-100/85"
+                    >
+                      <span className="mt-1 shrink-0 text-amber-300">•</span>
+                      <span className="break-words">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
 
@@ -136,7 +200,7 @@ export function ResultsPage({
               <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <span className="inline-block px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-300 text-[10px] font-mono mb-2">
-                    算法最匹配 (TOP 1)
+                    算法最匹配（第 1 推荐）
                   </span>
                   <h3 className="break-words text-lg font-medium leading-snug text-white">
                     {topProducts[0].name}
