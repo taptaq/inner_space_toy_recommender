@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildBackupCandidates,
+  buildLocalBackupReason,
   buildLocalShoppingGuidance,
 } from "./recommendation-results.ts";
 
@@ -147,6 +148,23 @@ test("buildBackupCandidates excludes top 3 and prefers differentiated directions
   assert.deepEqual(result.map((item) => item.backupLabel), ["更静音", "更省预算"]);
 });
 
+test("buildLocalBackupReason returns the local backup reason for a label", () => {
+  assert.equal(
+    buildLocalBackupReason(
+      { id: "p4", name: "Quiet Pick", price: 349, maxDb: 40, waterproof: 5 } as any,
+      "更静音",
+    ),
+    "噪音约 40dB，适合更安静的环境",
+  );
+  assert.equal(
+    buildLocalBackupReason(
+      { id: "p5", name: "Budget Pick", price: 169, maxDb: 52, waterproof: 5 } as any,
+      "更省预算",
+    ),
+    "价格约 169 元，预算压力更小",
+  );
+});
+
 test("buildLocalShoppingGuidance returns concise advice for narrow candidate pools", () => {
   const result = buildLocalShoppingGuidance({
     answers: { tags: ["安静", "低调"], maxDb: 50, appearance: "high_disguise" } as any,
@@ -154,9 +172,46 @@ test("buildLocalShoppingGuidance returns concise advice for narrow candidate poo
     backupCandidates: [
       { id: "p4", backupLabel: "更静音", backupReason: "噪音约 40dB，适合更安静的环境" },
       { id: "p5", backupLabel: "更省预算", backupReason: "价格约 169 元，预算压力更小" },
+      { id: "p6", backupLabel: "更防水", backupReason: "防水约 IPX8，清洁维护更省心" },
+      { id: "p7", backupLabel: "更隐蔽", backupReason: "外观更利于日常收纳和隐蔽" },
+      { id: "p8", backupLabel: "更强劲", backupReason: "输出更直接，适合偏强反馈的使用场景" },
+      { id: "p9", backupLabel: "更温和", backupReason: "节奏更温和，适合慢慢进入状态" },
     ] as any,
   });
 
-  assert.ok(result.length >= 2);
+  assert.equal(result[0], "候选池比较窄，先看备选卡片，避免只盯着前三名。");
   assert.ok(result.some((line) => line.includes("静音")));
+  assert.equal(result.length, 5);
+  assert.deepEqual(result, [
+    "候选池比较窄，先看备选卡片，避免只盯着前三名。",
+    "你在意静音，优先比较标注为更静音的备选。",
+    "你也在意隐蔽性，可顺手看更隐蔽的替代方向。",
+    "更静音：噪音约 40dB，适合更安静的环境",
+    "更省预算：价格约 169 元，预算压力更小",
+  ]);
+});
+
+test("buildLocalShoppingGuidance trims to five lines in the wider pool branch too", () => {
+  const result = buildLocalShoppingGuidance({
+    answers: { tags: ["安静"], maxDb: 50, appearance: "normal" } as any,
+    filteredCount: 8,
+    backupCandidates: [
+      { id: "p4", backupLabel: "更静音", backupReason: "噪音约 40dB，适合更安静的环境" },
+      { id: "p5", backupLabel: "更省预算", backupReason: "价格约 169 元，预算压力更小" },
+      { id: "p6", backupLabel: "更防水", backupReason: "防水约 IPX8，清洁维护更省心" },
+      { id: "p7", backupLabel: "更隐蔽", backupReason: "外观更利于日常收纳和隐蔽" },
+      { id: "p8", backupLabel: "更强劲", backupReason: "输出更直接，适合偏强反馈的使用场景" },
+      { id: "p9", backupLabel: "更温和", backupReason: "节奏更温和，适合慢慢进入状态" },
+    ] as any,
+  });
+
+  assert.equal(result[0], "当前结果已经收窄，可以重点看差异化备选。");
+  assert.equal(result.length, 5);
+  assert.deepEqual(result, [
+    "当前结果已经收窄，可以重点看差异化备选。",
+    "你在意静音，优先比较标注为更静音的备选。",
+    "更静音：噪音约 40dB，适合更安静的环境",
+    "更省预算：价格约 169 元，预算压力更小",
+    "更防水：防水约 IPX8，清洁维护更省心",
+  ]);
 });
