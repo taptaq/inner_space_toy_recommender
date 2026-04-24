@@ -21,7 +21,6 @@ export type BackupCandidate = RecommendationRankedProduct & {
 type BackupDirection = {
   label: string;
   score: number;
-  reason: string;
 };
 
 function getMinMax(values: number[]) {
@@ -71,10 +70,6 @@ function buildDirection(product: RecommendationRankedProduct, pool: Recommendati
     options.push({
       label: "更静音",
       score: quietnessScore,
-      reason:
-        product.maxDb != null
-          ? `噪音约 ${product.maxDb}dB，适合更安静的使用环境`
-          : "噪音信息不足，但这条备选仍然偏向安静取向",
     });
   }
 
@@ -82,7 +77,6 @@ function buildDirection(product: RecommendationRankedProduct, pool: Recommendati
   options.push({
     label: "更省预算",
     score: budgetScore,
-    reason: `价格约 ${product.price} 元，作为预算替代更稳妥`,
   });
 
   if (product.waterproof != null) {
@@ -94,26 +88,17 @@ function buildDirection(product: RecommendationRankedProduct, pool: Recommendati
     options.push({
       label: "更防水",
       score: waterproofScore,
-      reason: `防水等级约 IPX${product.waterproof}，更适合需要冲洗的场景`,
     });
   }
 
   options.push({
     label: product.appearance === "high_disguise" ? "更隐蔽" : "更直观",
     score: product.appearance === "high_disguise" ? 0.7 : 0.3,
-    reason:
-      product.appearance === "high_disguise"
-        ? "外观更利于日常收纳和隐蔽"
-        : "造型更直接，适合不强调伪装的场景",
   });
 
   options.push({
     label: product.motorType === "strong" ? "更强劲" : "更温和",
     score: product.motorType === "strong" ? 0.7 : 0.55,
-    reason:
-      product.motorType === "strong"
-        ? "输出更直接，适合想要更明显反馈的使用场景"
-        : "节奏更温和，适合慢慢进入状态",
   });
 
   options.sort((a, b) => b.score - a.score);
@@ -163,17 +148,9 @@ export function buildBackupCandidates(
         ...product,
         backupLabel: direction.label,
         backupReason: buildLocalBackupReason(product, direction.label),
-        __directionScore: direction.score,
       };
     })
-    .filter((item): item is BackupCandidate & { __directionScore: number } => item != null)
-    .sort((a, b) => {
-      return (
-        b.__directionScore - a.__directionScore ||
-        b.score - a.score ||
-        a.price - b.price
-      );
-    });
+    .filter((item): item is BackupCandidate => item != null);
 
   const selected: BackupCandidate[] = [];
   const usedLabels = new Set<string>();
@@ -181,17 +158,15 @@ export function buildBackupCandidates(
   for (const candidate of candidates) {
     if (selected.length >= count) break;
     if (usedLabels.has(candidate.backupLabel)) continue;
-    const { __directionScore, ...cleanCandidate } = candidate;
-    selected.push(cleanCandidate);
-    usedLabels.add(cleanCandidate.backupLabel);
+    selected.push(candidate);
+    usedLabels.add(candidate.backupLabel);
   }
 
   if (selected.length < count) {
     for (const candidate of candidates) {
       if (selected.length >= count) break;
       if (selected.some((item) => item.id === candidate.id)) continue;
-      const { __directionScore, ...cleanCandidate } = candidate;
-      selected.push(cleanCandidate);
+      selected.push(candidate);
     }
   }
 
@@ -215,7 +190,7 @@ export function buildLocalShoppingGuidance({
     lines.push("当前结果已经收窄，可以重点看差异化备选。");
   }
 
-  if (answers.maxDb != null) {
+  if (answers.maxDb != null && answers.maxDb < 100) {
     lines.push("你在意静音，优先比较标注为更静音的备选。");
   }
 
