@@ -330,6 +330,7 @@ description: >-
 npm run scrape:darentang
 npm run scrape:iroha
 npm run scrape:kistoy
+npm run scrape:romp
 npm run scrape:tenga
 npm run scrape:wevibe
 npm run scrape:xiaoguaishou
@@ -340,6 +341,7 @@ npm run scrape:zuiqingfeng
 npm run debug:param-chain
 npm run debug:param-chain:iroha -- "https://detail.tmall.com/item.htm?id=..."
 npm run debug:param-chain:kistoy -- "https://detail.tmall.com/item.htm?id=..."
+npm run debug:param-chain:romp -- "https://detail.tmall.com/item.htm?id=..."
 npm run debug:param-chain:tenga -- "https://detail.tmall.com/item.htm?id=..."
 npm run debug:param-chain:wevibe -- "https://detail.tmall.com/item.htm?id=..."
 npm run debug:param-chain -- "https://detail.tmall.com/item.htm?id=..."
@@ -356,6 +358,7 @@ npx tsc --noEmit
 - `src/scraper/darentang`: 大人糖天猫，入口 `npm run scrape:darentang`，数据文件 `src/data/review-buffer.json` / `src/data/cleaned-data.json`。
 - `src/scraper/iroha`: iroha 天猫，入口 `npm run scrape:iroha`，列表地址 `https://iroha.tmall.com/category.htm?spm=a1z10.5-b.w4010-21702348873.2.4a874d3bC8PQpn&search=y`，当前是旧版 `.J_TItems dl.item` 类目页，实测首屏约 `29` 个商品、无新版货架流，列表里混有少量纯 TENGA 标题，抓取时会按标题过滤，仅保留 `iroha` 商品，数据文件 `src/data/iroha-review-buffer.json` / `src/data/iroha-cleaned-data.json`，价格默认在详情页阶段提取。
 - `src/scraper/kistoy`: KISTOY 天猫，入口 `npm run scrape:kistoy`，列表地址 `https://kistoymcza.tmall.com/?ali_refid=a3_420434_1006:1678346645:H:bL%2B27NllkKafytJVcGaGdg%3D%3D:c0c3f3b80c2af2600c8c6706a30b8540&ali_trackid=282_c0c3f3b80c2af2600c8c6706a30b8540&spm=a21n57.1.2.1&pisk=ggcEhcq297ms8OKmuqVyQZ7gSEVLm7-XTbZ7r40uRkq3A44uacmWJkgkv0lzj4HBJ8tdzwhZ0_1Bvp3la7NkcnOXG2pLw7xbSjiWOMUu8_A7rubg9zwpfFs6G23L2wSklAAXaJ7ne_Xuq0VgjrUzZyX3xGYazrruZk2ljO40juVoqu2Gjz4AtgVuENYaylquZ7moSFz7juVuZ00Mr22bUnz7KeSWEq5ewkwUm2qNiVGa-oWK8lWNIfu_Lofbb_fo_y0oiZzltIridYcQsXxGD50xCD4agQ7z7xugtyoJM6FnoVDuLbJ5kuHZSxwZBwTL7XuqaryFjer-ODlzpjxf6kDZ6bPICH5b28Ds9-hBj6PmH2NIEcYlZukgrgJG2PxB7bHFqTy3WPrX7FkjV1gnIjXJATB8pMzaceDleTe3LPrX7FWReJdT7oTnE&mm_sceneid=1_0_2216650157_0`，当前首页是新版 `ProductShelf/cardContainer` 货架流，实测滚动后约 `63` 个商品，并已过滤会员充值类非商品卡片，数据文件 `src/data/kistoy-review-buffer.json` / `src/data/kistoy-cleaned-data.json`，价格缓存 `src/data/kistoy-list-price-cache.json`。
+- `src/scraper/romp`: ROMP / 绒谱 天猫，入口 `npm run scrape:romp`，列表地址 `https://rongpucryp.tmall.com/shop/view_shop.htm?appUid=RAzN8HWSmfzT5RT1SLHXyLL6kMetQtqtXNZMEEU5m23mNxu1cQs&spm=a21n57.1.hoverItem.3`，当前首页是新版 `ProductShelf/cardContainer` 货架流，实测首屏约 `13` 个商品，页面已直接出现 `没有更多商品`，抓取时会先过滤充值/权益类伪商品，再按 `ROMP / 绒谱 / 绒普 / 绒镨 / 绒潽` 品牌词过滤，数据文件 `src/data/romp-review-buffer.json` / `src/data/romp-cleaned-data.json`，价格缓存 `src/data/romp-list-price-cache.json`。
 - `src/scraper/tenga`: TENGA 天猫，入口 `npm run scrape:tenga`，列表地址 `https://tenga.tmall.com/category.htm?spm=a1z10.1-b-s.w5001-25428877010.3.8dda25318B3Mvr&search=y&scene=taobao_shop`，当前是旧版 `.J_TItems dl.item` 类目页，实测首屏约 `70` 个商品、无新版货架流，支持店内列表点击回详情页拿最终 `sourceUrl`，数据文件 `src/data/tenga-review-buffer.json` / `src/data/tenga-cleaned-data.json`，价格缓存 `src/data/tenga-list-price-cache.json`。
 - `src/scraper/wevibe`: We-Vibe 天猫，入口 `npm run scrape:wevibe`，列表地址 `https://wevibe.tmall.com/shop/view_shop.htm?appUid=RAzN8HWVJY3cGGRW7oQJ5Jen61ZqJNhhYB7arxnco2VeZeVeofh&spm=a21n57.1.hoverItem.1`，当前首页是新版 `ProductShelf/cardContainer` 货架流，实测首屏约 `18` 个商品，页面已直接出现 `没有更多商品`，商品池包含女性向、男性向和伴侣共用款，数据文件 `src/data/wevibe-review-buffer.json` / `src/data/wevibe-cleaned-data.json`，价格默认在详情页阶段提取。
 - `src/scraper/xiaoguaishou`: 小怪兽天猫，入口 `npm run scrape:xiaoguaishou`，列表地址 `https://xiaoguaishou.tmall.com/shop/view_shop.htm?appUid=RAzN8HWNuv49Lh1ynGgZvWJQwrYsuoBnCj1DnZKDSJGqWWNt187&spm=a21n57.1.hoverItem.2`，当前是新版 `ProductShelf/cardContainer` 货架流，滚动到底约 35 个商品，数据文件 `src/data/xiaoguaishou-review-buffer.json` / `src/data/xiaoguaishou-cleaned-data.json`，价格缓存 `src/data/xiaoguaishou-list-price-cache.json`。
@@ -368,6 +371,7 @@ npx tsc --noEmit
 - `DARENTANG_MAX_ITEMS`: 本次最多进入详情并入库的商品数，默认 `200`
 - `IROHA_MAX_ITEMS`: iroha 本次最多进入详情并入库的商品数，默认 `200`
 - `KISTOY_MAX_ITEMS`: KISTOY 本次最多进入详情并入库的商品数，默认 `200`
+- `ROMP_MAX_ITEMS`: ROMP / 绒谱 本次最多进入详情并入库的商品数，默认 `200`
 - `WEVIBE_MAX_ITEMS`: We-Vibe 本次最多进入详情并入库的商品数，默认 `200`
 - `TENGA_MAX_ITEMS`: TENGA 本次最多进入详情并入库的商品数，默认 `200`
 - `XIAOGUAISHOU_MAX_ITEMS`: 小怪兽本次最多进入详情并入库的商品数，默认 `200`
