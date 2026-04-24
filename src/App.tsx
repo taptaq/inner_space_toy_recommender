@@ -17,6 +17,12 @@ import {
   readJsonStorage,
   writeProductsCache,
 } from "./lib/app-shell";
+import {
+  buildBackupCandidates,
+  buildLocalBackupReason,
+  buildLocalShoppingGuidance,
+  type BackupCandidate,
+} from "./lib/recommendation-results";
 import { LoadingPage } from "./pages/LoadingPage";
 import { HomePage } from "./pages/HomePage";
 import { QuizPage } from "./pages/QuizPage";
@@ -36,8 +42,32 @@ type AiReasonResult = {
   reason: string;
 };
 
+type BackupProduct = BackupCandidate;
+
+type AiResultEnhancement = {
+  backupProducts?: AiReasonResult[];
+  shoppingGuidance?: string[];
+};
+
+type PersistedAppState = {
+  step?: number;
+  answers?: AnswerState;
+  topProducts?: RankedProduct[];
+  backupProducts?: BackupProduct[];
+  recommendationTips?: string[];
+  shoppingGuidance?: string[];
+  filterGender?: string;
+  filterBrand?: string;
+  filterOrigin?: string;
+  filterMaxDb?: number;
+  filterMaterial?: string;
+  filterPriceRange?: string;
+};
+
 const AI_RERANK_POOL_SIZE = 10;
 const FINAL_SELECTION_COUNT = 3;
+const BACKUP_SELECTION_COUNT = 3;
+const MAX_SHOPPING_GUIDANCE_COUNT = 5;
 
 type ScoreWeights = {
   genderExact: number;
@@ -466,19 +496,23 @@ function finalizeRankedProducts(
   );
 }
 
+function finalizeBackupProducts(
+  products: BackupCandidate[],
+  reasonMap: Map<string, string>,
+): BackupProduct[] {
+  return products.map((product) => ({
+    ...product,
+    backupReason:
+      reasonMap.get(product.id) ||
+      buildLocalBackupReason(product, product.backupLabel),
+  }));
+}
+
 export default function App() {
-  const persistedState = readJsonStorage<{
-    step?: number;
-    answers?: AnswerState;
-    topProducts?: RankedProduct[];
-    recommendationTips?: string[];
-    filterGender?: string;
-    filterBrand?: string;
-    filterOrigin?: string;
-    filterMaxDb?: number;
-    filterMaterial?: string;
-    filterPriceRange?: string;
-  }>(APP_STATE_STORAGE_KEY, {});
+  const persistedState = readJsonStorage<PersistedAppState>(
+    APP_STATE_STORAGE_KEY,
+    {},
+  );
   const cachedProducts = readProductsCache();
 
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
@@ -517,11 +551,17 @@ export default function App() {
   const [topProducts, setTopProducts] = useState<RankedProduct[]>(
     persistedState.topProducts ?? [],
   );
+  const [backupProducts, setBackupProducts] = useState<BackupProduct[]>(
+    persistedState.backupProducts ?? [],
+  );
 
   const [loadingStep, setLoadingStep] = useState(0);
 
   const [recommendationTips, setRecommendationTips] = useState<string[]>(
     persistedState.recommendationTips ?? [],
+  );
+  const [shoppingGuidance, setShoppingGuidance] = useState<string[]>(
+    persistedState.shoppingGuidance ?? [],
   );
 
   const activeQuestions: Question[] = questions.filter(
@@ -592,7 +632,9 @@ export default function App() {
         step,
         answers,
         topProducts,
+        backupProducts,
         recommendationTips,
+        shoppingGuidance,
         filterGender,
         filterBrand,
         filterOrigin,
@@ -605,7 +647,9 @@ export default function App() {
     step,
     answers,
     topProducts,
+    backupProducts,
     recommendationTips,
+    shoppingGuidance,
     filterGender,
     filterBrand,
     filterOrigin,
@@ -822,13 +866,138 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
     }
   }
 
+  async function callAiResultEnhancement(
+    userAnswers: AnswerState,
+    finalTopProducts: RankedProduct[],
+    backupCandidates: BackupCandidate[],
+    filteredCount: number,
+  ) {
+    const context = {
+      userPreferences: userAnswers.tags,
+      filteredCount,
+      topProducts: finalTopProducts.map((product, index) => ({
+        rank: index + 1,
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        reason: product.reason || "",
+      })),
+      backupCandidates: backupCandidates.map((product, index) => ({
+        rank: index + 1,
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        backupLabel: product.backupLabel,
+        structuredScore: product.score,
+        matchSummary: product.matchSummary?.join("、") || "",
+        localReason: buildLocalBackupReason(product, product.backupLabel),
+      })),
+    };
+
+    const prompt = `
+你是一个专业的性健康装备选品专家。
+Top 3 主推荐已经确定，请只补充两个结果区域：
+1. 为备选卡片写一句简短说明
+2. 为结果页写 3-5 条选购建议
+
+用户偏好标签: [${context.userPreferences.join(", ")}]
+候选池数量: ${context.filteredCount}
+
+已确定 Top 3（仅供参考，不需要重排）:
+${JSON.stringify(context.topProducts, null, 2)}
+
+备选候选（只能基于这些 id 输出说明）:
+${JSON.stringify(context.backupCandidates, null, 2)}
+
+请仅返回如下格式的 JSON 对象（不要包含任何 Markdown 格式或多余文字）：
+{
+  "backupProducts": [
+    { "id": "产品ID", "reason": "20字以内的备选说明" }
+  ],
+  "shoppingGuidance": ["建议1", "建议2", "建议3"]
+}
+
+要求：
+1. 不要改动 Top 3 排名，也不要输出列表外的 id。
+2. backupProducts 只为备选卡片补一句简短说明，语气自然，不要和 Top 3 推荐理由重复。
+3. shoppingGuidance 返回 3-5 条中文建议，尽量具体，帮助用户做最终购买判断。
+4. 建议可以参考静音、预算、防水、外观隐蔽、刺激方向、清洁维护等维度。
+5. 如果备选数量不足，也只返回实际存在的备选说明。`;
+
+    try {
+      console.log("🤖 [AI] 正在为备选结果与选购建议生成增强文案: DeepSeek...");
+      const dsKey = process.env.DEEPSEEK_API_KEY;
+      if (!dsKey) throw new Error("Missing DeepSeek Key");
+      const openai = new OpenAI({
+        apiKey: dsKey,
+        baseURL: "https://api.deepseek.com/v1",
+        dangerouslyAllowBrowser: true,
+      });
+      const response = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      });
+      return JSON.parse(
+        normalizeJsonResponse(response.choices[0].message.content) || "{}",
+      ) as AiResultEnhancement;
+    } catch (e) {
+      console.warn("⚠️ [AI] DeepSeek 结果增强失败，切换至 Qwen...", e);
+    }
+
+    try {
+      const qwenKey = process.env.QWEN_API_KEY;
+      if (!qwenKey) throw new Error("Missing Qwen Key");
+      const openai = new OpenAI({
+        apiKey: qwenKey,
+        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        dangerouslyAllowBrowser: true,
+      });
+      const response = await openai.chat.completions.create({
+        model: "qwen-turbo",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      });
+      return JSON.parse(
+        normalizeJsonResponse(response.choices[0].message.content) || "{}",
+      ) as AiResultEnhancement;
+    } catch (e) {
+      console.warn("⚠️ [AI] Qwen 结果增强失败，切换至 GLM-4.6V...", e);
+    }
+
+    try {
+      const glmKey = process.env.GLM_API_KEY;
+      if (!glmKey) throw new Error("Missing GLM Key");
+      const openai = new OpenAI({
+        apiKey: glmKey,
+        baseURL: "https://open.bigmodel.cn/api/paas/v4/",
+        dangerouslyAllowBrowser: true,
+      });
+      const response = await openai.chat.completions.create({
+        model: "glm-4.6v",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      });
+      return JSON.parse(
+        normalizeJsonResponse(response.choices[0].message.content) || "{}",
+      ) as AiResultEnhancement;
+    } catch (e) {
+      console.error("❌ [AI] 结果增强链路全部中断，回退到本地说明与建议", e);
+      throw e;
+    }
+  }
+
   const calculateResults = async (
     currentAnswers: AnswerState = answers,
     activeQs: Question[] = activeQuestions,
     productsData: Product[] = allProducts,
   ) => {
     setIsAiMatching(true);
+    setBackupProducts([]);
     setRecommendationTips([]);
+    setShoppingGuidance([]);
 
     // Step 1: Base Filter (物理硬指标过滤)
     const filtered = productsData.filter((p) => {
@@ -947,6 +1116,8 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
 
     if (rerankPool.length === 0) {
       setTopProducts([]);
+      setBackupProducts([]);
+      setShoppingGuidance([]);
       setIsAiMatching(false);
       setTimeout(() => {
         setStep(activeQs.length + 1);
@@ -954,6 +1125,8 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
       }, 3000);
       return;
     }
+
+    let finalTopProducts: RankedProduct[];
 
     try {
       const aiResults = await callAiRerank(currentAnswers, rerankPool);
@@ -981,20 +1154,88 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
           orderedProducts.push(product);
         }
 
-        setTopProducts(
-          finalizeRankedProducts(
-            orderedProducts.slice(0, FINAL_SELECTION_COUNT),
-            reasonMap,
-            currentAnswers,
-          ),
+        finalTopProducts = finalizeRankedProducts(
+          orderedProducts.slice(0, FINAL_SELECTION_COUNT),
+          reasonMap,
+          currentAnswers,
         );
       } else {
         throw new Error("Empty AI response");
       }
     } catch (e) {
-      setTopProducts(
-        finalizeRankedProducts(fallbackTopProducts, new Map(), currentAnswers),
+      finalTopProducts = finalizeRankedProducts(
+        fallbackTopProducts,
+        new Map(),
+        currentAnswers,
       );
+    }
+
+    const backupCandidates = buildBackupCandidates(
+      rankedCandidates,
+      finalTopProducts.map((product) => product.id),
+      BACKUP_SELECTION_COUNT,
+    );
+    const localBackupProducts = finalizeBackupProducts(
+      backupCandidates,
+      new Map(),
+    );
+    const localShoppingGuidance = buildLocalShoppingGuidance({
+      answers: currentAnswers,
+      filteredCount: filtered.length,
+      backupCandidates: localBackupProducts,
+    });
+
+    setTopProducts(finalTopProducts);
+
+    try {
+      if (backupCandidates.length === 0) {
+        setBackupProducts([]);
+        setShoppingGuidance(localShoppingGuidance);
+      } else {
+        const enhancement = await callAiResultEnhancement(
+          currentAnswers,
+          finalTopProducts,
+          backupCandidates,
+          filtered.length,
+        );
+        const backupReasonMap = new Map<string, string>();
+        const backupPoolIds = new Set(
+          backupCandidates.map((product) => product.id),
+        );
+
+        if (Array.isArray(enhancement.backupProducts)) {
+          enhancement.backupProducts.forEach((item) => {
+            if (!item?.id || !backupPoolIds.has(item.id)) return;
+            const normalizedReason = String(item.reason || "").trim();
+            if (normalizedReason) {
+              backupReasonMap.set(item.id, normalizedReason);
+            }
+          });
+        }
+
+        const aiShoppingGuidance = Array.isArray(enhancement.shoppingGuidance)
+          ? enhancement.shoppingGuidance
+              .map((line) => String(line || "").trim())
+              .filter(Boolean)
+              .slice(0, MAX_SHOPPING_GUIDANCE_COUNT)
+          : [];
+
+        setBackupProducts(
+          finalizeBackupProducts(backupCandidates, backupReasonMap),
+        );
+        setShoppingGuidance(
+          aiShoppingGuidance.length > 0
+            ? aiShoppingGuidance
+            : localShoppingGuidance,
+        );
+      }
+    } catch (enhancementError) {
+      console.warn(
+        "⚠️ [AI] 结果增强失败，使用本地备选说明与购物建议",
+        enhancementError,
+      );
+      setBackupProducts(localBackupProducts);
+      setShoppingGuidance(localShoppingGuidance);
     } finally {
       setIsAiMatching(false);
       // 延迟跳转以供展示动画
@@ -1009,7 +1250,9 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
     setStep(0);
     setAnswers({ tags: [] });
     setTopProducts([]);
+    setBackupProducts([]);
     setRecommendationTips([]);
+    setShoppingGuidance([]);
     navigateTo("/quiz");
   };
 
