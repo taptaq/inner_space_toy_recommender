@@ -53,10 +53,11 @@ For each app-level recommendation call:
 1. try NVIDIA DeepSeek
 2. try NVIDIA Qwen
 3. try NVIDIA GLM
-4. try self-hosted DeepSeek
-5. try self-hosted Qwen
-6. try self-hosted GLM
-7. if all fail, return to the existing local fallback behavior
+4. try NVIDIA Kimi
+5. try self-hosted DeepSeek
+6. try self-hosted Qwen
+7. try self-hosted GLM
+8. if all fail, return to the existing local fallback behavior
 
 ### Why this approach
 
@@ -78,16 +79,19 @@ The app recommendation chain after this change should be:
 3. `NVIDIA GLM`
    - base URL: `https://integrate.api.nvidia.com/v1`
    - model: `z-ai/glm-5.1`
-4. `DeepSeek`
+4. `NVIDIA Kimi`
+   - base URL: `https://integrate.api.nvidia.com/v1`
+   - model: `moonshotai/kimi-k2.5`
+5. `DeepSeek`
    - base URL: `https://api.deepseek.com/v1`
    - model: `deepseek-v4-flash`
-5. `Qwen`
+6. `Qwen`
    - base URL: `https://dashscope.aliyuncs.com/compatible-mode/v1`
    - model: `qwen-turbo`
-6. `GLM`
+7. `GLM`
    - base URL: `https://open.bigmodel.cn/api/paas/v4/`
    - model: `glm-4.6v`
-7. local structured fallback or local guidance fallback
+8. local structured fallback or local guidance fallback
 
 ## Affected App Flows
 
@@ -133,6 +137,7 @@ Logs should clearly show:
 - NVIDIA DeepSeek start / failure
 - NVIDIA Qwen start / failure
 - NVIDIA GLM start / failure
+- NVIDIA Kimi start / failure
 - self-hosted DeepSeek start / failure
 - self-hosted Qwen start / failure
 - self-hosted GLM start / failure
