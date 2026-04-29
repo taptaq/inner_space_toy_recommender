@@ -19,11 +19,13 @@ import type {
   ResultRecalibrationRequest,
   ResultRecalibrationResponse,
 } from "../lib/result-recalibration.ts";
+import { buildProductDescriptionSignalsSummary } from "../lib/product-description-signals.ts";
 import { runAppAiProviderLadder } from "./app-ai-proxy.ts";
 
 const FINAL_SELECTION_COUNT = 3;
 const BACKUP_SELECTION_COUNT = 3;
 const MAX_SHOPPING_GUIDANCE_COUNT = 5;
+const DEFAULT_AI_MAX_TOKENS = 24576;
 
 const PROVIDER_LABELS: Record<AppAiProvider, string> = {
   "dmxapi-mimo": "DMXAPI Mimo",
@@ -216,6 +218,7 @@ function buildRerankPrompt(
       tags: product.tags?.join(", ") || "",
       structuredScore: product.score,
       matchSummary: product.matchSummary?.join("、") || "",
+      descriptionSignals: buildProductDescriptionSignalsSummary(product),
     })),
   };
 
@@ -239,7 +242,7 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
 2. 最多返回 3 个，顺序就是你最终认定的 Top1 到 Top3。
 3. 推荐理由必须体现该商品为什么适合当前偏好，避免空泛夸张。
 4. 用中文输出，简洁自然，不要重复同一句话。
-5. 请综合用户标签、结构化分数、matchSummary、价格、噪音、防水、刺激形式来判断，不要只看单一字段。`;
+5. 请综合用户标签、结构化分数、matchSummary、descriptionSignals、价格、噪音、防水、刺激形式来判断，不要只看单一字段。`;
 }
 
 function buildResultEnhancementPrompt(
@@ -258,6 +261,7 @@ function buildResultEnhancementPrompt(
       brand: product.brand,
       price: product.price,
       reason: product.reason,
+      descriptionSignals: buildProductDescriptionSignalsSummary(product),
     })),
     backupCandidates: backupCandidates.map((product, index) => ({
       rank: index + 1,
@@ -268,6 +272,7 @@ function buildResultEnhancementPrompt(
       backupLabel: product.backupLabel,
       structuredScore: product.score,
       matchSummary: product.matchSummary?.join("、") || "",
+      descriptionSignals: buildProductDescriptionSignalsSummary(product),
       localReason: buildLocalBackupReason(product, product.backupLabel),
     })),
   };
@@ -310,7 +315,7 @@ function defaultChatCompletionRunner({
   prompt,
   temperature,
   topP,
-  maxTokens = 16384,
+  maxTokens = DEFAULT_AI_MAX_TOKENS,
 }: ChatCompletionRequest) {
   const openai = new OpenAI({
     apiKey,
@@ -386,7 +391,7 @@ export function createAppAiService({
             model: modelName,
             prompt,
             temperature,
-            maxTokens: 16384,
+            maxTokens: DEFAULT_AI_MAX_TOKENS,
             ...(runtimeConfig.topP == null ? {} : { topP: runtimeConfig.topP }),
           };
 

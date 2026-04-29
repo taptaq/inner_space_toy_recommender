@@ -83,7 +83,7 @@ test("createProviderExecutors exposes provider-specific executors with result-mo
     model: "qwen-max",
     prompt: "rerank prompt",
     temperature: 0.1,
-    maxTokens: 16384,
+    maxTokens: 24576,
   });
 });
 
@@ -131,26 +131,41 @@ test("runResultRecalibration recomputes canonical backup products from the recal
     appearance: "high_disguise",
   };
   const rerankPool = [
-    createRankedProduct("p-1", { score: 96 }),
+    createRankedProduct("p-1", {
+      score: 96,
+      rawDescription: "低噪吮吸设计，适合新手慢热探索。",
+    }),
     createRankedProduct("p-2", {
       score: 94,
       motorType: "strong",
       matchSummary: ["反馈更直接", "价格也在预算内"],
+      rawDescription: "自动活塞抽送，强刺激反馈更直接。",
     }),
-    createRankedProduct("b-1", { score: 93, price: 169 }),
+    createRankedProduct("b-1", {
+      score: 93,
+      price: 169,
+      rawDescription: "轻量安静，适合日常补位使用。",
+    }),
     createRankedProduct("p-3", {
       score: 92,
       matchSummary: ["结构取向一致", "静音表现稳定", "清洁更省心"],
+      rawDescription: "可穿戴贴合机身，低噪更适合双人氛围。",
     }),
   ];
   const rankedCandidates = [
     ...rerankPool,
-    createRankedProduct("b-2", { score: 89, price: 149, maxDb: 36 }),
+    createRankedProduct("b-2", {
+      score: 89,
+      price: 149,
+      maxDb: 36,
+      rawDescription: "低噪轻量机身，更适合安静环境。",
+    }),
     createRankedProduct("b-3", {
       score: 87,
       price: 189,
       waterproof: 8,
       matchSummary: ["防水更稳", "清洁维护更省心"],
+      rawDescription: "全身水洗，清洁维护更省心。",
     }),
   ];
 
@@ -167,15 +182,18 @@ test("runResultRecalibration recomputes canonical backup products from the recal
     requests.map((request) => ({
       model: request.model,
       baseURL: request.baseURL,
+      maxTokens: request.maxTokens,
     })),
     [
       {
         model: "qwen-max",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        maxTokens: 24576,
       },
       {
         model: "qwen-max",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        maxTokens: 24576,
       },
     ],
   );
@@ -205,14 +223,16 @@ test("runResultRecalibration recomputes canonical backup products from the recal
         ...createBackupCandidate("p-3", "更隐蔽", {
           score: 92,
           matchSummary: ["结构取向一致", "静音表现稳定", "清洁更省心"],
+          rawDescription: "可穿戴贴合机身，低噪更适合双人氛围。",
         }),
-        backupReason: "外观更利于日常收纳和隐蔽",
+        backupReason: "外观更利于日常收纳，降低被看到时的压力",
       },
       {
         ...createBackupCandidate("b-2", "更静音", {
           score: 89,
           price: 149,
           maxDb: 36,
+          rawDescription: "低噪轻量机身，更适合安静环境。",
         }),
         backupReason: "预算更轻，适合保守入手",
       },
@@ -222,6 +242,7 @@ test("runResultRecalibration recomputes canonical backup products from the recal
           price: 189,
           waterproof: 8,
           matchSummary: ["防水更稳", "清洁维护更省心"],
+          rawDescription: "全身水洗，清洁维护更省心。",
         }),
         backupReason: "清洁维护更省心，适合日常使用",
       },
@@ -241,4 +262,10 @@ test("runResultRecalibration recomputes canonical backup products from the recal
   assert.match(requests[1]?.prompt || "", /"id": "p-3"/);
   assert.match(requests[1]?.prompt || "", /"id": "b-2"/);
   assert.match(requests[1]?.prompt || "", /"id": "b-3"/);
+  assert.match(requests[0]?.prompt || "", /"descriptionSignals": "低噪静音、吮吸刺激、新手友好"/);
+  assert.match(requests[0]?.prompt || "", /"descriptionSignals": "自动活塞、强刺激"/);
+  assert.doesNotMatch(requests[0]?.prompt || "", /低噪吮吸设计，适合新手慢热探索/);
+  assert.match(requests[1]?.prompt || "", /"descriptionSignals": "低噪静音、可穿戴"/);
+  assert.match(requests[1]?.prompt || "", /"descriptionSignals": "低噪静音"/);
+  assert.match(requests[1]?.prompt || "", /"descriptionSignals": "易清洗"/);
 });

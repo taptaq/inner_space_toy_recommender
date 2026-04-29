@@ -112,14 +112,36 @@ test("buildLocalBackupReason returns the local backup reason for a label", () =>
       makeProduct({ id: "p4", name: "Quiet Pick", score: 90, price: 349, maxDb: 40 }),
       "更静音",
     ),
-    "噪音约 40dB，适合更安静的环境",
+    "噪音约 40dB，更适合安静、慢慢进入状态的环境",
   );
   assert.equal(
     buildLocalBackupReason(
       makeProduct({ id: "p5", name: "Budget Pick", score: 89, price: 169, maxDb: 52 }),
       "更省预算",
     ),
-    "价格约 169 元，预算压力更小",
+    "价格约 169 元，适合作为更轻负担的尝鲜或补位选择",
+  );
+});
+
+test("buildLocalBackupReason can adapt the wording for couple flow", () => {
+  assert.match(
+    buildLocalBackupReason(
+      makeProduct({
+        id: "p10",
+        name: "Couple Quiet Pick",
+        score: 92,
+        price: 299,
+        maxDb: 38,
+        gender: "unisex",
+      }),
+      "更静音",
+      {
+        gender: "unisex",
+        interactionMode: "sync",
+        tags: [],
+      },
+    ),
+    /互动氛围|共玩/,
   );
 });
 
@@ -143,16 +165,60 @@ test("buildLocalShoppingGuidance returns concise advice for narrow candidate poo
     ],
   });
 
-  assert.equal(result[0], "候选池比较窄，先看备选卡片，避免只盯着前三名。");
+  assert.equal(result[0], "候选池比较窄，先看备选卡片，补足不同刺激路线。");
   assert.ok(result.some((line) => line.includes("静音")));
   assert.equal(result.length, 5);
   assert.deepEqual(result, [
-    "候选池比较窄，先看备选卡片，避免只盯着前三名。",
-    "你在意静音，优先比较标注为更静音的备选。",
-    "你也在意隐蔽性，可顺手看更隐蔽的替代方向。",
+    "候选池比较窄，先看备选卡片，补足不同刺激路线。",
+    "你在意静音，优先比较更安静、更不打断进入状态的备选。",
+    "你也在意隐蔽性，可顺手看更利于日常收纳的替代方向。",
     "更静音：噪音约 40dB，适合更安静的环境",
     "更省预算：价格约 169 元，预算压力更小",
   ]);
+});
+
+test("buildLocalShoppingGuidance uses branch-specific guidance for male flow", () => {
+  const answers: RecommendationAnswers = {
+    tags: ["男性向"],
+    gender: "male",
+    maxDb: 50,
+    appearance: "high_disguise",
+    sessionGoal: "daily",
+  };
+
+  const result = buildLocalShoppingGuidance({
+    answers,
+    filteredCount: 2,
+    backupCandidates: [
+      { id: "p4", backupLabel: "更静音", backupReason: "噪音约 40dB，日常使用时存在感更低" },
+      { id: "p5", backupLabel: "更省预算", backupReason: "价格约 169 元，适合作为更顺手的日常备选" },
+    ],
+  });
+
+  assert.match(result[0], /顺手|备选/);
+  assert.ok(result.some((line) => /日常|顺手/.test(line)));
+});
+
+test("buildLocalShoppingGuidance uses branch-specific guidance for couple flow", () => {
+  const answers: RecommendationAnswers = {
+    tags: ["情侣共玩"],
+    gender: "unisex",
+    maxDb: 40,
+    appearance: "high_disguise",
+    interactionMode: "sync",
+  };
+
+  const result = buildLocalShoppingGuidance({
+    answers,
+    filteredCount: 6,
+    backupCandidates: [
+      { id: "p4", backupLabel: "更静音", backupReason: "噪音约 40dB，更不容易打断互动氛围" },
+      { id: "p5", backupLabel: "更省预算", backupReason: "价格约 169 元，适合作为更轻松的共玩备选" },
+    ],
+  });
+
+  assert.match(result[0], /互动|共玩/);
+  assert.ok(result.some((line) => /氛围|共玩/.test(line)));
 });
 
 test("buildLocalShoppingGuidance does not treat maxDb 100 as a quietness preference", () => {
@@ -175,12 +241,12 @@ test("buildLocalShoppingGuidance does not treat maxDb 100 as a quietness prefere
     ],
   });
 
-  assert.equal(result[0], "当前结果已经收窄，可以重点看差异化备选。");
+  assert.equal(result[0], "当前结果已经收窄，可以重点比较更适合进入状态的差异化备选。");
   assert.equal(result.length, 5);
   assert.ok(!result.some((line) => line.includes("你在意静音")));
   assert.deepEqual(result, [
-    "当前结果已经收窄，可以重点看差异化备选。",
-    "你也在意隐蔽性，可顺手看更隐蔽的替代方向。",
+    "当前结果已经收窄，可以重点比较更适合进入状态的差异化备选。",
+    "你也在意隐蔽性，可顺手看更利于日常收纳的替代方向。",
     "更静音：噪音约 40dB，适合更安静的环境",
     "更省预算：价格约 169 元，预算压力更小",
     "更防水：防水约 IPX8，清洁维护更省心",

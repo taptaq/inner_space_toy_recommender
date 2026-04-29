@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
-import { questions, AnswerState, Product, Question } from "./data/mock";
+import { getActiveQuestions, AnswerState, Product, Question } from "./data/mock";
 import {
   AppRoute,
   APP_STATE_STORAGE_KEY,
@@ -31,6 +31,13 @@ import {
   resolveCurrentResultSourceState,
   type ResultRecalibrationResponse,
 } from "./lib/result-recalibration";
+import {
+  buildBranchFallbackReason,
+  getBranchPreferenceAdjustments,
+  getResultLeadCopy,
+  selectScorePresetId,
+  type ScorePresetId,
+} from "./lib/quiz-branching";
 import { LoadingPage } from "./pages/LoadingPage";
 import { HomePage } from "./pages/HomePage";
 import { QuizPage } from "./pages/QuizPage";
@@ -125,7 +132,7 @@ type HardMissPolicy = {
 };
 
 type ScorePreset = {
-  id: "female" | "male_tenga" | "mixed";
+  id: ScorePresetId;
   label: string;
   weights: ScoreWeights;
   hardMissPolicy: HardMissPolicy;
@@ -182,8 +189,8 @@ const SCORE_PRESET_FEMALE: ScorePreset = {
   },
 };
 
-const SCORE_PRESET_MALE_TENGA: ScorePreset = {
-  id: "male_tenga",
+const SCORE_PRESET_MALE: ScorePreset = {
+  id: "male",
   label: "男性向场景",
   weights: {
     genderExact: 34,
@@ -231,32 +238,32 @@ const SCORE_PRESET_MALE_TENGA: ScorePreset = {
   },
 };
 
-const SCORE_PRESET_MIXED: ScorePreset = {
-  id: "mixed",
-  label: "通用混合商品池",
+const SCORE_PRESET_COUPLE: ScorePreset = {
+  id: "couple",
+  label: "情侣共玩场景",
   weights: {
-    genderExact: 28,
-    genderUnisex: 18,
-    genderMiss: -30,
+    genderExact: 18,
+    genderUnisex: 32,
+    genderMiss: -36,
 
-    physicalFormExact: 34,
+    physicalFormExact: 28,
     physicalFormMiss: -10,
 
-    motorTypeExact: 22,
+    motorTypeExact: 18,
     motorTypeMiss: -8,
 
-    appearanceExact: 18,
-    appearanceHighDisguiseMiss: -16,
+    appearanceExact: 20,
+    appearanceHighDisguiseMiss: -12,
 
     waterproofUnknown: 4,
-    waterproofQualified: 16,
+    waterproofQualified: 14,
     waterproofMiss: -12,
 
-    noiseUnknown: 6,
-    noiseQualified: 16,
-    noiseMissMin: -6,
+    noiseUnknown: 8,
+    noiseQualified: 22,
+    noiseMissMin: -8,
     noiseMissStep: -4,
-    noiseMissMax: -18,
+    noiseMissMax: -22,
     noiseStepDb: 5,
 
     budgetInRange: 22,
@@ -282,26 +289,15 @@ const SCORE_PRESET_MIXED: ScorePreset = {
 
 const SCORE_PRESETS = {
   female: SCORE_PRESET_FEMALE,
-  male_tenga: SCORE_PRESET_MALE_TENGA,
-  mixed: SCORE_PRESET_MIXED,
+  male: SCORE_PRESET_MALE,
+  couple: SCORE_PRESET_COUPLE,
 } as const;
-
-function looksLikeTengaPool(products: Product[]) {
-  if (products.length === 0) return false;
-  const tengaCount = products.filter((product) =>
-    /tenga|iroha/i.test(`${product.brand || ""} ${product.name || ""}`),
-  ).length;
-  return tengaCount / products.length >= 0.35;
-}
 
 function selectScorePreset(
   answers: AnswerState,
   products: Product[],
 ): ScorePreset {
-  if (answers.gender === "female") return SCORE_PRESETS.female;
-  if (answers.gender === "male") return SCORE_PRESETS.male_tenga;
-  if (looksLikeTengaPool(products)) return SCORE_PRESETS.male_tenga;
-  return SCORE_PRESETS.mixed;
+  return SCORE_PRESETS[selectScorePresetId(answers, products)];
 }
 
 // 并列时的优先级：
@@ -440,6 +436,14 @@ function scoreStructuredProduct(
     score += Math.min(product.tags.length, weights.tagsBonusMax);
   }
 
+  const branchAdjustments = getBranchPreferenceAdjustments(
+    product,
+    answers,
+    preset.id,
+  );
+  score += branchAdjustments.score;
+  matchSummary.push(...branchAdjustments.summary);
+
   return {
     ...product,
     score: Math.max(0, Math.round(score)),
@@ -473,18 +477,11 @@ function buildLocalReason(
   const summary = product.matchSummary.slice(0, 3);
   if (summary.length > 0) return summary.join("，");
 
-  if (answers.physicalForm && product.physicalForm === answers.physicalForm) {
-    return "结构取向贴近你的核心刺激偏好";
-  }
-  if (answers.motorType && product.motorType === answers.motorType) {
-    return answers.motorType === "gentle"
-      ? "节奏更温和，适合慢慢进入状态"
-      : "输出更直接，适合追求强反馈体验";
-  }
   if (answers.budget && getBudgetGap(product.price, answers.budget) === 0) {
-    return "预算友好，能更稳地落在你的预期区间";
+    return `${buildBranchFallbackReason(product, answers)} 价格也更稳地落在你的预算区间。`;
   }
-  return "综合表现均衡，适合作为当前偏好的稳妥选择";
+
+  return buildBranchFallbackReason(product, answers);
 }
 
 function finalizeRankedProducts(
@@ -508,12 +505,13 @@ function finalizeRankedProducts(
 function finalizeBackupProducts(
   products: BackupCandidate[],
   reasonMap: Map<string, string>,
+  answers?: AnswerState,
 ): BackupProduct[] {
   return products.map((product) => ({
     ...product,
     backupReason:
       reasonMap.get(product.id) ||
-      buildLocalBackupReason(product, product.backupLabel),
+      buildLocalBackupReason(product, product.backupLabel, answers),
   }));
 }
 
@@ -596,11 +594,7 @@ export default function App() {
     string | null
   >(null);
 
-  const activeQuestions: Question[] = questions.filter(
-    (q) =>
-      !q.applicableGenders ||
-      (answers.gender && q.applicableGenders.includes(answers.gender)),
-  );
+  const activeQuestions: Question[] = getActiveQuestions(answers.gender);
 
   const pageVariants: any = {
     initial: { opacity: 0, x: 20, scale: 0.95 },
@@ -762,19 +756,21 @@ export default function App() {
     return productsFetchRef.current;
   };
 
-  const handleOptionSelect = (field: string, value: any, tag: string) => {
+  const handleOptionSelect = (
+    field: keyof AnswerState,
+    value: AnswerState[keyof AnswerState],
+    tag: string,
+    answerPatch?: Partial<Omit<AnswerState, "tags">>,
+  ) => {
     const newAnswers = {
       ...answers,
+      ...(answerPatch ?? {}),
       [field]: value,
       tags: [...answers.tags, tag],
     };
     setAnswers(newAnswers);
 
-    const activeQs = questions.filter(
-      (q) =>
-        !q.applicableGenders ||
-        (newAnswers.gender && q.applicableGenders.includes(newAnswers.gender)),
-    );
+    const activeQs = getActiveQuestions(newAnswers.gender);
 
     if (step < activeQs.length - 1) {
       setStep(step + 1);
@@ -1063,7 +1059,11 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
         backupLabel: product.backupLabel,
         structuredScore: product.score,
         matchSummary: product.matchSummary?.join("、") || "",
-        localReason: buildLocalBackupReason(product, product.backupLabel),
+        localReason: buildLocalBackupReason(
+          product,
+          product.backupLabel,
+          userAnswers,
+        ),
       })),
     };
 
@@ -1250,10 +1250,12 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       localResult.rankedCandidates,
       finalTopProducts.map((product) => product.id),
       BACKUP_SELECTION_COUNT,
+      currentAnswers,
     );
     const localBackupProducts = finalizeBackupProducts(
       backupCandidates,
       new Map(),
+      currentAnswers,
     );
     const localShoppingGuidance = buildLocalShoppingGuidance({
       answers: currentAnswers,
@@ -1299,7 +1301,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
           : [];
 
         setBackupProducts(
-          finalizeBackupProducts(backupCandidates, backupReasonMap),
+          finalizeBackupProducts(backupCandidates, backupReasonMap, currentAnswers),
         );
         setShoppingGuidance(
           aiShoppingGuidance.length > 0
@@ -1423,9 +1425,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               pageVariants={pageVariants}
               step={step}
               activeQuestions={activeQuestions}
-              onSelectOption={(value, tag) =>
-                handleOptionSelect(activeQuestions[step].field, value, tag)
-              }
+              onSelectOption={handleOptionSelect}
               onBackHome={handleBackHomeFromQuiz}
             />
           )}

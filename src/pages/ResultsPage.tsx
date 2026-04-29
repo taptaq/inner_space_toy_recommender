@@ -19,6 +19,7 @@ import {
   getResultModelOption,
 } from "../lib/result-models";
 import type { BackupCandidate } from "../lib/recommendation-results";
+import { getResultLeadCopy } from "../lib/quiz-branching";
 
 type ResultsBackupProduct = BackupCandidate;
 
@@ -188,6 +189,7 @@ export function ResultsPage({
   const canShowRecalibrationModule = topProducts.length > 0;
   const primaryProductHref = topProducts[0] ? getProductHref(topProducts[0]) : undefined;
   const resultTags = dedupeDisplayTags(answers.tags);
+  const resultLeadCopy = getResultLeadCopy(answers);
 
   return (
     <motion.div
@@ -211,7 +213,7 @@ export function ResultsPage({
           ))}
         </div>
         <p className="text-sm text-slate-400">
-          基于你的以上偏好，我们找到了如下装备
+          {resultLeadCopy}
         </p>
       </div>
 

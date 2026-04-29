@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { ArrowLeft, CircleDashed, Hexagon, Triangle } from "lucide-react";
-import { Question } from "../data/mock";
+import type { AnswerState, Question } from "../data/mock";
 
 export function QuizPage({
   pageVariants,
@@ -12,7 +12,12 @@ export function QuizPage({
   pageVariants: any;
   step: number;
   activeQuestions: Question[];
-  onSelectOption: (value: any, tag: string) => void;
+  onSelectOption: (
+    field: keyof AnswerState,
+    value: AnswerState[keyof AnswerState],
+    tag: string,
+    answerPatch?: Partial<Omit<AnswerState, "tags">>,
+  ) => void;
   onBackHome: () => void;
 }) {
   const currentQuestion = activeQuestions[step];
@@ -63,7 +68,14 @@ export function QuizPage({
           {currentQuestion.options.map((option, index) => (
             <button
               key={index}
-              onClick={() => onSelectOption(option.value, option.tag)}
+              onClick={() =>
+                onSelectOption(
+                  currentQuestion.field,
+                  option.value,
+                  option.tag,
+                  option.answerPatch,
+                )
+              }
               className="w-full text-left glass-button rounded-2xl p-5 flex items-center gap-4 group"
             >
               <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">

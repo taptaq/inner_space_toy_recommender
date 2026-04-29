@@ -1,8 +1,28 @@
 import type { AnswerState, Product } from "../data/mock";
+import {
+  buildBranchBackupReason,
+  getBranchShoppingGuidanceLead,
+  getBranchShoppingPreferenceHints,
+} from "./quiz-branching.ts";
 
 export type RecommendationAnswers = Pick<
   AnswerState,
-  "tags" | "maxDb" | "appearance" | "budget" | "gender" | "physicalForm" | "motorType" | "waterproof"
+  | "tags"
+  | "maxDb"
+  | "appearance"
+  | "budget"
+  | "gender"
+  | "physicalForm"
+  | "motorType"
+  | "waterproof"
+  | "experienceLevel"
+  | "driveMode"
+  | "channelFeel"
+  | "sessionGoal"
+  | "interactionMode"
+  | "fitPreference"
+  | "coupleScene"
+  | "sharedIntensity"
 >;
 
 export type RecommendationRankedProduct = Product & {
@@ -108,35 +128,16 @@ function buildDirection(product: RecommendationRankedProduct, pool: Recommendati
 export function buildLocalBackupReason(
   product: RecommendationRankedProduct,
   backupLabel?: string,
+  answers?: RecommendationAnswers,
 ) {
-  switch (backupLabel) {
-    case "更静音":
-      return product.maxDb != null
-        ? `噪音约 ${product.maxDb}dB，适合更安静的环境`
-        : "静音取向更明显，适合优先看噪音需求";
-    case "更省预算":
-      return `价格约 ${product.price} 元，预算压力更小`;
-    case "更防水":
-      return product.waterproof != null
-        ? `防水约 IPX${product.waterproof}，清洁维护更省心`
-        : "防水信息有限，但这条备选更偏向易清洁";
-    case "更隐蔽":
-      return "外观更利于日常收纳和隐蔽";
-    case "更直观":
-      return "造型更直接，适合不强调伪装的场景";
-    case "更强劲":
-      return "输出更直接，适合偏强反馈的使用场景";
-    case "更温和":
-      return "节奏更温和，适合慢慢进入状态";
-    default:
-      return "综合表现均衡，适合作为备选方向";
-  }
+  return buildBranchBackupReason(product, backupLabel, answers);
 }
 
 export function buildBackupCandidates(
   ranked: RecommendationRankedProduct[],
   excludedIds: string[],
   count: number,
+  answers?: RecommendationAnswers,
 ): BackupCandidate[] {
   const excluded = new Set(excludedIds);
   const pool = ranked.filter((item) => !excluded.has(item.id));
@@ -147,7 +148,7 @@ export function buildBackupCandidates(
       return {
         ...product,
         backupLabel: direction.label,
-        backupReason: buildLocalBackupReason(product, direction.label),
+        backupReason: buildLocalBackupReason(product, direction.label, answers),
       };
     })
     .filter((item): item is BackupCandidate => item != null);
@@ -184,19 +185,8 @@ export function buildLocalShoppingGuidance({
 }) {
   const lines: string[] = [];
 
-  if (filteredCount <= 3) {
-    lines.push("候选池比较窄，先看备选卡片，避免只盯着前三名。");
-  } else {
-    lines.push("当前结果已经收窄，可以重点看差异化备选。");
-  }
-
-  if (answers.maxDb != null && answers.maxDb < 100) {
-    lines.push("你在意静音，优先比较标注为更静音的备选。");
-  }
-
-  if (answers.appearance === "high_disguise") {
-    lines.push("你也在意隐蔽性，可顺手看更隐蔽的替代方向。");
-  }
+  lines.push(getBranchShoppingGuidanceLead(answers, filteredCount));
+  lines.push(...getBranchShoppingPreferenceHints(answers));
 
   for (const candidate of backupCandidates.slice(0, 3)) {
     lines.push(`${candidate.backupLabel}：${candidate.backupReason}`);
