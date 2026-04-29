@@ -11,26 +11,26 @@ const facts: LoadingFunFact[] = Array.from({ length: 12 }, (_, index) => ({
   surfaces: ["loading", "matching"],
 }));
 
-test("buildFloatingKnowledgeItems returns medium desktop density", () => {
+test("buildFloatingKnowledgeItems returns slightly richer desktop density", () => {
   const items = buildFloatingKnowledgeItems(facts, {
     variant: "loading",
     viewport: "desktop",
   });
 
-  assert.equal(items.length, 9);
+  assert.equal(items.length, 11);
   assert.deepEqual(
     items.map((item) => item.fact.id),
-    facts.slice(0, 9).map((fact) => fact.id),
+    facts.slice(0, 11).map((fact) => fact.id),
   );
 });
 
-test("buildFloatingKnowledgeItems returns reduced mobile density", () => {
+test("buildFloatingKnowledgeItems returns slightly reduced mobile density", () => {
   const items = buildFloatingKnowledgeItems(facts, {
     variant: "matching",
     viewport: "mobile",
   });
 
-  assert.equal(items.length, 5);
+  assert.equal(items.length, 6);
   assert.ok(items.every((item) => item.slot.mobileHidden !== true));
 });
 
