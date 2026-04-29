@@ -24,7 +24,7 @@ export function MatchingPage({
       initial="initial"
       animate="in"
       exit="out"
-      className="relative flex flex-col items-center justify-center overflow-hidden px-4 py-12"
+      className="relative flex min-h-[calc(100vh-2rem)] w-full flex-col items-center justify-center overflow-visible px-4 py-12 sm:min-h-[calc(100vh-3rem)] md:min-h-[calc(100vh-4rem)]"
     >
       <FloatingKnowledgeField facts={matchingFunFacts} variant="matching" />
 

@@ -34,6 +34,22 @@ test("buildFloatingKnowledgeItems returns slightly reduced mobile density", () =
   assert.ok(items.every((item) => item.slot.mobileHidden !== true));
 });
 
+test("buildFloatingKnowledgeItems varies fragment shape and motion", () => {
+  const items = buildFloatingKnowledgeItems(facts, {
+    variant: "matching",
+    viewport: "desktop",
+  });
+
+  assert.ok(
+    new Set(items.map((item) => item.slot.shapeClassName)).size >= 4,
+    "desktop fragments should use several silhouette shapes",
+  );
+  assert.ok(
+    new Set(items.map((item) => item.slot.motionClassName)).size >= 3,
+    "desktop fragments should use layered drifting motions",
+  );
+});
+
 test("buildFloatingKnowledgeItems uses variant-specific slots", () => {
   const loadingItems = buildFloatingKnowledgeItems(facts, {
     variant: "loading",

@@ -1384,11 +1384,17 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     currentRoute === "/results"
       ? "max-w-6xl"
       : currentRoute === "/quiz" && step === activeQuestions.length
-        ? "max-w-4xl"
+        ? "max-w-none"
         : "max-w-md";
+  const shellOverflowClassName =
+    currentRoute === "/quiz" && step === activeQuestions.length
+      ? "overflow-visible"
+      : "overflow-hidden";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative overflow-hidden">
+    <div
+      className={`min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative ${shellOverflowClassName}`}
+    >
       {/* Background ambient elements */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl pointer-events-none"></div>

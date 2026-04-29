@@ -3,12 +3,24 @@ import type { LoadingFunFact } from "./loading-fun-facts.ts";
 export type FloatingKnowledgeVariant = "loading" | "matching";
 export type FloatingKnowledgeViewport = "desktop" | "mobile";
 export type FloatingKnowledgeDepth = "near" | "far";
+export type FloatingKnowledgeShapeClass =
+  | "floating-knowledge-shard-1"
+  | "floating-knowledge-shard-2"
+  | "floating-knowledge-shard-3"
+  | "floating-knowledge-shard-4"
+  | "floating-knowledge-shard-5";
+export type FloatingKnowledgeMotionClass =
+  | "floating-knowledge-motion-drift"
+  | "floating-knowledge-motion-tumble"
+  | "floating-knowledge-motion-parallax";
 
 export type FloatingKnowledgeSlot = {
   id: string;
   variant: FloatingKnowledgeVariant;
   depth: FloatingKnowledgeDepth;
   className: string;
+  shapeClassName: FloatingKnowledgeShapeClass;
+  motionClassName: FloatingKnowledgeMotionClass;
   delayMs: number;
   mobileHidden?: boolean;
 };
@@ -23,7 +35,36 @@ type BuildFloatingKnowledgeItemsOptions = {
   viewport: FloatingKnowledgeViewport;
 };
 
-const LOADING_SLOTS: FloatingKnowledgeSlot[] = [
+type FloatingKnowledgeSlotInput = Omit<
+  FloatingKnowledgeSlot,
+  "shapeClassName" | "motionClassName"
+>;
+
+const SHAPE_CLASSES: FloatingKnowledgeShapeClass[] = [
+  "floating-knowledge-shard-1",
+  "floating-knowledge-shard-2",
+  "floating-knowledge-shard-3",
+  "floating-knowledge-shard-4",
+  "floating-knowledge-shard-5",
+];
+
+const MOTION_CLASSES: FloatingKnowledgeMotionClass[] = [
+  "floating-knowledge-motion-drift",
+  "floating-knowledge-motion-tumble",
+  "floating-knowledge-motion-parallax",
+];
+
+function withFragmentTraits(
+  slots: FloatingKnowledgeSlotInput[],
+): FloatingKnowledgeSlot[] {
+  return slots.map((slot, index) => ({
+    ...slot,
+    shapeClassName: SHAPE_CLASSES[index % SHAPE_CLASSES.length],
+    motionClassName: MOTION_CLASSES[index % MOTION_CLASSES.length],
+  }));
+}
+
+const LOADING_SLOTS: FloatingKnowledgeSlot[] = withFragmentTraits([
   {
     id: "loading-far-top-left",
     variant: "loading",
@@ -122,9 +163,9 @@ const LOADING_SLOTS: FloatingKnowledgeSlot[] = [
     delayMs: 1680,
     mobileHidden: true,
   },
-];
+]);
 
-const MATCHING_SLOTS: FloatingKnowledgeSlot[] = [
+const MATCHING_SLOTS: FloatingKnowledgeSlot[] = withFragmentTraits([
   {
     id: "matching-far-top-left",
     variant: "matching",
@@ -223,7 +264,55 @@ const MATCHING_SLOTS: FloatingKnowledgeSlot[] = [
     delayMs: 1440,
     mobileHidden: true,
   },
-];
+  {
+    id: "matching-far-top-inner-left",
+    variant: "matching",
+    depth: "far",
+    className: "floating-knowledge-slot-matching-14",
+    delayMs: 1560,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-near-top-inner-right",
+    variant: "matching",
+    depth: "near",
+    className: "floating-knowledge-slot-matching-15",
+    delayMs: 1680,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-far-lower-edge-left",
+    variant: "matching",
+    depth: "far",
+    className: "floating-knowledge-slot-matching-16",
+    delayMs: 1800,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-near-lower-edge-right",
+    variant: "matching",
+    depth: "near",
+    className: "floating-knowledge-slot-matching-17",
+    delayMs: 1920,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-far-bottom-inner-left",
+    variant: "matching",
+    depth: "far",
+    className: "floating-knowledge-slot-matching-18",
+    delayMs: 2040,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-near-bottom-inner-right",
+    variant: "matching",
+    depth: "near",
+    className: "floating-knowledge-slot-matching-19",
+    delayMs: 2160,
+    mobileHidden: true,
+  },
+]);
 
 function getSlots(variant: FloatingKnowledgeVariant) {
   return variant === "loading" ? LOADING_SLOTS : MATCHING_SLOTS;

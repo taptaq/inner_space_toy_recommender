@@ -134,6 +134,60 @@ const LOADING_FUN_FACTS: LoadingFunFact[] = [
     surfaces: ["matching", "loading"],
   },
   {
+    id: "matching-size-fit",
+    title: "尺寸顺手，往往比参数更容易留住复用率",
+    description:
+      "只看纸面参数很容易跑偏，真正决定你会不会反复使用的，常常是尺寸、拿握和接触方式是否顺手。",
+    theme: "decision",
+    priorityTokens: ["适配", "尺寸", "外部", "纯入体"],
+    surfaces: ["matching", "loading"],
+  },
+  {
+    id: "matching-feedback-route",
+    title: "先想要慢热还是直接反馈，选型会更准",
+    description:
+      "如果你更想要慢慢进入的节奏，和一开始就追求明确刺激，适合的结构、动力和接触方式通常完全不同。",
+    theme: "experience",
+    priorityTokens: ["慢玩", "温柔", "强力", "节奏"],
+    surfaces: ["matching", "loading"],
+  },
+  {
+    id: "matching-storage-ease",
+    title: "收纳越顺手，越容易形成稳定复用",
+    description:
+      "能不能快速放回固定位置、是否好拿好藏，往往比宣传里的附加功能更影响你后续会不会继续用。",
+    theme: "care",
+    priorityTokens: ["高伪装", "收纳", "隐蔽"],
+    surfaces: ["matching", "loading"],
+  },
+  {
+    id: "matching-contact-stability",
+    title: "贴合路径稳定，细节刺激才更容易被放大",
+    description:
+      "当接触点不容易偏移、姿势也更自然时，很多原本不明显的细节反馈反而会被稳定放大出来。",
+    theme: "experience",
+    priorityTokens: ["贴合", "柔软", "温柔", "外部"],
+    surfaces: ["matching"],
+  },
+  {
+    id: "matching-mode-stability",
+    title: "频繁换模式，不一定比稳定档位更舒服",
+    description:
+      "很多人真正留下的使用习惯，不是不断切花样，而是能快速进入状态的那一两个稳定档位。",
+    theme: "decision",
+    priorityTokens: ["模式", "档位", "节奏", "稳定"],
+    surfaces: ["matching", "loading"],
+  },
+  {
+    id: "matching-cleanup-friction",
+    title: "清洁步骤越简单，越不容易在体验后掉兴致",
+    description:
+      "如果收尾流程太繁琐，下一次使用意愿通常也会一起下降，所以清洁摩擦感本身就是体验的一部分。",
+    theme: "care",
+    priorityTokens: ["清洁", "防水", "维护"],
+    surfaces: ["matching", "loading"],
+  },
+  {
     id: "loading-waterproof",
     title: "防水不等于适合长期浸泡",
     description:
