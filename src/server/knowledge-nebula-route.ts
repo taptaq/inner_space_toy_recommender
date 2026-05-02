@@ -104,6 +104,40 @@ export function createKnowledgeNebulaUpdateCardHandler({
   };
 }
 
+export function createKnowledgeNebulaRecordCardViewHandler({
+  store,
+}: {
+  store: Pick<KnowledgeNebulaStore, "recordCardView">;
+}) {
+  return async (req: Request, res: Response) => {
+    const cardId = String(req.params.cardId || "").trim();
+    if (!cardId) {
+      res.status(400).json({ error: "cardId is required" });
+      return;
+    }
+    const viewerKey = String(req.body?.viewerKey || "").trim();
+    if (!viewerKey) {
+      res.status(400).json({ error: "viewerKey is required" });
+      return;
+    }
+
+    try {
+      const result = await store.recordCardView(cardId, viewerKey);
+      if (!result) {
+        res.status(404).json({ error: "Knowledge card not found" });
+        return;
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("❌ [Server/Knowledge] 记录知识卡片查看失败:", error);
+      res
+        .status(500)
+        .json({ error: "Knowledge card view record failed", details: String(error) });
+    }
+  };
+}
+
 export function parseKnowledgeNebulaCardInput(
   body: unknown,
 ): KnowledgeNebulaCardInput | null {

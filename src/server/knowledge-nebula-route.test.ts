@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 
 import {
   createKnowledgeNebulaCreateCardHandler,
+  createKnowledgeNebulaRecordCardViewHandler,
   createKnowledgeNebulaTopicHandler,
   createKnowledgeNebulaUpdateCardHandler,
 } from "./knowledge-nebula-route.ts";
@@ -132,5 +133,61 @@ test("knowledge update-card handler rejects an empty title before touching the s
   assert.equal(mockResponse.readStatusCode(), 400);
   assert.deepEqual(mockResponse.readJsonPayload(), {
     error: "title, summary, and bodyText are required",
+  });
+});
+
+test("knowledge record-card-view handler increments and returns card heat", async () => {
+  let capturedInput: unknown;
+  const handler = createKnowledgeNebulaRecordCardViewHandler({
+    store: {
+      recordCardView: async (cardId, viewerKey) => {
+        capturedInput = { cardId, viewerKey };
+        return { cardId, viewCount: 18, counted: true };
+      },
+    },
+  });
+
+  const mockResponse = createMockResponse();
+  await handler(
+    createMockRequest({
+      params: { cardId: "first-route" },
+      body: { viewerKey: "viewer-abc" },
+    }),
+    mockResponse.response,
+  );
+
+  assert.deepEqual(capturedInput, {
+    cardId: "first-route",
+    viewerKey: "viewer-abc",
+  });
+  assert.equal(mockResponse.readStatusCode(), 200);
+  assert.deepEqual(mockResponse.readJsonPayload(), {
+    cardId: "first-route",
+    viewCount: 18,
+    counted: true,
+  });
+});
+
+test("knowledge record-card-view handler requires a viewer key for unique heat", async () => {
+  let callCount = 0;
+  const handler = createKnowledgeNebulaRecordCardViewHandler({
+    store: {
+      recordCardView: async () => {
+        callCount += 1;
+        return null;
+      },
+    },
+  });
+
+  const mockResponse = createMockResponse();
+  await handler(
+    createMockRequest({ params: { cardId: "first-route" }, body: {} }),
+    mockResponse.response,
+  );
+
+  assert.equal(callCount, 0);
+  assert.equal(mockResponse.readStatusCode(), 400);
+  assert.deepEqual(mockResponse.readJsonPayload(), {
+    error: "viewerKey is required",
   });
 });

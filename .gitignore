@@ -6,5 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
-src/data/
+src/data/*
+!src/data/knowledge-nebula.ts
 .worktrees/

@@ -1,9 +1,17 @@
 import { motion } from "motion/react";
+import { ChevronLeft, ChevronRight, Signal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type {
   KnowledgeNebulaSection,
   KnowledgeNebulaTopic,
 } from "../data/knowledge-nebula.ts";
+import {
+  buildTopicDetailNodeAnchors,
+  getTopicDetailViewport,
+  type TopicDetailViewport,
+} from "../lib/knowledge-nebula-topic-detail-scene.ts";
+import { mergeKnowledgeNebulaTopicPayload } from "../lib/knowledge-nebula-topic-sync.ts";
+import { TopicDetailNodeLayer } from "./knowledge-nebula/TopicDetailNodeLayer.tsx";
 
 type KnowledgeCardEditorState = {
   mode: "create" | "edit";
@@ -20,123 +28,67 @@ type KnowledgeCardEditorState = {
 
 const ACCENT_STYLES = {
   cyan: {
-    badge: "border-cyan-400/18 bg-cyan-400/10 text-cyan-200/85",
-    title: "text-cyan-50",
-    summary: "text-cyan-100/72",
-    border: "border-cyan-400/18",
-    ring: "shadow-[0_0_34px_rgba(34,211,238,0.12)]",
-    glow: "from-cyan-300/28 via-cyan-200/12 to-transparent",
-    shard: "bg-[linear-gradient(165deg,rgba(11,33,54,0.94),rgba(4,12,28,0.9))]",
+    badge: "border-cyan-300/16 bg-cyan-400/10 text-cyan-100/82",
+    title: "from-white via-cyan-100 to-cyan-300/78",
+    summary: "text-cyan-50/78",
+    glow: "from-cyan-300/18 via-cyan-200/10 to-transparent",
+    dialogBorder: "border-cyan-300/16",
+    dialogGlow: "shadow-[0_0_120px_rgba(34,211,238,0.12)]",
+    dialogTag: "border-cyan-300/14 bg-cyan-400/8 text-cyan-100/85",
   },
   sky: {
-    badge: "border-sky-400/18 bg-sky-400/10 text-sky-200/85",
-    title: "text-sky-50",
-    summary: "text-sky-100/72",
-    border: "border-sky-400/18",
-    ring: "shadow-[0_0_34px_rgba(56,189,248,0.12)]",
-    glow: "from-sky-300/26 via-sky-200/12 to-transparent",
-    shard: "bg-[linear-gradient(165deg,rgba(8,30,52,0.94),rgba(3,10,24,0.9))]",
+    badge: "border-sky-300/16 bg-sky-400/10 text-sky-100/82",
+    title: "from-white via-sky-100 to-sky-300/78",
+    summary: "text-sky-50/78",
+    glow: "from-sky-300/18 via-sky-200/10 to-transparent",
+    dialogBorder: "border-sky-300/16",
+    dialogGlow: "shadow-[0_0_120px_rgba(56,189,248,0.12)]",
+    dialogTag: "border-sky-300/14 bg-sky-400/8 text-sky-100/85",
   },
   indigo: {
-    badge: "border-indigo-400/18 bg-indigo-400/10 text-indigo-200/85",
-    title: "text-indigo-50",
-    summary: "text-indigo-100/72",
-    border: "border-indigo-400/18",
-    ring: "shadow-[0_0_34px_rgba(129,140,248,0.12)]",
-    glow: "from-indigo-300/28 via-indigo-200/12 to-transparent",
-    shard: "bg-[linear-gradient(165deg,rgba(14,24,54,0.94),rgba(4,8,26,0.9))]",
+    badge: "border-indigo-300/16 bg-indigo-400/10 text-indigo-100/82",
+    title: "from-white via-indigo-100 to-indigo-300/78",
+    summary: "text-indigo-50/78",
+    glow: "from-indigo-300/18 via-indigo-200/10 to-transparent",
+    dialogBorder: "border-indigo-300/16",
+    dialogGlow: "shadow-[0_0_120px_rgba(129,140,248,0.12)]",
+    dialogTag: "border-indigo-300/14 bg-indigo-400/8 text-indigo-100/85",
   },
 } as const;
 
-function buildFragmentSections(topic: KnowledgeNebulaTopic) {
-  const featuredIds = new Set(topic.featuredSectionIds);
-  const featured = topic.sections.filter((section) => featuredIds.has(section.id));
-  const rest = topic.sections.filter((section) => !featuredIds.has(section.id));
-  return [...featured, ...rest];
+const COCKPIT_SCREEN_GROUP_SIZE = {
+  desktop: 6,
+  mobile: 3,
+} as const;
+
+const KNOWLEDGE_CARD_VIEWER_KEY = "inner-space-knowledge-card-viewer";
+
+function createKnowledgeCardViewerKey() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return `viewer-${crypto.randomUUID()}`;
+  }
+
+  return `viewer-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
 }
 
-function ShardButton({
-  section,
-  badgeLabel,
-  accent,
-  onOpen,
-  onEdit,
-  isAdmin,
-}: {
-  section: KnowledgeNebulaSection;
-  badgeLabel: string;
-  accent: (typeof ACCENT_STYLES)[KnowledgeNebulaTopic["accent"]];
-  onOpen: (sectionId: string) => void;
-  onEdit: (section: KnowledgeNebulaSection) => void;
-  isAdmin: boolean;
-}) {
-  return (
-    <motion.div
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(section.id)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(section.id);
-        }
-      }}
-      whileHover={{ y: -10, scale: 1.02 }}
-      whileTap={{ scale: 0.985 }}
-      className={[
-        "group relative w-full cursor-pointer overflow-hidden rounded-[1.75rem] border px-5 py-5 text-left backdrop-blur-xl transition-shadow duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:px-6 sm:py-6",
-        accent.border,
-        accent.ring,
-        accent.shard,
-      ].join(" ")}
-      aria-label={`展开 ${section.title}`}
-    >
-      <div
-        className={[
-          "pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r",
-          accent.glow,
-        ].join(" ")}
-      />
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100">
-        <div
-          className={[
-            "absolute -right-6 -top-8 h-24 w-24 rounded-full bg-gradient-to-br blur-2xl",
-            accent.glow,
-          ].join(" ")}
-        />
-      </div>
-      {isAdmin ? (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdit(section);
-          }}
-          className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] tracking-[0.14em] text-slate-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
-          aria-label={`编辑卡片 ${section.title}`}
-        >
-          编辑卡片
-        </button>
-      ) : null}
-      <span
-        className={[
-          "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-mono tracking-[0.16em]",
-          accent.badge,
-        ].join(" ")}
-      >
-        {badgeLabel}
-      </span>
-      <h3 className={`mt-4 text-lg font-medium sm:text-xl ${accent.title}`}>
-        {section.title}
-      </h3>
-      <p className={`mt-2 text-sm leading-relaxed ${accent.summary}`}>
-        {section.summary}
-      </p>
-      <p className="mt-5 text-xs tracking-[0.14em] text-slate-400 transition-colors group-hover:text-slate-200">
-        点击展开碎片
-      </p>
-    </motion.div>
-  );
+function getKnowledgeCardViewerKey() {
+  if (typeof window === "undefined") {
+    return "server-rendered-viewer";
+  }
+
+  const existingViewerKey = window.localStorage.getItem(KNOWLEDGE_CARD_VIEWER_KEY);
+  if (existingViewerKey) {
+    return existingViewerKey;
+  }
+
+  const nextViewerKey = createKnowledgeCardViewerKey();
+  window.localStorage.setItem(KNOWLEDGE_CARD_VIEWER_KEY, nextViewerKey);
+  return nextViewerKey;
 }
 
 export function KnowledgeNebulaTopicSections({
@@ -148,31 +100,104 @@ export function KnowledgeNebulaTopicSections({
 }) {
   const [liveTopic, setLiveTopic] = useState(topic);
   const [topicSyncError, setTopicSyncError] = useState<string | null>(null);
-  const sectionsById = useMemo(
-    () => new Map(liveTopic.sections.map((section) => [section.id, section])),
-    [liveTopic.sections],
+  const [viewport, setViewport] = useState<TopicDetailViewport>(() =>
+    getTopicDetailViewport(),
   );
-  const fragmentSections = useMemo(() => buildFragmentSections(liveTopic), [liveTopic]);
-  const featuredIds = useMemo(
-    () => new Set(liveTopic.featuredSectionIds),
-    [liveTopic.featuredSectionIds],
-  );
-  const hasInvalidFeaturedSectionIds =
-    fragmentSections.filter((section) => featuredIds.has(section.id)).length !==
-    liveTopic.featuredSectionIds.length;
-  const accent = ACCENT_STYLES[liveTopic.accent];
+  const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
-  const openSection = openSectionId ? sectionsById.get(openSectionId) : undefined;
+  const [viewedSectionIds, setViewedSectionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [visibleScreenStart, setVisibleScreenStart] = useState(0);
   const [editorState, setEditorState] = useState<KnowledgeCardEditorState | null>(
     null,
   );
 
+  const accent = ACCENT_STYLES[liveTopic.accent];
+  const sectionsById = useMemo(
+    () => new Map(liveTopic.sections.map((section) => [section.id, section])),
+    [liveTopic.sections],
+  );
+  const featuredIds = useMemo(
+    () => new Set(liveTopic.featuredSectionIds),
+    [liveTopic.featuredSectionIds],
+  );
+  const anchors = useMemo(
+    () =>
+      buildTopicDetailNodeAnchors({
+        topic: liveTopic,
+        viewport,
+      }),
+    [liveTopic, viewport],
+  );
+  const currentScreenGroupSize = COCKPIT_SCREEN_GROUP_SIZE[viewport];
+  const visibleAnchors = useMemo(
+    () => anchors.slice(visibleScreenStart, visibleScreenStart + currentScreenGroupSize),
+    [anchors, currentScreenGroupSize, visibleScreenStart],
+  );
+  const screenGroupIndex = Math.floor(visibleScreenStart / currentScreenGroupSize) + 1;
+  const screenGroupTotal = Math.max(
+    1,
+    Math.ceil(anchors.length / currentScreenGroupSize),
+  );
+  const canPageScreens = anchors.length > currentScreenGroupSize;
+  const openSection = openSectionId ? sectionsById.get(openSectionId) : undefined;
+  const relatedSections = openSection
+    ? (openSection.relatedSectionIds?.length
+        ? openSection.relatedSectionIds
+            .map((sectionId) => sectionsById.get(sectionId))
+            .filter((section): section is KnowledgeNebulaSection => Boolean(section))
+        : liveTopic.sections.filter((section) => section.id !== openSection.id)
+      ).slice(0, 3)
+    : [];
+
   useEffect(() => {
     setLiveTopic(topic);
+    setHoveredSectionId(null);
     setOpenSectionId(null);
+    setViewedSectionIds(new Set());
+    setVisibleScreenStart(0);
     setEditorState(null);
     setTopicSyncError(null);
   }, [topic]);
+
+  useEffect(() => {
+    setVisibleScreenStart((current) => {
+      if (anchors.length === 0) {
+        return 0;
+      }
+
+      const maxStart =
+        Math.max(0, Math.ceil(anchors.length / currentScreenGroupSize) - 1) *
+        currentScreenGroupSize;
+
+      return Math.min(current, maxStart);
+    });
+  }, [anchors.length, currentScreenGroupSize]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const onChange = (event: MediaQueryListEvent) => {
+      setViewport(event.matches ? "desktop" : "mobile");
+    };
+
+    mediaQuery.addEventListener("change", onChange);
+    return () => {
+      mediaQuery.removeEventListener("change", onChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!openSectionId || sectionsById.has(openSectionId)) {
+      return;
+    }
+
+    setOpenSectionId(null);
+  }, [openSectionId, sectionsById]);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,10 +212,12 @@ export function KnowledgeNebulaTopicSections({
 
         const payload = (await response.json()) as KnowledgeNebulaTopic;
         if (!cancelled) {
-          setLiveTopic(payload);
+          setLiveTopic((current) =>
+            mergeKnowledgeNebulaTopicPayload(current, payload),
+          );
           setTopicSyncError(null);
         }
-      } catch (error) {
+      } catch (_error) {
         if (!cancelled) {
           setTopicSyncError("数据库内容同步失败，当前展示本地卡片。");
         }
@@ -251,23 +278,99 @@ export function KnowledgeNebulaTopicSections({
   };
 
   const updateEditorField = (
-    field: keyof Omit<KnowledgeCardEditorState, "mode" | "cardId" | "isSubmitting" | "error">,
+    field: keyof Omit<
+      KnowledgeCardEditorState,
+      "mode" | "cardId" | "isSubmitting" | "error"
+    >,
     value: string | boolean,
   ) => {
-    setEditorState((current) => {
-      if (!current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        [field]: value,
-      };
-    });
+    setEditorState((current) =>
+      current
+        ? {
+            ...current,
+            [field]: value,
+          }
+        : current,
+    );
   };
 
   const closeEditor = () => {
     setEditorState(null);
+  };
+
+  const showPreviousScreenGroup = () => {
+    setVisibleScreenStart((current) =>
+      Math.max(0, current - currentScreenGroupSize),
+    );
+  };
+
+  const showNextScreenGroup = () => {
+    setVisibleScreenStart((current) => {
+      const nextStart = current + currentScreenGroupSize;
+
+      if (nextStart >= anchors.length) {
+        return 0;
+      }
+
+      return nextStart;
+    });
+  };
+
+  const patchSectionViewCount = (sectionId: string, viewCount: number) => {
+    setLiveTopic((current) => ({
+      ...current,
+      sections: current.sections.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              viewCount,
+            }
+          : section,
+      ),
+    }));
+  };
+
+  const recordCardView = async (sectionId: string) => {
+    const currentSection = sectionsById.get(sectionId);
+    const hasViewedInSession = viewedSectionIds.has(sectionId);
+    if (!hasViewedInSession) {
+      const optimisticViewCount = (currentSection?.viewCount ?? 0) + 1;
+      patchSectionViewCount(sectionId, optimisticViewCount);
+      setViewedSectionIds((current) => new Set(current).add(sectionId));
+    }
+
+    try {
+      const viewerKey = getKnowledgeCardViewerKey();
+      const response = await fetch(`/api/knowledge/cards/${sectionId}/view`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ viewerKey }),
+      });
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as {
+        cardId?: string;
+        viewCount?: number;
+        counted?: boolean;
+      };
+      if (
+        payload.cardId === sectionId &&
+        typeof payload.viewCount === "number"
+      ) {
+        patchSectionViewCount(sectionId, payload.viewCount);
+      }
+    } catch (_error) {
+      // 热度记录是增强信息，失败时不阻塞主屏展开。
+    }
+  };
+
+  const openParameterScreen = (sectionId: string) => {
+    setOpenSectionId(sectionId);
+    void recordCardView(sectionId);
   };
 
   const saveEditor = async () => {
@@ -318,7 +421,9 @@ export function KnowledgeNebulaTopicSections({
       }
 
       const nextTopic = (await response.json()) as KnowledgeNebulaTopic;
-      setLiveTopic(nextTopic);
+      setLiveTopic((current) =>
+        mergeKnowledgeNebulaTopicPayload(current, nextTopic),
+      );
       setTopicSyncError(null);
       setEditorState(null);
     } catch (error) {
@@ -336,156 +441,233 @@ export function KnowledgeNebulaTopicSections({
 
   return (
     <>
-      <div className="space-y-10">
-        <section aria-labelledby={`${liveTopic.slug}-fragments`} className="space-y-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2
-                id={`${liveTopic.slug}-fragments`}
-                className="text-lg font-medium tracking-[0.16em] text-white"
-              >
-                内容碎片
-              </h2>
-              <p className="mt-1 text-sm text-slate-400">
-                所有内容统一放在这里，点击任意卡片展开查看
-              </p>
-              {topicSyncError ? (
-                <p className="mt-2 text-xs text-amber-200/80">{topicSyncError}</p>
-              ) : null}
-              {hasInvalidFeaturedSectionIds ? (
-                <p className="mt-2 text-xs text-amber-200/75">
-                  当前主题有部分重点章节配置未命中，已跳过无效锚点。
-                </p>
-              ) : null}
-            </div>
-            {isAdmin ? (
-              <button
-                type="button"
-                onClick={openCreateEditor}
-                className="inline-flex shrink-0 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition-colors hover:border-cyan-300/38 hover:bg-cyan-400/16 hover:text-white"
-              >
-                新增卡片
-              </button>
-            ) : null}
+      <div className="relative h-full min-h-0 overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[28dvh] bg-[linear-gradient(180deg,rgba(0,8,18,0.58),transparent)]" />
+        <div className="pointer-events-none absolute left-1/2 top-[13dvh] z-10 h-[38dvh] w-[86vw] -translate-x-1/2 rounded-[50%] border-t border-cyan-100/12 shadow-[inset_0_34px_90px_rgba(8,47,73,0.12)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[32dvh] bg-[linear-gradient(180deg,transparent,rgba(1,6,16,0.72)_28%,rgba(1,4,12,0.98))]" />
+        <div className="pointer-events-none absolute bottom-0 left-1/2 z-30 h-[30dvh] w-[112vw] -translate-x-1/2 rounded-t-[52%] border-t border-cyan-100/12 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.13),transparent_42%),linear-gradient(180deg,rgba(4,13,25,0.5),rgba(1,4,12,0.94))] shadow-[0_-28px_90px_rgba(8,47,73,0.22)]" />
+        <div className="pointer-events-none absolute bottom-[11dvh] left-[7vw] z-30 h-px w-[24vw] rotate-[-13deg] bg-gradient-to-r from-transparent via-cyan-100/24 to-transparent" />
+        <div className="pointer-events-none absolute bottom-[11dvh] right-[7vw] z-30 h-px w-[24vw] rotate-[13deg] bg-gradient-to-l from-transparent via-cyan-100/24 to-transparent" />
+
+        <div className="pointer-events-none absolute left-1/2 top-[6.5%] z-20 w-[min(58rem,90vw)] -translate-x-1/2 text-center sm:top-[8%]">
+          <div className="flex items-center justify-center gap-4">
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-100/18 to-cyan-100/34" />
+            <span className="relative inline-flex items-center gap-2 rounded-full border border-cyan-200/18 bg-slate-950/34 px-4 py-1.5 text-[10px] tracking-[0.28em] text-cyan-50/78 shadow-[0_0_34px_rgba(34,211,238,0.08)] backdrop-blur-md">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-200/72 shadow-[0_0_12px_rgba(125,211,252,0.72)]" />
+              <span>驾驶舱导航</span>
+            </span>
+            <span className="h-px flex-1 bg-gradient-to-l from-transparent via-cyan-100/18 to-cyan-100/34" />
           </div>
+          <p className="mt-2 text-[10px] tracking-[0.32em] text-slate-400/70 sm:text-xs">
+            模拟巡航 · 知识屏同步中
+          </p>
+          <div className="mx-auto mt-3 h-px w-[min(18rem,52vw)] bg-gradient-to-r from-transparent via-cyan-100/18 to-transparent" />
+          {topicSyncError ? (
+            <p className="mt-3 text-xs tracking-normal text-amber-200/80">
+              {topicSyncError}
+            </p>
+          ) : null}
+        </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {fragmentSections.map((section, index) => {
-              const isFeatured = featuredIds.has(section.id);
-
-              return (
-                <ShardButton
-                  key={section.id}
-                  section={section}
-                  badgeLabel={
-                    isFeatured
-                      ? "重点"
-                      : `SECTION ${String(index + 1).padStart(2, "0")}`
-                  }
-                  accent={accent}
-                  onOpen={setOpenSectionId}
-                  onEdit={openEditEditor}
-                  isAdmin={isAdmin}
-                />
-              );
-            })}
+        {isAdmin ? (
+          <div className="absolute right-3 top-3 z-30 flex flex-col items-end gap-2 sm:right-5 sm:top-5">
+            <button
+              type="button"
+              onClick={openCreateEditor}
+              className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100 transition-colors hover:border-cyan-300/38 hover:bg-cyan-400/16 hover:text-white"
+            >
+              新增卡片
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const firstSection = liveTopic.sections[0];
+                if (firstSection) {
+                  openEditEditor(firstSection);
+                }
+              }}
+              className="inline-flex rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              编辑卡片
+            </button>
           </div>
-        </section>
-      </div>
+        ) : null}
 
-      {openSection ? (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/76 px-4 py-8 backdrop-blur-md"
-          onClick={() => setOpenSectionId(null)}
-          role="presentation"
+          className={[
+            "transition-opacity duration-300",
+            openSection ? "pointer-events-none opacity-18" : "opacity-100",
+          ].join(" ")}
         >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`${openSection.id}-dialog-title`}
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.98 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
-            className={[
-              "relative max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-[2rem] border p-6 shadow-[0_0_90px_rgba(2,132,199,0.18)] sm:p-7",
-              accent.border,
-              "bg-[linear-gradient(180deg,rgba(10,18,36,0.97),rgba(4,9,20,0.96))]",
-            ].join(" ")}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div
+          <TopicDetailNodeLayer
+            anchors={visibleAnchors}
+            sectionsById={sectionsById}
+            openSectionId={openSectionId}
+            hoveredSectionId={hoveredSectionId}
+            viewport={viewport}
+            onHoverSection={setHoveredSectionId}
+            onOpenSection={openParameterScreen}
+          />
+        </div>
+
+        {openSection ? (
+          <div className="pointer-events-auto absolute inset-x-[3.5vw] top-[10.5dvh] z-[65] h-[67dvh] sm:inset-x-[5vw] sm:top-[10.5dvh] sm:h-[68dvh]">
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`${openSection.id}-dialog-title`}
               className={[
-                "pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r",
-                accent.glow,
+                "expanded-cockpit-main-screen relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.8rem] border bg-[linear-gradient(180deg,rgba(5,19,35,0.94),rgba(1,7,18,0.97))] p-4 shadow-[0_0_120px_rgba(34,211,238,0.13)] backdrop-blur-2xl sm:rounded-[2.4rem] sm:p-6",
+                accent.dialogBorder,
               ].join(" ")}
-            />
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <span
+              initial={{ opacity: 0, scale: 0.84, y: 34, filter: "brightness(1.5)" }}
+              animate={{ opacity: 1, scale: 1, y: 0, filter: "brightness(1)" }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),transparent_24%),repeating-linear-gradient(180deg,rgba(125,211,252,0.052)_0_1px,transparent_1px_7px),radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.1),transparent_44%)]" />
+              <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/50 to-transparent" />
+              <div className="pointer-events-none absolute -left-20 top-1/3 h-44 w-44 rounded-full bg-cyan-300/8 blur-3xl" />
+              <div className="relative z-10 flex items-start justify-between gap-4 border-b border-white/8 pb-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-[0.2em] text-cyan-100/62">
+                    <span>主屏展开</span>
+                    <span className="h-px w-8 bg-cyan-100/24" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <Signal className="h-3 w-3" />
+                      <span>已被查看 {openSection.viewCount ?? 0} 次</span>
+                    </span>
+                  </div>
+                  <h3
+                    id={`${openSection.id}-dialog-title`}
+                    className="mt-3 text-2xl font-light tracking-[0.08em] text-white sm:text-4xl"
+                  >
+                    {openSection.title}
+                  </h3>
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300/84 sm:text-base">
+                    {openSection.summary}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenSectionId(null)}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:border-cyan-200/28 hover:bg-cyan-300/10 hover:text-white"
+                  aria-label="关闭主屏"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="relative z-10 mt-4 grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[1fr_16rem]">
+                <div className="min-h-0 overflow-y-auto pr-1 [mask-image:linear-gradient(to_bottom,black,black_calc(100%_-_18px),transparent)]">
+                  <div className="space-y-4">
+                    {openSection.body.map((paragraph, paragraphIndex) => (
+                      <p
+                        key={`${openSection.id}-${paragraphIndex}`}
+                        className={[
+                          "border-l-2 py-1 pl-4 text-sm leading-7 text-slate-200/88 sm:text-[15px]",
+                          accent.dialogBorder,
+                        ].join(" ")}
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                <aside className="hidden min-h-0 border-l border-white/8 pl-4 lg:block">
+                  <p className="text-[10px] tracking-[0.2em] text-slate-500">
+                    可能关联的参数卡片
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    {relatedSections.map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => openParameterScreen(section.id)}
+                        className="group block w-full rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors hover:border-cyan-200/24 hover:bg-cyan-300/8"
+                      >
+                        <span className="block text-xs text-slate-200 transition-colors group-hover:text-white">
+                          {section.title}
+                        </span>
+                        <span className="mt-1.5 line-clamp-2 block text-[11px] leading-5 text-slate-500 transition-colors group-hover:text-cyan-100/62">
+                          {section.summary}
+                        </span>
+                        <span className="mt-2 inline-flex items-center gap-1 text-[10px] tracking-[0.14em] text-cyan-100/42 transition-colors group-hover:text-cyan-100/70">
+                          <span className="h-px w-5 bg-current/50" />
+                          打开关联卡片
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {openSection.sourceUrl ? (
+                    <a
+                      href={openSection.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 transition-colors hover:border-cyan-300/30 hover:bg-cyan-400/10 hover:text-white"
+                    >
+                      查看来源
+                    </a>
+                  ) : null}
+                </aside>
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
+
+        <div className="absolute inset-x-4 bottom-5 z-40 mx-auto max-w-5xl sm:bottom-7">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-cyan-100/12 bg-[linear-gradient(180deg,rgba(5,20,36,0.72),rgba(1,6,16,0.9))] px-4 py-3.5 shadow-[0_0_80px_rgba(14,165,233,0.12)] backdrop-blur-xl sm:px-5 sm:py-4">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(125,211,252,0.08),transparent)]" />
+            <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[10px] tracking-[0.28em] text-cyan-100/58">
+                  驾驶舱中控台
+                </p>
+                <h2
                   className={[
-                    "inline-flex rounded-full border px-2.5 py-1 text-[10px] font-mono tracking-[0.18em]",
-                    accent.badge,
+                    "mt-1.5 bg-gradient-to-r bg-clip-text text-xl font-light tracking-[0.14em] text-transparent sm:text-3xl",
+                    accent.title,
                   ].join(" ")}
                 >
-                  SHARD OPEN
+                  当前航线：{liveTopic.title}
+                </h2>
+                <p className={`mt-2 line-clamp-1 text-xs leading-relaxed sm:text-sm ${accent.summary}`}>
+                  {liveTopic.summary}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-[0.16em] text-slate-300/78">
+                <span className="rounded-full border border-white/8 bg-white/6 px-3 py-1">
+                  {liveTopic.sections.length} 项参数配置
                 </span>
-                <h3
-                  id={`${openSection.id}-dialog-title`}
-                  className={`mt-4 text-2xl font-medium sm:text-3xl ${accent.title}`}
-                >
-                  {openSection.title}
-                </h3>
-                <p className={`mt-3 max-w-2xl text-sm leading-relaxed sm:text-base ${accent.summary}`}>
-                  {openSection.summary}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpenSectionId(null)}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
-                aria-label="关闭碎片弹窗"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="mt-6 max-h-[52vh] space-y-4 overflow-y-auto pr-1">
-              {openSection.body.map((paragraph, paragraphIndex) => (
-                <p
-                  key={`${openSection.id}-${paragraphIndex}`}
-                  className="text-sm leading-7 text-slate-200/88 sm:text-[15px]"
-                >
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-
-            {openSection.tags?.length || openSection.sourceUrl ? (
-              <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
-                {openSection.tags?.map((tag) => (
-                  <span
-                    key={`${openSection.id}-${tag}`}
-                    className="rounded-full border border-cyan-300/14 bg-cyan-400/8 px-3 py-1 text-xs text-cyan-100/85"
-                  >
-                    {tag}
+                {canPageScreens ? (
+                  <span className="rounded-full border border-white/8 bg-white/6 px-3 py-1">
+                    第 {screenGroupIndex}/{screenGroupTotal} 组
                   </span>
-                ))}
-                {openSection.sourceUrl ? (
-                  <a
-                    href={openSection.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 transition-colors hover:border-cyan-300/30 hover:bg-cyan-400/10 hover:text-white"
-                  >
-                    查看来源
-                  </a>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={showPreviousScreenGroup}
+                  disabled={!canPageScreens || visibleScreenStart === 0}
+                  className="pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-full border border-cyan-200/14 bg-cyan-300/8 px-3 py-1 text-cyan-100/82 transition-colors hover:border-cyan-200/32 hover:bg-cyan-300/14 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                  <span>上一组</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextScreenGroup}
+                  disabled={!canPageScreens}
+                  className="pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-full border border-cyan-200/18 bg-cyan-300/10 px-3 py-1 text-cyan-100 transition-colors hover:border-cyan-200/38 hover:bg-cyan-300/16 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <span>下一组</span>
+                  <ChevronRight className="h-3 w-3" />
+                </button>
               </div>
-            ) : null}
-          </motion.div>
+            </div>
+          </div>
         </div>
-      ) : null}
+      </div>
 
       {isAdmin && editorState ? (
         <div

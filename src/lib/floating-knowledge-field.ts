@@ -312,6 +312,46 @@ const MATCHING_SLOTS: FloatingKnowledgeSlot[] = withFragmentTraits([
     delayMs: 2160,
     mobileHidden: true,
   },
+  {
+    id: "matching-far-inner-left",
+    variant: "matching",
+    depth: "far",
+    className: "floating-knowledge-slot-matching-20",
+    delayMs: 2280,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-near-inner-right",
+    variant: "matching",
+    depth: "near",
+    className: "floating-knowledge-slot-matching-21",
+    delayMs: 2400,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-far-upper-middle-left",
+    variant: "matching",
+    depth: "far",
+    className: "floating-knowledge-slot-matching-22",
+    delayMs: 2520,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-near-upper-middle-right",
+    variant: "matching",
+    depth: "near",
+    className: "floating-knowledge-slot-matching-23",
+    delayMs: 2640,
+    mobileHidden: true,
+  },
+  {
+    id: "matching-far-lower-middle",
+    variant: "matching",
+    depth: "far",
+    className: "floating-knowledge-slot-matching-24",
+    delayMs: 2760,
+    mobileHidden: true,
+  },
 ]);
 
 function getSlots(variant: FloatingKnowledgeVariant) {

@@ -11,6 +11,284 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+}
+
+button:not(:disabled),
+a[href],
+[role="button"],
+summary,
+label[for],
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+select:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+.cockpit-cruise-stars {
+  background-image:
+    radial-gradient(circle, rgba(226, 232, 240, 0.48) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(103, 232, 249, 0.28) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(148, 163, 184, 0.22) 0 1px, transparent 1.7px);
+  background-position:
+    0 0,
+    34px 70px,
+    102px 28px;
+  background-size:
+    220px 220px,
+    310px 310px,
+    410px 410px;
+  opacity: 0.48;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.cockpit-cruise-stars-a {
+  animation: cockpit-cruise-drift-a 18s linear infinite;
+}
+
+.cockpit-cruise-stars-b {
+  opacity: 0.26;
+  animation: cockpit-cruise-drift-b 28s linear infinite;
+}
+
+.cockpit-cruise-depth {
+  opacity: 0.88;
+  transform: translate3d(0, 0, 0);
+}
+
+.cockpit-cruise-dust {
+  background-image:
+    radial-gradient(circle, rgba(226, 232, 240, 0.58) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(125, 211, 252, 0.38) 0 1px, transparent 1.7px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.28) 0 1px, transparent 1.9px);
+  background-position:
+    12px 24px,
+    94px 18px,
+    46px 112px;
+  background-size:
+    280px 180px,
+    380px 260px,
+    520px 320px;
+  will-change: transform, opacity;
+}
+
+.cockpit-cruise-dust-a {
+  opacity: 0.36;
+  animation: cockpit-cruise-dust-a 12s linear infinite;
+}
+
+.cockpit-cruise-dust-b {
+  opacity: 0.22;
+  animation: cockpit-cruise-dust-b 20s linear infinite;
+}
+
+.cockpit-cruise-speedline {
+  background: linear-gradient(90deg, transparent, rgba(224, 242, 254, 0.5), rgba(103, 232, 249, 0.12), transparent);
+  opacity: 0;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+.cockpit-cruise-speedline-a {
+  animation: cockpit-cruise-speedline 3.4s ease-in-out infinite;
+}
+
+.cockpit-cruise-speedline-b {
+  animation: cockpit-cruise-speedline 4.2s ease-in-out 0.8s infinite;
+}
+
+.cockpit-cruise-speedline-c {
+  animation: cockpit-cruise-speedline 3.8s ease-in-out 1.7s infinite;
+}
+
+.cockpit-cruise-stream {
+  background: linear-gradient(90deg, transparent, rgba(186, 230, 253, 0.36), transparent);
+  opacity: 0;
+  filter: blur(0.5px);
+  will-change: transform, opacity;
+}
+
+.cockpit-cruise-stream-a {
+  animation: cockpit-cruise-stream 4.6s ease-in-out infinite;
+}
+
+.cockpit-cruise-stream-b {
+  animation: cockpit-cruise-stream 5.8s ease-in-out 1.4s infinite;
+}
+
+.cockpit-cruise-beacon {
+  box-shadow: 0 0 22px rgba(103, 232, 249, 0.55);
+  animation: cockpit-cruise-beacon 3.8s ease-in-out infinite;
+}
+
+.quiz-scan-shell {
+  min-height: 100dvh;
+}
+
+.quiz-starfield {
+  overflow: hidden;
+  background-image:
+    linear-gradient(115deg, transparent 0 42%, rgba(34, 211, 238, 0.055) 48%, transparent 56%),
+    radial-gradient(circle at 50% 18%, rgba(34, 211, 238, 0.12), transparent 34%),
+    radial-gradient(circle at 18% 78%, rgba(99, 102, 241, 0.12), transparent 36%);
+  background-size: 100% 100%;
+}
+
+.quiz-starfield::before {
+  position: absolute;
+  inset: -12%;
+  content: "";
+  background-image:
+    radial-gradient(circle, rgba(226, 232, 240, 0.52) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(103, 232, 249, 0.34) 0 1px, transparent 1.8px);
+  background-position:
+    0 0,
+    64px 38px;
+  background-size:
+    190px 190px,
+    310px 310px;
+  opacity: 0.9;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  animation: quiz-starfield-drift 26s linear infinite;
+}
+
+.quiz-orbit-arc {
+  transform: translate3d(-50%, 0, 0) rotate(-10deg);
+  animation: quiz-orbit-breathe 7s ease-in-out infinite;
+}
+
+.quiz-scan-beam {
+  animation: quiz-scan-beam 5.6s ease-in-out infinite;
+}
+
+@keyframes cockpit-cruise-drift-a {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-90px, 44px, 0);
+  }
+}
+
+@keyframes cockpit-cruise-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(-130px, 62px, 0) scale(1.02);
+  }
+}
+
+@keyframes cockpit-cruise-dust-a {
+  from {
+    transform: translate3d(80px, -28px, 0) scale(1.03);
+  }
+  to {
+    transform: translate3d(-180px, 78px, 0) scale(1.03);
+  }
+}
+
+@keyframes cockpit-cruise-dust-b {
+  from {
+    transform: translate3d(160px, -40px, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-240px, 94px, 0) scale(1.08);
+  }
+}
+
+@keyframes cockpit-cruise-speedline {
+  0% {
+    opacity: 0;
+    transform: translate3d(42vw, -6vh, 0) scaleX(0.18);
+  }
+  18% {
+    opacity: 0.52;
+  }
+  58% {
+    opacity: 0.24;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-78vw, 16vh, 0) scaleX(1.5);
+  }
+}
+
+@keyframes cockpit-cruise-stream {
+  0% {
+    opacity: 0;
+    transform: translate3d(34vw, -4vh, 0) scaleX(0.24);
+  }
+  22% {
+    opacity: 0.46;
+  }
+  56% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-92vw, 22vh, 0) scaleX(1.25);
+  }
+}
+
+@keyframes cockpit-cruise-beacon {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.7);
+  }
+  45% {
+    opacity: 0.9;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes quiz-starfield-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-80px, 44px, 0);
+  }
+}
+
+@keyframes quiz-orbit-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate3d(-50%, 0, 0) rotate(-10deg) scale(0.98);
+  }
+  50% {
+    opacity: 0.92;
+    transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1.03);
+  }
+}
+
+@keyframes quiz-scan-beam {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: translate3d(-18%, 0, 0) rotate(-8deg);
+  }
+  48% {
+    opacity: 0.78;
+    transform: translate3d(18%, 0, 0) rotate(-8deg);
+  }
+}
+
 .glass-panel {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(16px);
@@ -32,6 +310,180 @@ body {
 .glass-button:active {
   background: rgba(255, 255, 255, 0.15);
   transform: scale(0.98);
+}
+
+.home-space-depth {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(34, 211, 238, 0.08), transparent 26%),
+    radial-gradient(circle at 78% 28%, rgba(129, 140, 248, 0.08), transparent 24%);
+}
+
+.home-space-stars {
+  background-image:
+    radial-gradient(circle, rgba(226, 232, 240, 0.46) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(125, 211, 252, 0.24) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(148, 163, 184, 0.18) 0 1px, transparent 1.8px);
+  background-position:
+    0 0,
+    38px 64px,
+    110px 28px;
+  background-size:
+    210px 210px,
+    320px 320px,
+    460px 460px;
+  will-change: transform;
+}
+
+.home-space-stars-a {
+  opacity: 0.46;
+  animation: home-space-drift-a 24s linear infinite;
+}
+
+.home-space-stars-b {
+  opacity: 0.24;
+  animation: home-space-drift-b 38s linear infinite;
+}
+
+.home-space-orbit {
+  transform: translate3d(-50%, 0, 0) rotate(-8deg);
+  box-shadow: inset 0 34px 80px rgba(8, 47, 73, 0.06);
+}
+
+.home-space-orbit-offset {
+  transform: translate3d(-50%, 0, 0) rotate(13deg);
+}
+
+.home-space-comet {
+  background: linear-gradient(90deg, transparent, rgba(224, 242, 254, 0.62), rgba(103, 232, 249, 0.16), transparent);
+  opacity: 0;
+  animation: home-space-comet 5.6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.home-orbit-core {
+  animation: home-orbit-breathe 4.8s ease-in-out infinite;
+}
+
+.home-panel-scan {
+  animation: home-panel-scan 4.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.home-primary-ignition::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  opacity: 0;
+  animation: home-primary-pulse 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.home-secondary-node::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(125, 211, 252, 0.54);
+  box-shadow: 0 0 16px rgba(125, 211, 252, 0.54);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition: opacity 150ms ease, transform 150ms ease;
+  pointer-events: none;
+}
+
+.home-secondary-node:hover::after,
+.home-secondary-node:focus-within::after {
+  opacity: 0.46;
+  transform: translate(-50%, -50%) scale(8);
+}
+
+.home-privacy-status {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-privacy-status::before {
+  content: "";
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.34);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.34);
+}
+
+@keyframes home-space-drift-a {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-72px, 42px, 0);
+  }
+}
+
+@keyframes home-space-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.04);
+  }
+  to {
+    transform: translate3d(-120px, 68px, 0) scale(1.04);
+  }
+}
+
+@keyframes home-space-comet {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translate3d(36vw, -8vh, 0) scaleX(0.28);
+  }
+  72% {
+    opacity: 0.66;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-72vw, 18vh, 0) scaleX(1.35);
+  }
+}
+
+@keyframes home-orbit-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 38px rgba(34, 211, 238, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 62px rgba(34, 211, 238, 0.22);
+  }
+}
+
+@keyframes home-panel-scan {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -120%, 0);
+  }
+  42% {
+    opacity: 0.72;
+  }
+  72% {
+    opacity: 0;
+    transform: translate3d(0, 430%, 0);
+  }
+}
+
+@keyframes home-primary-pulse {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  46% {
+    opacity: 0.86;
+    transform: scale(1.03);
+  }
 }
 
 .radar-container {
@@ -504,6 +956,36 @@ body {
   right: 22%;
   bottom: 3%;
   rotate: 5deg;
+}
+
+.floating-knowledge-slot-matching-20 {
+  top: 33%;
+  left: 18%;
+  rotate: 7deg;
+}
+
+.floating-knowledge-slot-matching-21 {
+  top: 34%;
+  right: 18%;
+  rotate: -7deg;
+}
+
+.floating-knowledge-slot-matching-22 {
+  top: 15%;
+  left: 31%;
+  rotate: -5deg;
+}
+
+.floating-knowledge-slot-matching-23 {
+  top: 15%;
+  right: 31%;
+  rotate: 5deg;
+}
+
+.floating-knowledge-slot-matching-24 {
+  bottom: 13%;
+  left: 43%;
+  rotate: -3deg;
 }
 
 @keyframes floating-knowledge-drift {

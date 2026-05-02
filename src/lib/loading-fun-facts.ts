@@ -188,6 +188,51 @@ const LOADING_FUN_FACTS: LoadingFunFact[] = [
     surfaces: ["matching", "loading"],
   },
   {
+    id: "matching-hold-comfort",
+    title: "握持舒适度会影响持续体验",
+    description:
+      "重量、重心和外壳弧度会影响使用时是否容易累手，也会改变你能否稳定控制角度。",
+    theme: "experience",
+    priorityTokens: ["尺寸", "外部", "稳定", "日常"],
+    surfaces: ["matching"],
+  },
+  {
+    id: "matching-button-layout",
+    title: "按键位置越直觉，越不容易中途出戏",
+    description:
+      "如果调档需要反复找按键，体验节奏会被打断；盲操作友好度其实很重要。",
+    theme: "decision",
+    priorityTokens: ["模式", "档位", "节奏", "稳定"],
+    surfaces: ["matching"],
+  },
+  {
+    id: "matching-temperature-feel",
+    title: "材质触感也包括温度感",
+    description:
+      "偏冷、偏黏或回温慢的表层都会影响第一下接触的接受度，不只是软硬问题。",
+    theme: "experience",
+    priorityTokens: ["材质", "温柔", "柔软", "慢玩"],
+    surfaces: ["matching"],
+  },
+  {
+    id: "matching-partner-sync",
+    title: "双人场景更看沟通成本",
+    description:
+      "情侣共玩时，是否容易说明、切换和暂停，往往比参数强弱更影响默契感。",
+    theme: "experience",
+    priorityTokens: ["情侣", "双人", "遥控", "互动"],
+    surfaces: ["matching"],
+  },
+  {
+    id: "matching-maintenance-memory",
+    title: "保养越容易记住，长期体验越稳定",
+    description:
+      "固定清洁、晾干和收纳习惯，比偶尔认真维护一次更能减少异味和材质老化。",
+    theme: "care",
+    priorityTokens: ["清洁", "收纳", "维护", "防水"],
+    surfaces: ["matching"],
+  },
+  {
     id: "loading-waterproof",
     title: "防水不等于适合长期浸泡",
     description:

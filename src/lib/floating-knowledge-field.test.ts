@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildFloatingKnowledgeItems } from "./floating-knowledge-field.ts";
 import type { LoadingFunFact } from "./loading-fun-facts.ts";
 
-const facts: LoadingFunFact[] = Array.from({ length: 14 }, (_, index) => ({
+const facts: LoadingFunFact[] = Array.from({ length: 26 }, (_, index) => ({
   id: `fact-${index + 1}`,
   title: `知识碎片 ${index + 1}`,
   description: `描述 ${index + 1}`,
@@ -21,6 +21,22 @@ test("buildFloatingKnowledgeItems returns slightly richer desktop density", () =
   assert.deepEqual(
     items.map((item) => item.fact.id),
     facts.slice(0, 13).map((fact) => fact.id),
+  );
+});
+
+test("buildFloatingKnowledgeItems keeps matching desktop richer without becoming dense", () => {
+  const items = buildFloatingKnowledgeItems(facts, {
+    variant: "matching",
+    viewport: "desktop",
+  });
+
+  assert.equal(items.length, 24);
+  assert.ok(items.length < facts.length);
+  assert.ok(
+    items
+      .slice(-5)
+      .every((item) => item.slot.className.match(/floating-knowledge-slot-matching-2[0-4]/)),
+    "newer matching slots should fill the middle ring rather than only the edges",
   );
 });
 

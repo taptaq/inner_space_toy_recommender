@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
+import type { Session } from "@supabase/supabase-js";
 import { getActiveQuestions, AnswerState, Product, Question } from "./data/mock";
 import {
   AppRoute,
@@ -33,6 +34,19 @@ import {
   type ResultRecalibrationResponse,
 } from "./lib/result-recalibration";
 import { tuneResultAnswers, type ResultTuningMode } from "./lib/result-tuning";
+import {
+  buildRecommendationProfilePayload,
+  saveRecommendationProfile,
+} from "./lib/user-recommendation-profile";
+import {
+  getCurrentSupabaseSession,
+  isSupabaseAuthConfigured,
+  onSupabaseAuthStateChange,
+  registerUsernamePassword,
+  signInWithUsernamePassword,
+  signOutOfSupabase,
+} from "./lib/supabase-auth";
+import type { AuthPanelMode } from "./components/AuthPanel";
 import {
   buildBranchFallbackReason,
   getBranchPreferenceAdjustments,
@@ -623,6 +637,15 @@ export default function App() {
   const [resultRecalibrationError, setResultRecalibrationError] = useState<
     string | null
   >(null);
+  const [isSavingRecommendationProfile, setIsSavingRecommendationProfile] =
+    useState(false);
+  const [
+    saveRecommendationProfileMessage,
+    setSaveRecommendationProfileMessage,
+  ] = useState<string | null>("登录后可加密保存到云端");
+  const [supabaseSession, setSupabaseSession] = useState<Session | null>(null);
+  const [authStatusMessage, setAuthStatusMessage] = useState<string | null>(null);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   const activeQuestions: Question[] = getActiveQuestions(answers.gender);
 
@@ -707,6 +730,30 @@ export default function App() {
       navigateToKnowledgeNebula(undefined, true);
     }
   }, [currentRoute]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void getCurrentSupabaseSession().then((session) => {
+      if (!isMounted) return;
+      setSupabaseSession(session);
+      setSaveRecommendationProfileMessage(
+        session ? "已登录，可加密保存并多端同步" : "登录后可加密保存到云端",
+      );
+    });
+
+    const unsubscribe = onSupabaseAuthStateChange((session) => {
+      setSupabaseSession(session);
+      setSaveRecommendationProfileMessage(
+        session ? "已登录，可加密保存并多端同步" : "登录后可加密保存到云端",
+      );
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -1319,6 +1366,108 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     applyLocalResultSet(tunedAnswers, localResult);
   }
 
+  async function handleAuthSubmit(
+    mode: AuthPanelMode,
+    username: string,
+    password: string,
+  ) {
+    const normalizedUsername = username.trim();
+    if (!normalizedUsername || !password.trim()) {
+      setAuthStatusMessage("请先填写用户名和密码。");
+      return;
+    }
+
+    setIsSubmittingAuth(true);
+    setAuthStatusMessage(null);
+
+    try {
+      if (mode === "signup") {
+        await registerUsernamePassword({
+          username: normalizedUsername,
+          password,
+        });
+        const loginResult = await signInWithUsernamePassword(
+          normalizedUsername,
+          password,
+        );
+
+        if (loginResult.session) {
+          setSupabaseSession(loginResult.session);
+        }
+        setAuthStatusMessage("注册成功，已自动登录。");
+        return;
+      }
+
+      const data = await signInWithUsernamePassword(normalizedUsername, password);
+
+      if (data.session) {
+        setSupabaseSession(data.session);
+      }
+      setAuthStatusMessage(
+        "登录成功，可以加密保存推荐档案了。",
+      );
+    } catch (error) {
+      setAuthStatusMessage(
+        error instanceof Error ? error.message : "登录处理失败，请稍后重试。",
+      );
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setIsSubmittingAuth(true);
+    setAuthStatusMessage(null);
+
+    try {
+      await signOutOfSupabase();
+      setSupabaseSession(null);
+      setAuthStatusMessage("已退出登录。");
+      setSaveRecommendationProfileMessage("登录后可加密保存到云端");
+    } catch (error) {
+      setAuthStatusMessage(
+        error instanceof Error ? error.message : "退出登录失败，请稍后重试。",
+      );
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  }
+
+  async function handleSaveRecommendationProfile() {
+    const authToken =
+      supabaseSession?.access_token ||
+      (await getCurrentSupabaseSession())?.access_token ||
+      "";
+
+    if (!authToken) {
+      setSaveRecommendationProfileMessage("需要登录后才能加密保存推荐档案。");
+      return;
+    }
+
+    setIsSavingRecommendationProfile(true);
+    setSaveRecommendationProfileMessage(null);
+
+    try {
+      await saveRecommendationProfile({
+        authToken,
+        payload: buildRecommendationProfilePayload({
+          answers,
+          topProducts,
+          backupProducts,
+          recommendationTips,
+          shoppingGuidance,
+        }),
+      });
+      setSaveRecommendationProfileMessage("已加密保存到云端推荐档案。");
+    } catch (error) {
+      setSaveRecommendationProfileMessage(
+        error instanceof Error ? error.message : "保存推荐档案失败，请稍后重试。",
+      );
+    } finally {
+      setIsSavingRecommendationProfile(false);
+    }
+  }
+
   const calculateResults = async (
     currentAnswers: AnswerState = answers,
     activeQs: Question[] = activeQuestions,
@@ -1557,23 +1706,42 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
 
   const isKnowledgeHubRoute =
     currentRoute === "/knowledge" && selectedKnowledgeTopicSlug == null;
+  const authPanel = {
+    isConfigured: isSupabaseAuthConfigured(),
+    userLabel:
+      (typeof supabaseSession?.user?.user_metadata?.username === "string"
+        ? supabaseSession.user.user_metadata.username
+        : "") || (supabaseSession?.user?.email ?? null),
+    statusMessage: authStatusMessage,
+    isSubmitting: isSubmittingAuth,
+    onSubmit: handleAuthSubmit,
+    onSignOut: handleSignOut,
+  };
   const shellContainerClassName =
     isKnowledgeHubRoute
       ? "max-w-none"
+      : currentRoute === "/knowledge" && selectedKnowledgeTopicSlug != null
+        ? "max-w-none"
       : currentRoute === "/results" || currentRoute === "/knowledge"
       ? "max-w-6xl"
       : currentRoute === "/quiz" && step === activeQuestions.length
         ? "max-w-none"
-        : "max-w-md";
+        : "max-w-xl";
   const shellOverflowClassName =
     isKnowledgeHubRoute
       ? "overflow-hidden"
+      : currentRoute === "/knowledge" && selectedKnowledgeTopicSlug != null
+        ? "overflow-hidden"
       : currentRoute === "/knowledge" ||
         (currentRoute === "/quiz" && step === activeQuestions.length)
       ? "overflow-visible"
       : "overflow-hidden";
   const shellViewportClassName = isKnowledgeHubRoute
     ? "h-dvh min-h-dvh p-0"
+    : currentRoute === "/knowledge" && selectedKnowledgeTopicSlug != null
+      ? "h-dvh min-h-dvh p-0"
+    : currentRoute === "/quiz"
+      ? "h-dvh min-h-dvh p-0"
     : "min-h-screen p-4 sm:p-6 md:p-8";
 
   return (
@@ -1600,6 +1768,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               onOpenKnowledgeNebula={() => {
                 navigateToKnowledgeNebula();
               }}
+              authPanel={authPanel}
             />
           )}
 
@@ -1643,6 +1812,10 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               onSelectResultProvider={handleSelectResultProvider}
               onRecalibrateResults={recalibrateCurrentResults}
               onTuneResults={handleTuneResults}
+              onSaveRecommendationProfile={handleSaveRecommendationProfile}
+              isSavingRecommendationProfile={isSavingRecommendationProfile}
+              saveRecommendationProfileMessage={saveRecommendationProfileMessage}
+              authPanel={authPanel}
               onReset={resetQuiz}
             />
           )}

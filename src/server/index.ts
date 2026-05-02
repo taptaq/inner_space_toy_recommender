@@ -5,6 +5,7 @@ import { createAppAiService } from './app-ai-service.ts';
 import { createRecalibrateResultsHandler } from './app-ai-recalibration-route.ts';
 import {
   createKnowledgeNebulaCreateCardHandler,
+  createKnowledgeNebulaRecordCardViewHandler,
   createKnowledgeNebulaTopicHandler,
   createKnowledgeNebulaUpdateCardHandler,
 } from './knowledge-nebula-route.ts';
@@ -12,6 +13,12 @@ import {
   createKnowledgeNebulaStore,
   ensureKnowledgeNebulaSchema,
 } from './knowledge-nebula-store.ts';
+import { createKnowledgeEmbeddingService } from './knowledge-embedding-service.ts';
+import { ensureUserRecommendationSchema } from './user-recommendation-store.ts';
+import { createSaveUserRecommendationProfileHandler } from './user-recommendation-route.ts';
+import { createUserRecommendationStore } from './user-recommendation-store.ts';
+import { createUsernameRegistrationHandler } from './user-register-route.ts';
+import { createUsernameRegistrationService } from './user-register-service.ts';
 
 dotenv.config();
 
@@ -30,7 +37,16 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
-const knowledgeNebulaStore = createKnowledgeNebulaStore({ pool });
+const knowledgeEmbeddingService = createKnowledgeEmbeddingService();
+const knowledgeNebulaStore = createKnowledgeNebulaStore({
+  pool,
+  embeddingService: knowledgeEmbeddingService,
+});
+const userRecommendationStore = createUserRecommendationStore({ pool });
+const usernameRegistrationService = createUsernameRegistrationService({
+  supabaseUrl: process.env.VITE_SUPABASE_URL,
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+});
 
 // 监听连接错误
 pool.on('error', (err) => {
@@ -127,6 +143,12 @@ app.post('/api/ai/result-enhancement', async (req, res) => {
 });
 
 app.post('/api/ai/recalibrate-results', recalibrateResultsHandler);
+app.post(
+  '/api/auth/register',
+  createUsernameRegistrationHandler({
+    service: usernameRegistrationService,
+  }),
+);
 app.get(
   '/api/knowledge/topics/:slug',
   createKnowledgeNebulaTopicHandler({ store: knowledgeNebulaStore }),
@@ -139,13 +161,29 @@ app.patch(
   '/api/knowledge/cards/:cardId',
   createKnowledgeNebulaUpdateCardHandler({ store: knowledgeNebulaStore }),
 );
+app.post(
+  '/api/knowledge/cards/:cardId/view',
+  createKnowledgeNebulaRecordCardViewHandler({ store: knowledgeNebulaStore }),
+);
+app.post(
+  '/api/user/recommendation-profiles',
+  createSaveUserRecommendationProfileHandler({
+    encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
+    jwtSecret: process.env.JWT_SECRET,
+    store: userRecommendationStore,
+  }),
+);
 
-void ensureKnowledgeNebulaSchema(pool)
+void Promise.all([
+  ensureKnowledgeNebulaSchema(pool),
+  ensureUserRecommendationSchema(pool),
+])
   .then(() => {
     app.listen(port, '0.0.0.0', () => {
       console.log(`🚀 [Server] 稳定后端桥梁已启动: http://localhost:${port}`);
       console.log(`🔗 [Server] 前端通过 Vite Proxy (/api) 进行量子透传...`);
       console.log(`🪐 [Server] 知识星云表与默认卡片已校准`);
+      console.log(`🔐 [Server] 用户推荐档案加密表已校准`);
     });
   })
   .catch((error) => {

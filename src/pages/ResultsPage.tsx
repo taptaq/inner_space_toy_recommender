@@ -10,6 +10,7 @@ import {
   VolumeX,
   Droplets,
   Zap,
+  LockKeyhole,
 } from "lucide-react";
 import { ProductImage } from "../components/ProductImage.tsx";
 import { AnswerState } from "../data/mock.ts";
@@ -34,6 +35,7 @@ import {
 } from "../lib/recommendation-results.ts";
 import type { BackupCandidate } from "../lib/recommendation-results.ts";
 import { getResultLeadCopy } from "../lib/quiz-branching.ts";
+import { AuthPanel, type AuthPanelMode } from "../components/AuthPanel.tsx";
 
 type ResultsBackupProduct = BackupCandidate;
 
@@ -225,6 +227,17 @@ type ResultsPageProps = {
   onSelectResultProvider: (provider: AppAiProvider) => void;
   onRecalibrateResults: () => void;
   onTuneResults: (mode: ResultTuningMode) => void;
+  onSaveRecommendationProfile: () => Promise<void>;
+  isSavingRecommendationProfile: boolean;
+  saveRecommendationProfileMessage: string | null;
+  authPanel: {
+    isConfigured: boolean;
+    userLabel: string | null;
+    statusMessage: string | null;
+    isSubmitting: boolean;
+    onSubmit: (mode: AuthPanelMode, username: string, password: string) => Promise<void>;
+    onSignOut: () => Promise<void>;
+  };
   onReset: () => void;
 };
 
@@ -243,6 +256,10 @@ export function ResultsPage({
   onSelectResultProvider,
   onRecalibrateResults,
   onTuneResults,
+  onSaveRecommendationProfile,
+  isSavingRecommendationProfile,
+  saveRecommendationProfileMessage,
+  authPanel,
   onReset,
 }: ResultsPageProps) {
   const [isRecalibrationPanelOpen, setIsRecalibrationPanelOpen] = useState(false);
@@ -314,7 +331,8 @@ export function ResultsPage({
 
       {topProducts.length > 0 && (
         <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-medium text-white">快速微调结果</h3>
               <p className="mt-1 text-xs leading-5 text-slate-400">
@@ -334,6 +352,37 @@ export function ResultsPage({
                 </button>
               ))}
             </div>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-2xl border border-cyan-400/12 bg-cyan-400/[0.045] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-2">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300/75" />
+                <div>
+                  <p className="text-sm font-medium text-cyan-50">
+                    保存推荐档案
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-cyan-100/55">
+                    登录后会加密保存问卷偏好和推荐快照，方便多端继续比较。
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void onSaveRecommendationProfile()}
+                disabled={isSavingRecommendationProfile}
+                className="inline-flex shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isSavingRecommendationProfile ? "保存中..." : "保存推荐档案"}
+              </button>
+            </div>
+
+            {saveRecommendationProfileMessage && (
+              <p className="text-xs leading-5 text-cyan-100/65">
+                {saveRecommendationProfileMessage}
+              </p>
+            )}
+
+            <AuthPanel {...authPanel} />
           </div>
         </section>
       )}

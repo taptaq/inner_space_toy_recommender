@@ -45,7 +45,7 @@ const PARTICLE_STAR_LAYERS = [
     id: "distant-white",
     size: 1,
     opacity: 0.84,
-    shadow: buildStarfieldShadow(260, 1, "rgba(255,255,255,0.72)"),
+    shadow: buildStarfieldShadow(150, 1, "rgba(255,255,255,0.72)"),
     duration: 6,
     delay: 0,
   },
@@ -53,7 +53,7 @@ const PARTICLE_STAR_LAYERS = [
     id: "cyan-depth",
     size: 1.5,
     opacity: 0.72,
-    shadow: buildStarfieldShadow(120, 9, "rgba(186,230,253,0.78)"),
+    shadow: buildStarfieldShadow(72, 9, "rgba(186,230,253,0.78)"),
     duration: 7.4,
     delay: 0.8,
   },
@@ -61,7 +61,7 @@ const PARTICLE_STAR_LAYERS = [
     id: "violet-near",
     size: 2,
     opacity: 0.58,
-    shadow: buildStarfieldShadow(62, 17, "rgba(245,208,254,0.72)"),
+    shadow: buildStarfieldShadow(36, 17, "rgba(245,208,254,0.72)"),
     duration: 8.6,
     delay: 1.7,
   },
@@ -400,7 +400,7 @@ export function KnowledgeNebulaField({
           知识星云
         </h2>
         <p className="mx-auto max-w-[20rem] text-sm leading-relaxed text-slate-300/88 sm:max-w-2xl">
-          在整片深空星幕中选择你想先进入的主题星云，镜头会穿入那片雾光并进入详情。
+          在整片深空星幕中选择你想进入的主题星云
         </p>
       </div>
 

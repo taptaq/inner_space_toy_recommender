@@ -87,8 +87,12 @@ export function NebulaScene3D(props: NebulaScene3DProps) {
   return (
     <div className="absolute inset-0">
       <Canvas
-        dpr={props.viewport === "mobile" ? [1, 1.25] : [1, 1.75]}
-        gl={{ antialias: props.viewport !== "mobile", alpha: true }}
+        dpr={props.viewport === "mobile" ? [1, 1.1] : [1, 1.35]}
+        gl={{
+          antialias: false,
+          alpha: true,
+          powerPreference: "high-performance",
+        }}
         camera={{
           position: props.cameraState.position,
           fov: props.viewport === "mobile" ? 42 : 38,

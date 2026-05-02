@@ -5,6 +5,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { RankedProduct } from "../lib/app-shell.ts";
 import { ResultsPage } from "./ResultsPage.tsx";
 
+const authPanel = {
+  isConfigured: true,
+  userLabel: null,
+  statusMessage: null,
+  isSubmitting: false,
+  onSubmit: async () => {},
+  onSignOut: async () => {},
+};
+
 function makeProduct(overrides: Partial<RankedProduct>): RankedProduct {
   return {
     id: "p1",
@@ -52,6 +61,10 @@ test("results page shows confidence, fit reasons, and caveats for the primary re
       onSelectResultProvider={() => {}}
       onRecalibrateResults={() => {}}
       onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
       onReset={() => {}}
     />,
   );
@@ -61,4 +74,31 @@ test("results page shows confidence, fit reasons, and caveats for the primary re
   assert.match(html, /需要留意/);
   assert.match(html, /适配当前使用方向/);
   assert.match(html, /主要参数与当前偏好吻合/);
+});
+
+test("results page shows a save recommendation profile action", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      selectedResultProvider="dmxapi-mimo"
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onSelectResultProvider={() => {}}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage="登录后可加密保存到云端"
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /保存推荐档案/);
+  assert.match(html, /登录后可加密保存到云端/);
 });
