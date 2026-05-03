@@ -25,6 +25,10 @@ export function mergeKnowledgeNebulaTopicPayload(
 
   return {
     ...remoteTopic,
+    title: localTopic.title,
+    shortLabel: localTopic.shortLabel,
+    summary: localTopic.summary,
+    accent: localTopic.accent,
     sections: attachRelatedSectionIds(mergedSections),
     featuredSectionIds: Array.from(
       new Set([

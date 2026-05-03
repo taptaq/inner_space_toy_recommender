@@ -15,10 +15,14 @@ import {
 } from './knowledge-nebula-store.ts';
 import { createKnowledgeEmbeddingService } from './knowledge-embedding-service.ts';
 import { ensureUserRecommendationSchema } from './user-recommendation-store.ts';
-import { createSaveUserRecommendationProfileHandler } from './user-recommendation-route.ts';
+import {
+  createListUserRecommendationProfilesHandler,
+  createSaveUserRecommendationProfileHandler,
+} from './user-recommendation-route.ts';
 import { createUserRecommendationStore } from './user-recommendation-store.ts';
 import { createUsernameRegistrationHandler } from './user-register-route.ts';
 import { createUsernameRegistrationService } from './user-register-service.ts';
+import { createSupabaseAccessTokenVerifier } from './user-auth.ts';
 
 dotenv.config();
 
@@ -44,6 +48,10 @@ const knowledgeNebulaStore = createKnowledgeNebulaStore({
 });
 const userRecommendationStore = createUserRecommendationStore({ pool });
 const usernameRegistrationService = createUsernameRegistrationService({
+  supabaseUrl: process.env.VITE_SUPABASE_URL,
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+});
+const supabaseAccessTokenVerifier = createSupabaseAccessTokenVerifier({
   supabaseUrl: process.env.VITE_SUPABASE_URL,
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 });
@@ -170,6 +178,16 @@ app.post(
   createSaveUserRecommendationProfileHandler({
     encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
     jwtSecret: process.env.JWT_SECRET,
+    authVerifier: supabaseAccessTokenVerifier,
+    store: userRecommendationStore,
+  }),
+);
+app.get(
+  '/api/user/recommendation-profiles',
+  createListUserRecommendationProfilesHandler({
+    encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
+    jwtSecret: process.env.JWT_SECRET,
+    authVerifier: supabaseAccessTokenVerifier,
     store: userRecommendationStore,
   }),
 );

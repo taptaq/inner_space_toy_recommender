@@ -404,7 +404,7 @@ export function KnowledgeNebulaField({
         </p>
       </div>
 
-      <div className="absolute inset-0 mx-auto w-full overflow-hidden">
+      <div className="absolute inset-x-0 bottom-0 top-[11.75rem] mx-auto w-full overflow-hidden sm:top-[12.75rem]">
         {anchors.map((anchor, index) => {
           const variant =
             nebulaTextureVariants[index % nebulaTextureVariants.length];
@@ -612,7 +612,7 @@ export function KnowledgeNebulaField({
           onSelectTopic={handleSelectTopic}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-5 pb-5 pt-10 text-center">
+        {/* <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-5 pb-5 pt-10 text-center">
           <p className="text-xs text-slate-300/78 sm:text-sm">
             {selectedTopic
               ? `镜头正在靠近：${selectedTopic.title}`
@@ -622,7 +622,7 @@ export function KnowledgeNebulaField({
                   ? "主题星云正在浮现"
                   : "选择任意主题星云，进入对应内容层"}
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

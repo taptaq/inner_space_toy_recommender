@@ -20,6 +20,7 @@ test("home page prioritizes matching and demotes library and knowledge nebula en
       onStart={() => {}}
       onBrowseLibrary={() => {}}
       onOpenKnowledgeNebula={() => {}}
+      onOpenProfiles={() => {}}
       authPanel={authPanel}
     />,
   );
@@ -42,6 +43,7 @@ test("home page makes privacy reassurance visible before matching starts", () =>
       onStart={() => {}}
       onBrowseLibrary={() => {}}
       onOpenKnowledgeNebula={() => {}}
+      onOpenProfiles={() => {}}
       authPanel={authPanel}
     />,
   );
@@ -60,6 +62,7 @@ test("home page keeps authentication as a lightweight entry instead of an inline
       onStart={() => {}}
       onBrowseLibrary={() => {}}
       onOpenKnowledgeNebula={() => {}}
+      onOpenProfiles={() => {}}
       authPanel={authPanel}
     />,
   );
@@ -79,6 +82,7 @@ test("home page renders an animated inner-space entry atmosphere", () => {
       onStart={() => {}}
       onBrowseLibrary={() => {}}
       onOpenKnowledgeNebula={() => {}}
+      onOpenProfiles={() => {}}
       authPanel={authPanel}
     />,
   );

@@ -185,6 +185,7 @@ const TOPIC_SHAPES: readonly TopicGlowShape[] = [
   "halo",
   "wake",
   "comet",
+  "plume",
 ];
 const TOPIC_TINTS = [
   "#f0abfc",
@@ -192,6 +193,7 @@ const TOPIC_TINTS = [
   "#ffffff",
   "#c084fc",
   "#a5b4fc",
+  "#67e8f9",
 ] as const;
 
 export function buildMotherCloudBands(
@@ -256,6 +258,7 @@ export function buildTopicGlowProfiles(
       [1.04, 1.04],
       [1.44, 0.72],
       [1.12, 0.92],
+      [1.18, 0.8],
     ] as const;
     const baseWidth = anchor.viewport === "mobile" ? 3.05 : 4.2;
     const baseHeight = anchor.viewport === "mobile" ? 1.74 : 2.1;
@@ -267,8 +270,8 @@ export function buildTopicGlowProfiles(
       topicSlug: anchor.topicSlug,
       shape,
       cloudOffset: [
-        [-0.28, 0.18, -0.08, 0.26, -0.18][index % 5],
-        [0.16, -0.14, 0.08, -0.1, 0.12][index % 5],
+        [-0.28, 0.18, -0.08, 0.26, -0.18, 0.12][index % 6],
+        [0.16, -0.14, 0.08, -0.1, 0.12, -0.18][index % 6],
         -0.18,
       ],
       cloudScale: [width, height, 1],

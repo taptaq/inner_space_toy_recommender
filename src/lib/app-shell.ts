@@ -1,6 +1,12 @@
 import { Product } from "../data/mock";
 
-export type AppRoute = "/" | "/quiz" | "/results" | "/library" | "/knowledge";
+export type AppRoute =
+  | "/"
+  | "/quiz"
+  | "/results"
+  | "/library"
+  | "/knowledge"
+  | "/profiles";
 
 export const APP_STATE_STORAGE_KEY = "inner-space-recommender-app-state-v1";
 export const PRODUCTS_CACHE_STORAGE_KEY =
@@ -91,8 +97,18 @@ export function detectRoute(pathname: string): AppRoute {
     return "/knowledge";
   }
   if (pathname === "/library") return "/library";
+  if (pathname === "/profiles") return "/profiles";
   if (pathname === "/results") return "/results";
   if (pathname === "/quiz") return "/quiz";
+  return "/";
+}
+
+export function resolveProfilesReturnRoute(
+  originRoute: AppRoute | undefined,
+): AppRoute {
+  if (originRoute && originRoute !== "/profiles") {
+    return originRoute;
+  }
   return "/";
 }
 

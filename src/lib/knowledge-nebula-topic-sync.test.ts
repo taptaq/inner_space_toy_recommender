@@ -29,6 +29,29 @@ test("mergeKnowledgeNebulaTopicPayload keeps local expanded cards when database 
   );
 });
 
+test("mergeKnowledgeNebulaTopicPayload keeps local topic display names when database payload is stale", () => {
+  const localTopic = KNOWLEDGE_NEBULA_TOPICS[1];
+  const staleDatabaseTopic = {
+    ...localTopic,
+    title: "人群指南",
+    shortLabel: "人群指南",
+    summary: "按状态找答案，比按大而全知识库检索更快。",
+    sections: localTopic.sections.slice(0, 3),
+  };
+
+  const mergedTopic = mergeKnowledgeNebulaTopicPayload(
+    localTopic,
+    staleDatabaseTopic,
+  );
+
+  assert.equal(mergedTopic.title, "人群与场景导航");
+  assert.equal(mergedTopic.shortLabel, "场景导航");
+  assert.equal(
+    mergedTopic.summary,
+    "按使用状态和生活场景找答案，比泛泛检索更快。",
+  );
+});
+
 test("mergeKnowledgeNebulaTopicPayload computes varied related cards for local expanded cards", () => {
   const localTopic = KNOWLEDGE_NEBULA_TOPICS[0];
   const staleDatabaseTopic = {

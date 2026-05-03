@@ -57,12 +57,50 @@ test('buildKnowledgeNebulaPath("couples") returns the topic path', () => {
 test("KNOWLEDGE_NEBULA_TOPICS exposes the expected slugs in order", () => {
   assert.deepEqual(
     KNOWLEDGE_NEBULA_TOPICS.map((topic) => topic.slug),
-    ["science", "people", "first-time", "couples", "care"],
+    ["science", "people", "lgbtq", "first-time", "couples", "care"],
+  );
+});
+
+test("KNOWLEDGE_NEBULA_TOPICS uses topic names aligned with card content", () => {
+  assert.deepEqual(
+    KNOWLEDGE_NEBULA_TOPICS.map((topic) => topic.title),
+    [
+      "参数与体验原理",
+      "人群与场景导航",
+      "LGBT+ 友好探索",
+      "新手第一台",
+      "伴侣互动与边界",
+      "清洁收纳与长期维护",
+    ],
+  );
+});
+
+test("people topic no longer carries the dedicated LGBT+ card cluster", () => {
+  const peopleTopic = getKnowledgeNebulaTopicBySlug("people");
+
+  assert.ok(peopleTopic);
+  assert.ok(
+    peopleTopic.sections.every(
+      (section) => !section.tags?.some((tag) => tag.toLowerCase() === "lgbt+"),
+    ),
+  );
+});
+
+test("lgbtq topic exists as an independent nebula theme", () => {
+  const topic = getKnowledgeNebulaTopicBySlug("lgbtq");
+
+  assert.ok(topic);
+  assert.equal(topic.title, "LGBT+ 友好探索");
+  assert.ok(topic.sections.length >= 23);
+  assert.ok(
+    topic.sections.some((section) =>
+      section.tags?.some((tag) => tag.toLowerCase() === "lgbt+"),
+    ),
   );
 });
 
 test('getKnowledgeNebulaTopicBySlug("science") returns the expected title', () => {
-  assert.equal(getKnowledgeNebulaTopicBySlug("science")?.title, "正经科普");
+  assert.equal(getKnowledgeNebulaTopicBySlug("science")?.title, "参数与体验原理");
 });
 
 test('detectRoute returns "/knowledge" for the knowledge hub', () => {

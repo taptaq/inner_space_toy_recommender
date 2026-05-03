@@ -1,4 +1,9 @@
 import crypto from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
+
+export type AccessTokenVerifier = {
+  verifyAccessToken: (accessToken: string) => Promise<string | null>;
+};
 
 function base64UrlDecode(value: string) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -61,4 +66,63 @@ export function verifyBearerUserId(
   } catch {
     return null;
   }
+}
+
+function extractBearerToken(authorizationHeader: string | undefined) {
+  const match = authorizationHeader?.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
+}
+
+export function createSupabaseAccessTokenVerifier({
+  supabaseUrl,
+  serviceRoleKey,
+}: {
+  supabaseUrl: string | undefined;
+  serviceRoleKey: string | undefined;
+}): AccessTokenVerifier | undefined {
+  if (!supabaseUrl || !serviceRoleKey) {
+    return undefined;
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return {
+    async verifyAccessToken(accessToken) {
+      const { data, error } = await adminClient.auth.getUser(accessToken);
+      if (error) {
+        return null;
+      }
+
+      return data.user?.id || null;
+    },
+  };
+}
+
+export async function resolveBearerUserId({
+  authorizationHeader,
+  jwtSecret,
+  authVerifier,
+}: {
+  authorizationHeader: string | undefined;
+  jwtSecret: string | undefined;
+  authVerifier?: AccessTokenVerifier;
+}) {
+  const accessToken = extractBearerToken(authorizationHeader);
+  if (!accessToken) {
+    return null;
+  }
+
+  const verifiedSupabaseUserId = authVerifier
+    ? await authVerifier.verifyAccessToken(accessToken)
+    : null;
+  if (verifiedSupabaseUserId) {
+    return verifiedSupabaseUserId;
+  }
+
+  return verifyBearerUserId(authorizationHeader, jwtSecret);
 }

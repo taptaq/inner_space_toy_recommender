@@ -36,8 +36,6 @@ test("quiz page renders a differentiated deep-space scanning cockpit", () => {
   assert.match(html, /quiz-scan-shell/);
   assert.match(html, /isolate/);
   assert.match(html, /quiz-starfield/);
-  assert.match(html, /quiz-orbit-arc/);
-  assert.match(html, /quiz-scan-beam/);
   assert.match(html, /SCAN PHASE 01/);
   assert.match(html, /SIGNAL CHANNEL 01/);
   assert.match(html, /信号校准中/);

@@ -59,7 +59,7 @@ test("buildTopicGlowProfiles maps anchors into non-uniform mother-cloud glow reg
   });
   const profiles = buildTopicGlowProfiles(anchors);
 
-  assert.equal(profiles.length, 5);
+  assert.equal(profiles.length, 6);
   assert.deepEqual(
     profiles.map((profile) => profile.topicSlug),
     topicSlugs,
@@ -90,5 +90,8 @@ test("buildTopicGlowProfiles keeps topic nebulae airy and visibly distinct", () 
     profiles.some(
       (profile) => profile.cloudScale[0] / profile.cloudScale[1] > 2.15,
     ),
+  );
+  assert.ok(
+    profiles.some((profile) => profile.cloudOffset[1] < -0.12),
   );
 });

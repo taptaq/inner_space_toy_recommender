@@ -139,6 +139,25 @@ const TEXTURE_VARIANTS: readonly NebulaTextureVariant[] = [
     hoverScale: 1.2,
     hoverOpacityBoost: 1.14,
   },
+  {
+    widthMultiplier: 2.12,
+    opacity: 0.44,
+    rotate: 18,
+    scaleX: 1.22,
+    scaleY: 0.76,
+    background:
+      [
+        ...NEBULA_CORE_SPARKLES,
+        "radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.74) 0 8%, transparent 17%)",
+        "radial-gradient(ellipse at 43% 52%, rgba(103,232,249,0.84) 0 18%, transparent 40%)",
+        "radial-gradient(ellipse at 58% 48%, rgba(165,180,252,0.48) 0 17%, transparent 36%)",
+      ].join(","),
+    filter: "contrast(1.13) saturate(1.17) brightness(1.04)",
+    mask: "radial-gradient(ellipse 58% 35% at 50% 50%, black 33%, rgba(0,0,0,0.9) 53%, transparent 67%)",
+    idleDuration: 9.2,
+    hoverScale: 1.28,
+    hoverOpacityBoost: 1.19,
+  },
 ] as const;
 
 export const NEBULA_HOVER_TRANSITION = {

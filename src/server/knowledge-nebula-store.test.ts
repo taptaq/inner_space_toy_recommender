@@ -135,3 +135,28 @@ test("knowledge nebula schema seeds default cards with deterministic embeddings"
     "seed embedding value should be a JSON array",
   );
 });
+
+test("knowledge nebula schema refreshes seeded topic display names", async () => {
+  const calls: QueryCall[] = [];
+  const pool = {
+    async query(sql: string, values?: unknown[]) {
+      calls.push({ sql, values });
+      return { rows: [] };
+    },
+  };
+
+  await ensureKnowledgeNebulaSchema(pool as unknown as Pick<Pool, "query">);
+
+  const topicInsert = calls.find((call) =>
+    call.sql.includes("INSERT INTO public.knowledge_nebula_topics"),
+  );
+
+  assert.ok(topicInsert, "default topics should be seeded");
+  assert.match(topicInsert.sql, /ON CONFLICT \(slug\) DO UPDATE/);
+  assert.deepEqual(topicInsert.values?.slice(0, 4), [
+    "science",
+    "参数与体验原理",
+    "参数原理",
+    "理解参数、结构和体感之间的关系，避免被营销词带偏。",
+  ]);
+});

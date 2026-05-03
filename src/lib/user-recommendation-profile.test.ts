@@ -4,6 +4,7 @@ import test from "node:test";
 import type { RankedProduct } from "./app-shell.ts";
 import {
   buildRecommendationProfilePayload,
+  listRecommendationProfiles,
   saveRecommendationProfile,
 } from "./user-recommendation-profile.ts";
 
@@ -53,6 +54,22 @@ test("buildRecommendationProfilePayload keeps enough recommendation context for 
   assert.deepEqual(payload.recommendationTips, ["可以放宽预算"]);
   assert.deepEqual(payload.shoppingGuidance, ["优先看售后"]);
   assert.match(payload.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test("buildRecommendationProfilePayload dedupes saved preference tags", () => {
+  const payload = buildRecommendationProfilePayload({
+    answers: {
+      tags: ["静音", " 入门级 ", "静音", "", "入门级", "防水"],
+      maxDb: 50,
+    },
+    topProducts: [makeProduct({ id: "toy-1", name: "Top Pick" })],
+    backupProducts: [],
+    recommendationTips: [],
+    shoppingGuidance: [],
+  });
+
+  assert.deepEqual(payload.answers.tags, ["静音", "入门级", "防水"]);
+  assert.equal(payload.summary, "偏好：静音、入门级、防水；推荐：Top Pick");
 });
 
 test("saveRecommendationProfile posts the payload with bearer authorization", async () => {
@@ -113,4 +130,74 @@ test("saveRecommendationProfile refuses to call the API without a token", async 
   );
 
   assert.equal(fetchCount, 0);
+});
+
+test("saveRecommendationProfile surfaces server error details", async () => {
+  await assert.rejects(
+    () =>
+      saveRecommendationProfile({
+        authToken: "signed-token",
+        payload: {
+          createdAt: "2026-05-01T00:00:00.000Z",
+          title: "推荐档案",
+          summary: "",
+          topProductIds: [],
+          answers: { tags: [] },
+          topProducts: [],
+          backupProducts: [],
+          recommendationTips: [],
+          shoppingGuidance: [],
+        },
+        fetcher: async () =>
+          ({
+            ok: false,
+            json: async () => ({
+              error: "Recommendation profile save failed",
+              details: "insert or update on table violates foreign key constraint",
+            }),
+          }) as Response,
+      }),
+    /foreign key constraint/,
+  );
+});
+
+test("listRecommendationProfiles fetches saved equipment matching profiles", async () => {
+  let captured: unknown;
+
+  const result = await listRecommendationProfiles({
+    authToken: "signed-token",
+    fetcher: async (url, init) => {
+      captured = { url, init };
+      return {
+        ok: true,
+        json: async () => ({
+          profiles: [
+            {
+              id: "profile-1",
+              title: "我的装备匹配档案",
+              summary: "偏好：静音",
+              topProductIds: ["toy-1"],
+              savedAt: "2026-05-02T12:00:00.000Z",
+              payload: {
+                createdAt: "2026-05-02T12:00:00.000Z",
+                title: "我的装备匹配档案",
+                summary: "偏好：静音",
+                topProductIds: ["toy-1"],
+                answers: { tags: ["静音"] },
+                topProducts: [{ id: "toy-1", name: "Nebula Pick", score: 96 }],
+                backupProducts: [],
+                recommendationTips: [],
+                shoppingGuidance: [],
+              },
+            },
+          ],
+        }),
+      } as Response;
+    },
+  });
+
+  assert.match(JSON.stringify(captured), /\/api\/user\/recommendation-profiles/);
+  assert.match(JSON.stringify(captured), /GET/);
+  assert.match(JSON.stringify(captured), /Bearer signed-token/);
+  assert.equal(result.profiles[0]?.title, "我的装备匹配档案");
 });

@@ -140,9 +140,11 @@ textarea:disabled {
 .quiz-starfield {
   overflow: hidden;
   background-image:
-    linear-gradient(115deg, transparent 0 42%, rgba(34, 211, 238, 0.055) 48%, transparent 56%),
-    radial-gradient(circle at 50% 18%, rgba(34, 211, 238, 0.12), transparent 34%),
-    radial-gradient(circle at 18% 78%, rgba(99, 102, 241, 0.12), transparent 36%);
+    radial-gradient(circle at 18% 22%, rgba(34, 211, 238, 0.1), transparent 28%),
+    radial-gradient(circle at 72% 18%, rgba(99, 102, 241, 0.08), transparent 24%),
+    radial-gradient(circle at 82% 76%, rgba(34, 211, 238, 0.06), transparent 26%),
+    radial-gradient(circle at 14% 82%, rgba(165, 180, 252, 0.06), transparent 22%),
+    radial-gradient(circle at 50% 50%, rgba(8, 15, 35, 0.2), transparent 68%);
   background-size: 100% 100%;
 }
 
@@ -151,27 +153,33 @@ textarea:disabled {
   inset: -12%;
   content: "";
   background-image:
-    radial-gradient(circle, rgba(226, 232, 240, 0.52) 0 1px, transparent 1.6px),
-    radial-gradient(circle, rgba(103, 232, 249, 0.34) 0 1px, transparent 1.8px);
+    radial-gradient(circle, rgba(226, 232, 240, 0.42) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(103, 232, 249, 0.24) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(148, 163, 184, 0.18) 0 1px, transparent 1.4px);
   background-position:
     0 0,
-    64px 38px;
+    64px 38px,
+    126px 92px;
   background-size:
-    190px 190px,
-    310px 310px;
-  opacity: 0.9;
+    180px 220px,
+    270px 310px,
+    360px 380px;
+  opacity: 0.8;
   transform: translate3d(0, 0, 0);
   will-change: transform;
-  animation: quiz-starfield-drift 26s linear infinite;
+  animation: quiz-starfield-drift 34s linear infinite;
 }
 
-.quiz-orbit-arc {
-  transform: translate3d(-50%, 0, 0) rotate(-10deg);
-  animation: quiz-orbit-breathe 7s ease-in-out infinite;
-}
-
-.quiz-scan-beam {
-  animation: quiz-scan-beam 5.6s ease-in-out infinite;
+.results-report-grid {
+  background-image:
+    linear-gradient(rgba(125, 211, 252, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 50% 12%, rgba(34, 211, 238, 0.08), transparent 42%);
+  background-size:
+    72px 72px,
+    72px 72px,
+    100% 100%;
+  mask-image: linear-gradient(to bottom, transparent, black 14%, black 72%, transparent);
 }
 
 @keyframes cockpit-cruise-drift-a {

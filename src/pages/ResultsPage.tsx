@@ -24,6 +24,7 @@ import {
 import {
   RESULT_TUNING_OPTIONS,
   type ResultTuningMode,
+  getResultTuningAppliedTag,
 } from "../lib/result-tuning.ts";
 import {
   buildResultComparisonRows,
@@ -156,6 +157,12 @@ function getConfidenceToneClassName(tone: "high" | "conditional" | "backup") {
   return "border-slate-300/20 bg-slate-400/10 text-slate-100";
 }
 
+function getTuningProgressLabel(mode: ResultTuningMode) {
+  if (mode === "quieter") return "正在按更安静方向重新计算推荐...";
+  if (mode === "cheaper") return "正在按更低预算方向重新计算推荐...";
+  return "正在按新手友好方向重新计算推荐...";
+}
+
 function renderConfidenceSummary(
   summary: ReturnType<typeof buildResultConfidenceSummary>,
 ) {
@@ -228,6 +235,7 @@ type ResultsPageProps = {
   onRecalibrateResults: () => void;
   onTuneResults: (mode: ResultTuningMode) => void;
   onSaveRecommendationProfile: () => Promise<void>;
+  onOpenRecommendationProfiles: () => void;
   isSavingRecommendationProfile: boolean;
   saveRecommendationProfileMessage: string | null;
   authPanel: {
@@ -257,6 +265,7 @@ export function ResultsPage({
   onRecalibrateResults,
   onTuneResults,
   onSaveRecommendationProfile,
+  onOpenRecommendationProfiles,
   isSavingRecommendationProfile,
   saveRecommendationProfileMessage,
   authPanel,
@@ -265,6 +274,8 @@ export function ResultsPage({
   const [isRecalibrationPanelOpen, setIsRecalibrationPanelOpen] = useState(false);
   const [isBackupPanelOpen, setIsBackupPanelOpen] = useState(false);
   const [isComparisonPanelOpen, setIsComparisonPanelOpen] = useState(false);
+  const [isSavePanelOpen, setIsSavePanelOpen] = useState(false);
+  const [activeTuningMode, setActiveTuningMode] = useState<ResultTuningMode | null>(null);
   const relaxationTips = dedupeGuidanceItems(recommendationTips).slice(
     0,
     MAX_RELAXATION_TIPS,
@@ -302,6 +313,22 @@ export function ResultsPage({
   const primaryConfidenceSummary = topProducts[0]
     ? buildResultConfidenceSummary(topProducts[0], answers)
     : null;
+  const visibleResultTags = resultTags.slice(0, 4);
+  const hiddenResultTagCount = Math.max(resultTags.length - visibleResultTags.length, 0);
+  const appliedTuningOptions = RESULT_TUNING_OPTIONS.filter((option) =>
+    answers.tags.includes(getResultTuningAppliedTag(option.mode)),
+  );
+  const isSignedIn = Boolean(authPanel.userLabel);
+  const activeTuningOption = activeTuningMode
+    ? RESULT_TUNING_OPTIONS.find((option) => option.mode === activeTuningMode)
+    : undefined;
+  const handleTuneResultClick = (mode: ResultTuningMode) => {
+    setActiveTuningMode(mode);
+    onTuneResults(mode);
+    window.setTimeout(() => {
+      setActiveTuningMode((currentMode) => (currentMode === mode ? null : currentMode));
+    }, 650);
+  };
 
   return (
     <motion.div
@@ -310,12 +337,20 @@ export function ResultsPage({
       initial="initial"
       animate="in"
       exit="out"
-      className="w-full space-y-6 overflow-x-hidden"
+      className="results-report-shell relative isolate w-full space-y-6 overflow-x-hidden px-1 pb-4"
     >
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-light text-white mb-2">匹配完成</h2>
-        <div className="flex flex-wrap justify-center gap-1.5 mb-4 max-w-sm mx-auto">
-          {resultTags.map((tag, index) => (
+      <div className="pointer-events-none absolute inset-x-[-12vw] top-[-8rem] -z-10 h-[30rem] bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.12),transparent_42%),radial-gradient(circle_at_12%_48%,rgba(59,130,246,0.09),transparent_34%),radial-gradient(circle_at_88%_58%,rgba(99,102,241,0.11),transparent_36%)]" />
+      <div className="results-report-grid pointer-events-none absolute inset-0 -z-10 opacity-45" />
+
+      <div className="relative z-10 mb-6 text-center">
+        <p className="mb-3 font-mono text-[10px] tracking-[0.34em] text-cyan-200/50">
+          DEEP SPACE REPORT
+        </p>
+        <h2 className="mb-2 text-2xl font-light text-white">
+          已锁定 {Math.min(topProducts.length, 3)} 个高匹配方案
+        </h2>
+        <div className="mx-auto mb-4 flex max-w-xl flex-wrap justify-center gap-1.5">
+          {visibleResultTags.map((tag, index) => (
             <span
               key={index}
               className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[10px] text-slate-300"
@@ -323,14 +358,75 @@ export function ResultsPage({
               {tag}
             </span>
           ))}
+          {hiddenResultTagCount > 0 && (
+            <span className="rounded border border-cyan-300/15 bg-cyan-300/8 px-2 py-0.5 text-[10px] text-cyan-100/70">
+              +{hiddenResultTagCount}
+            </span>
+          )}
         </div>
         <p className="text-sm text-slate-400">
           {resultLeadCopy}
         </p>
       </div>
 
+      {topProducts[0] && (
+        <section className="results-report-panel relative z-10 overflow-hidden rounded-[1.75rem] border border-cyan-200/14 bg-slate-950/56 p-4 shadow-[0_24px_90px_rgba(8,47,73,0.2)] sm:p-5">
+          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/45 to-transparent" />
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch">
+            <div className="relative min-h-56 overflow-hidden rounded-3xl border border-white/8 bg-black/20">
+              {renderProductImage(topProducts[0], "h-8 w-8 text-white/50")}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                <div>
+                  <span className="mb-2 inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/12 px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-cyan-100">
+                    主推荐方案
+                  </span>
+                  <h3 className="break-words text-xl font-medium leading-snug text-white">
+                    {topProducts[0].name}
+                  </h3>
+                </div>
+                <span className="shrink-0 text-xl font-semibold text-cyan-300">
+                  ¥{topProducts[0].price}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between gap-4">
+              <div>
+                {topProducts[0].reason && (
+                  <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.055] p-3">
+                    <p className="text-sm leading-6 text-cyan-50/82">
+                      <Sparkles className="mr-1 inline-block h-3.5 w-3.5 text-cyan-200" />
+                      {topProducts[0].reason}
+                    </p>
+                  </div>
+                )}
+
+                {primaryConfidenceSummary &&
+                  renderConfidenceSummary(primaryConfidenceSummary)}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {getMetricChips(topProducts[0]).map((chip) => {
+                  const Icon = chip.icon;
+                  return (
+                    <div
+                      key={chip.id}
+                      className="flex max-w-full items-start gap-1 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[11px] text-slate-300"
+                    >
+                      <Icon className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span className="break-words">{chip.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {topProducts.length > 0 && (
-        <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5">
+        <section className="relative z-10 rounded-2xl border border-white/8 bg-white/[0.028] p-4 sm:p-5">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -340,18 +436,40 @@ export function ResultsPage({
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {RESULT_TUNING_OPTIONS.map((option) => (
-                <button
-                  key={option.mode}
-                  type="button"
-                  onClick={() => onTuneResults(option.mode)}
-                  disabled={isRecalibratingResults}
-                  className="rounded-xl border border-cyan-400/18 bg-cyan-400/8 px-3 py-2 text-xs text-cyan-100 transition-colors hover:border-cyan-300/35 hover:bg-cyan-400/14 disabled:cursor-not-allowed disabled:opacity-55"
-                >
-                  {option.label}
-                </button>
-              ))}
+              {RESULT_TUNING_OPTIONS.map((option) => {
+                const isApplied = answers.tags.includes(getResultTuningAppliedTag(option.mode));
+                const isActive = activeTuningMode === option.mode;
+
+                return (
+                  <button
+                    key={option.mode}
+                    type="button"
+                    onClick={() => handleTuneResultClick(option.mode)}
+                    disabled={isRecalibratingResults || isApplied || activeTuningMode != null}
+                    className={[
+                      "inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs transition-colors",
+                      isApplied
+                        ? "border-emerald-300/18 bg-emerald-400/8 text-emerald-100/70"
+                        : "border-cyan-400/18 bg-cyan-400/8 text-cyan-100 hover:border-cyan-300/35 hover:bg-cyan-400/14",
+                      isRecalibratingResults || isApplied || activeTuningMode != null
+                        ? "cursor-not-allowed opacity-65"
+                        : "",
+                    ].join(" ")}
+                  >
+                    {isActive && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{isApplied ? `已应用${option.label}` : option.label}</span>
+                  </button>
+                );
+              })}
             </div>
+            </div>
+
+            <div className="min-h-5 text-xs leading-5 text-cyan-100/62">
+              {activeTuningMode
+                ? getTuningProgressLabel(activeTuningMode)
+                : appliedTuningOptions.length > 0
+                  ? `已应用：${appliedTuningOptions.map((option) => option.label).join("、")}`
+                  : "正在按所选方向重新计算推荐时，会保留当前问卷并更新结果。"}
             </div>
 
             <div className="flex flex-col gap-2 rounded-2xl border border-cyan-400/12 bg-cyan-400/[0.045] p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -359,21 +477,41 @@ export function ResultsPage({
                 <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300/75" />
                 <div>
                   <p className="text-sm font-medium text-cyan-50">
-                    保存推荐档案
+                    {isSignedIn ? "已登录，可加密保存" : "登录后可加密保存"}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-cyan-100/55">
-                    登录后会加密保存问卷偏好和推荐快照，方便多端继续比较。
+                    {isSignedIn
+                      ? `${authPanel.userLabel} 的推荐档案会加密同步，方便多端继续比较。`
+                      : "保存问卷偏好和推荐快照，方便多端继续比较。"}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => void onSaveRecommendationProfile()}
-                disabled={isSavingRecommendationProfile}
-                className="inline-flex shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isSavingRecommendationProfile ? "保存中..." : "保存推荐档案"}
-              </button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {!isSignedIn && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSavePanelOpen((isOpen) => !isOpen)}
+                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+                  >
+                    {isSavePanelOpen ? "收起登录" : "登录 / 注册"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void onSaveRecommendationProfile()}
+                  disabled={isSavingRecommendationProfile}
+                  className="inline-flex items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isSavingRecommendationProfile ? "保存中..." : "保存推荐档案"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenRecommendationProfiles}
+                  className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+                >
+                  查看档案
+                </button>
+              </div>
             </div>
 
             {saveRecommendationProfileMessage && (
@@ -382,7 +520,7 @@ export function ResultsPage({
               </p>
             )}
 
-            <AuthPanel {...authPanel} />
+            {!isSignedIn && isSavePanelOpen && <AuthPanel {...authPanel} />}
           </div>
         </section>
       )}
@@ -663,148 +801,6 @@ export function ResultsPage({
 
       {topProducts.length > 0 ? (
         <div className="space-y-4">
-          {primaryProductHref ? (
-            <a
-              href={primaryProductHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block rounded-3xl transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
-              <div className="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-cyan-950/20 backdrop-blur-xl p-[3px] transition-colors duration-200 group-hover:border-cyan-300/45">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
-
-                <div className="relative mb-3 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-black/20 sm:aspect-[2.6/1]">
-                  {renderProductImage(topProducts[0], "h-8 w-8 text-white/50")}
-                </div>
-
-                <div className="px-3 pb-3 sm:px-4 sm:pb-4">
-                  <div className="mb-2 flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <span className="inline-block rounded-md bg-cyan-500/20 px-2 py-1 text-[10px] font-mono text-cyan-300 mb-2">
-                        算法最匹配（第 1 推荐）
-                      </span>
-                      <h3 className="break-words text-lg font-medium leading-snug text-white">
-                        {topProducts[0].name}
-                      </h3>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
-                      <span className="text-lg font-semibold text-cyan-400">
-                        ¥{topProducts[0].price}
-                      </span>
-                      <span className="mt-1">{renderClickableHint()}</span>
-                    </div>
-                  </div>
-
-                  {topProducts[0].tags && topProducts[0].tags.length > 0 && (
-                    <div className="mt-2 mb-3 flex flex-wrap gap-1.5">
-                      {topProducts[0].tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="break-words rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {topProducts[0].reason && (
-                    <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2.5">
-                      <p className="text-[11px] italic leading-relaxed text-cyan-200/80">
-                        <Sparkles className="w-3 h-3 inline-block mr-1 mb-0.5 text-cyan-400" />
-                        “ {topProducts[0].reason} ”
-                      </p>
-                    </div>
-                  )}
-
-                  {primaryConfidenceSummary &&
-                    renderConfidenceSummary(primaryConfidenceSummary)}
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {getMetricChips(topProducts[0]).map((chip) => {
-                      const Icon = chip.icon;
-                      return (
-                        <div
-                          key={chip.id}
-                          className="flex max-w-full items-start gap-1 rounded bg-white/5 px-2 py-1 text-xs text-slate-300"
-                        >
-                          <Icon className="mt-0.5 h-3 w-3 shrink-0" />
-                          <span className="break-words">{chip.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </a>
-          ) : (
-            <div className="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-cyan-950/20 backdrop-blur-xl p-[3px]">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
-
-              <div className="relative mb-3 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-black/20 sm:aspect-[2.6/1]">
-                {renderProductImage(topProducts[0], "h-8 w-8 text-white/50")}
-              </div>
-
-              <div className="px-3 pb-3 sm:px-4 sm:pb-4">
-                <div className="mb-2 flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <span className="inline-block px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-300 text-[10px] font-mono mb-2">
-                      算法最匹配（第 1 推荐）
-                    </span>
-                    <h3 className="break-words text-lg font-medium leading-snug text-white">
-                      {topProducts[0].name}
-                    </h3>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
-                    <span className="text-lg font-semibold text-cyan-400">
-                      ¥{topProducts[0].price}
-                    </span>
-                  </div>
-                </div>
-
-                {topProducts[0].tags && topProducts[0].tags.length > 0 && (
-                  <div className="mt-2 mb-3 flex flex-wrap gap-1.5">
-                    {topProducts[0].tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="break-words rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {topProducts[0].reason && (
-                  <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2.5">
-                    <p className="text-[11px] text-cyan-200/80 leading-relaxed italic">
-                      <Sparkles className="w-3 h-3 inline-block mr-1 mb-0.5 text-cyan-400" />
-                      “ {topProducts[0].reason} ”
-                    </p>
-                  </div>
-                )}
-
-                {primaryConfidenceSummary &&
-                  renderConfidenceSummary(primaryConfidenceSummary)}
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {getMetricChips(topProducts[0]).map((chip) => {
-                    const Icon = chip.icon;
-                    return (
-                      <div
-                        key={chip.id}
-                        className="flex max-w-full items-start gap-1 rounded bg-white/5 px-2 py-1 text-xs text-slate-300"
-                      >
-                        <Icon className="mt-0.5 h-3 w-3 shrink-0" />
-                        <span className="break-words">{chip.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {topProducts.slice(1, 3).map((product, index) => (
               getProductHref(product) ? (

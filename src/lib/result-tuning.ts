@@ -13,6 +13,17 @@ export const RESULT_TUNING_OPTIONS: ResultTuningOption[] = [
   { mode: "beginner", label: "更适合新手" },
 ];
 
+export function getResultTuningAppliedTag(mode: ResultTuningMode) {
+  switch (mode) {
+    case "quieter":
+      return "微调：更安静";
+    case "cheaper":
+      return "微调：预算更低";
+    case "beginner":
+      return "微调：新手友好";
+  }
+}
+
 function lowerBudget(budget: [number, number] | undefined): [number, number] {
   if (!budget) return [0, 300];
   const [, max] = budget;
@@ -33,21 +44,21 @@ export function tuneResultAnswers(
 
   switch (mode) {
     case "quieter":
-      addTag("微调：更安静");
+      addTag(getResultTuningAppliedTag(mode));
       return {
         ...answers,
         maxDb: Math.min(answers.maxDb ?? 50, 45),
         tags: nextTags,
       };
     case "cheaper":
-      addTag("微调：预算更低");
+      addTag(getResultTuningAppliedTag(mode));
       return {
         ...answers,
         budget: lowerBudget(answers.budget),
         tags: nextTags,
       };
     case "beginner":
-      addTag("微调：新手友好");
+      addTag(getResultTuningAppliedTag(mode));
       return {
         ...answers,
         motorType: "gentle",

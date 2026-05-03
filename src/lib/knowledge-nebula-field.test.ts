@@ -34,9 +34,9 @@ test("buildKnowledgeNebulaClusterAnchors returns the exact desktop layout contra
       {
         topicSlug: "science",
         viewport: "desktop",
-        xPercent: 16,
-        yPercent: 51,
-        position: [-6.1, 0.1, -2.2],
+        xPercent: 13,
+        yPercent: 49,
+        position: [-6.8, 0.4, -2.35],
         scale: 1.02,
         depth: "far",
         driftAmplitude: 0.18,
@@ -46,9 +46,9 @@ test("buildKnowledgeNebulaClusterAnchors returns the exact desktop layout contra
       {
         topicSlug: "people",
         viewport: "desktop",
-        xPercent: 31,
-        yPercent: 78,
-        position: [-3.2, -2.5, -0.7],
+        xPercent: 27,
+        yPercent: 83,
+        position: [-4.0, -3.0, -0.85],
         scale: 1.12,
         depth: "mid",
         driftAmplitude: 0.22,
@@ -56,39 +56,51 @@ test("buildKnowledgeNebulaClusterAnchors returns the exact desktop layout contra
         labelWidthRem: 10,
       },
       {
+        topicSlug: "lgbtq",
+        viewport: "desktop",
+        xPercent: 41,
+        yPercent: 38,
+        position: [-1.35, 1.45, 0.3],
+        scale: 1.08,
+        depth: "mid",
+        driftAmplitude: 0.2,
+        splitDelayMs: 400,
+        labelWidthRem: 9.75,
+      },
+      {
         topicSlug: "first-time",
         viewport: "desktop",
-        xPercent: 51,
-        yPercent: 62,
-        position: [0.1, -0.8, 1.1],
-        scale: 1.28,
+        xPercent: 58,
+        yPercent: 61,
+        position: [1.0, -0.7, 1.28],
+        scale: 1.22,
         depth: "near",
-        driftAmplitude: 0.26,
-        splitDelayMs: 420,
-        labelWidthRem: 11,
+        driftAmplitude: 0.25,
+        splitDelayMs: 520,
+        labelWidthRem: 10.5,
       },
       {
         topicSlug: "couples",
         viewport: "desktop",
-        xPercent: 69,
-        yPercent: 77,
-        position: [3.1, -2.4, 0.2],
-        scale: 1.12,
+        xPercent: 76,
+        yPercent: 80,
+        position: [4.15, -2.7, 0.18],
+        scale: 1.1,
         depth: "mid",
         driftAmplitude: 0.21,
-        splitDelayMs: 560,
-        labelWidthRem: 10,
+        splitDelayMs: 640,
+        labelWidthRem: 9.8,
       },
       {
         topicSlug: "care",
         viewport: "desktop",
-        xPercent: 84,
-        yPercent: 49,
-        position: [6.2, 0.3, -1.8],
+        xPercent: 87,
+        yPercent: 46,
+        position: [6.8, 0.55, -1.85],
         scale: 1.02,
         depth: "far",
         driftAmplitude: 0.17,
-        splitDelayMs: 700,
+        splitDelayMs: 760,
         labelWidthRem: 9.25,
       },
     ],
@@ -140,27 +152,39 @@ test("buildKnowledgeNebulaClusterAnchors returns the exact mobile layout contrac
         labelWidthRem: 8.1,
       },
       {
+        topicSlug: "lgbtq",
+        viewport: "mobile",
+        xPercent: 49,
+        yPercent: 28,
+        position: [-0.15, 2.2, 0.28],
+        scale: 0.96,
+        depth: "mid",
+        driftAmplitude: 0.14,
+        splitDelayMs: 380,
+        labelWidthRem: 7.95,
+      },
+      {
         topicSlug: "first-time",
         viewport: "mobile",
-        xPercent: 51,
-        yPercent: 60,
-        position: [0.08, -0.55, 0.8],
-        scale: 1.1,
+        xPercent: 52,
+        yPercent: 61,
+        position: [0.18, -0.7, 0.88],
+        scale: 1.04,
         depth: "near",
         driftAmplitude: 0.18,
-        splitDelayMs: 400,
-        labelWidthRem: 8.5,
+        splitDelayMs: 500,
+        labelWidthRem: 8.35,
       },
       {
         topicSlug: "couples",
         viewport: "mobile",
-        xPercent: 70,
+        xPercent: 72,
         yPercent: 75,
-        position: [2.05, -2.18, -0.1],
+        position: [2.2, -2.1, -0.12],
         scale: 0.98,
         depth: "mid",
         driftAmplitude: 0.15,
-        splitDelayMs: 540,
+        splitDelayMs: 620,
         labelWidthRem: 8.1,
       },
       {
@@ -172,7 +196,7 @@ test("buildKnowledgeNebulaClusterAnchors returns the exact mobile layout contrac
         scale: 0.9,
         depth: "far",
         driftAmplitude: 0.12,
-        splitDelayMs: 680,
+        splitDelayMs: 740,
         labelWidthRem: 7.75,
       },
     ],
@@ -193,17 +217,17 @@ test("buildKnowledgeNebulaClusterAnchors returns fresh position tuples on each c
 
   first[0].position[0] = 999;
 
-  assert.deepEqual(second[0].position, [-6.1, 0.1, -2.2]);
+  assert.deepEqual(second[0].position, [-6.8, 0.4, -2.35]);
 });
 
-test("buildKnowledgeNebulaClusterAnchors requires exactly five topic clouds for desktop", () => {
+test("buildKnowledgeNebulaClusterAnchors requires exactly six topic clouds for desktop", () => {
   assert.throws(
     () =>
       buildKnowledgeNebulaClusterAnchors({
-        topicSlugs: topicSlugs.slice(0, 4),
+        topicSlugs: topicSlugs.slice(0, 5),
         viewport: "desktop",
       }),
-    /exactly 5|five/i,
+    /exactly 6|six/i,
   );
 
   assert.throws(
@@ -212,18 +236,18 @@ test("buildKnowledgeNebulaClusterAnchors requires exactly five topic clouds for 
         topicSlugs: [...topicSlugs, topicSlugs[0]],
         viewport: "desktop",
       }),
-    /exactly 5|five/i,
+    /exactly 6|six/i,
   );
 });
 
-test("buildKnowledgeNebulaClusterAnchors requires exactly five topic clouds for mobile", () => {
+test("buildKnowledgeNebulaClusterAnchors requires exactly six topic clouds for mobile", () => {
   assert.throws(
     () =>
       buildKnowledgeNebulaClusterAnchors({
-        topicSlugs: topicSlugs.slice(0, 4),
+        topicSlugs: topicSlugs.slice(0, 5),
         viewport: "mobile",
       }),
-    /exactly 5|five/i,
+    /exactly 6|six/i,
   );
 
   assert.throws(
@@ -232,7 +256,7 @@ test("buildKnowledgeNebulaClusterAnchors requires exactly five topic clouds for 
         topicSlugs: [...topicSlugs, topicSlugs[0]],
         viewport: "mobile",
       }),
-    /exactly 5|five/i,
+    /exactly 6|six/i,
   );
 });
 
@@ -280,15 +304,18 @@ test("desktop anchors spread topic clouds across the full starfield", () => {
   const yValues = anchors.map((anchor) => anchor.yPercent);
 
   assert.ok(Math.max(...xValues) - Math.min(...xValues) >= 68);
-  assert.ok(Math.max(...yValues) - Math.min(...yValues) >= 28);
+  assert.ok(Math.max(...yValues) - Math.min(...yValues) >= 40);
   assert.ok(anchors.filter((anchor) => anchor.yPercent >= 70).length >= 2);
+  assert.ok(anchors.filter((anchor) => anchor.yPercent <= 38).length >= 1);
 });
 
 test("buildKnowledgeNebulaFocusCamera returns a fresh target tuple aimed at the selected cloud", () => {
   const anchor = buildKnowledgeNebulaClusterAnchors({
     topicSlugs,
     viewport: "desktop",
-  })[2];
+  }).find((item) => item.topicSlug === "first-time");
+
+  assert.ok(anchor);
 
   const focusCamera = buildKnowledgeNebulaFocusCamera(anchor);
 
@@ -304,7 +331,7 @@ test("buildKnowledgeNebulaFocusCamera returns a fresh target tuple aimed at the 
 
   anchor.position[0] = 999;
 
-  assert.deepEqual(focusCamera.target, [0.1, -0.8, 1.1]);
+  assert.deepEqual(focusCamera.target, [1.0, -0.7, 1.28]);
 });
 
 test("buildKnowledgeNebulaFocusCamera uses the mid-depth camera offset", () => {
@@ -315,10 +342,10 @@ test("buildKnowledgeNebulaFocusCamera uses the mid-depth camera offset", () => {
 
   const focusCamera = buildKnowledgeNebulaFocusCamera(anchor);
 
-  assert.ok(Math.abs(focusCamera.position[0] - -1.088) < 1e-12);
-  assert.ok(Math.abs(focusCamera.position[1] - -0.65) < 1e-12);
+  assert.ok(Math.abs(focusCamera.position[0] - -1.36) < 1e-12);
+  assert.ok(Math.abs(focusCamera.position[1] - -0.78) < 1e-12);
   assert.ok(Math.abs(focusCamera.position[2] - 6.75) < 1e-12);
-  assert.deepEqual(focusCamera.target, [-3.2, -2.5, -0.7]);
+  assert.deepEqual(focusCamera.target, [-4.0, -3.0, -0.85]);
 });
 
 test("buildKnowledgeNebulaFocusCamera uses the far-depth camera offset", () => {
@@ -329,10 +356,10 @@ test("buildKnowledgeNebulaFocusCamera uses the far-depth camera offset", () => {
 
   const focusCamera = buildKnowledgeNebulaFocusCamera(anchor);
 
-  assert.ok(Math.abs(focusCamera.position[0] - -2.074) < 1e-12);
-  assert.ok(Math.abs(focusCamera.position[1] - 0.026) < 1e-12);
+  assert.ok(Math.abs(focusCamera.position[0] - -2.312) < 1e-12);
+  assert.ok(Math.abs(focusCamera.position[1] - 0.104) < 1e-12);
   assert.ok(Math.abs(focusCamera.position[2] - 7.1) < 1e-12);
-  assert.deepEqual(focusCamera.target, [-6.1, 0.1, -2.2]);
+  assert.deepEqual(focusCamera.target, [-6.8, 0.4, -2.35]);
 });
 
 test("getKnowledgeNebulaTimeline returns the full-motion contract", () => {

@@ -15,6 +15,7 @@ import {
   normalizeProductsPayload,
   readProductsCache,
   readSessionJsonStorage,
+  resolveProfilesReturnRoute,
   writeProductsCache,
   writeSessionJsonStorage,
 } from "./lib/app-shell";
@@ -36,6 +37,8 @@ import {
 import { tuneResultAnswers, type ResultTuningMode } from "./lib/result-tuning";
 import {
   buildRecommendationProfilePayload,
+  listRecommendationProfiles,
+  type SavedRecommendationProfile,
   saveRecommendationProfile,
 } from "./lib/user-recommendation-profile";
 import {
@@ -60,6 +63,7 @@ import { MatchingPage } from "./pages/MatchingPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { KnowledgeNebulaPage } from "./pages/KnowledgeNebulaPage";
+import { ProfilesPage } from "./pages/ProfilesPage";
 import {
   buildKnowledgeNebulaPath,
   parseKnowledgeNebulaPath,
@@ -87,6 +91,7 @@ type AiResultEnhancement = {
 
 type AppHistoryState = {
   knowledgeOriginRoute?: AppRoute;
+  profilesOriginRoute?: AppRoute;
 };
 
 type AppAiProxyResponse<T> = {
@@ -562,6 +567,10 @@ export default function App() {
     detectRoute(initialPathname) === "/knowledge"
       ? (window.history.state as AppHistoryState | null)?.knowledgeOriginRoute
       : undefined;
+  const initialProfilesOriginRoute =
+    detectRoute(initialPathname) === "/profiles"
+      ? (window.history.state as AppHistoryState | null)?.profilesOriginRoute
+      : undefined;
   const persistedState = readSessionJsonStorage<PersistedAppState>(
     APP_STATE_STORAGE_KEY,
     {},
@@ -578,6 +587,9 @@ export default function App() {
   const [knowledgeOriginRoute, setKnowledgeOriginRoute] = useState<
     AppRoute | undefined
   >(initialKnowledgeOriginRoute);
+  const [profilesOriginRoute, setProfilesOriginRoute] = useState<
+    AppRoute | undefined
+  >(initialProfilesOriginRoute);
   const [step, setStep] = useState<number>(persistedState.step ?? -1);
   const [answers, setAnswers] = useState<AnswerState>(
     persistedState.answers ?? { tags: [] },
@@ -646,6 +658,13 @@ export default function App() {
   const [supabaseSession, setSupabaseSession] = useState<Session | null>(null);
   const [authStatusMessage, setAuthStatusMessage] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [recommendationProfiles, setRecommendationProfiles] = useState<
+    SavedRecommendationProfile[]
+  >([]);
+  const [isLoadingRecommendationProfiles, setIsLoadingRecommendationProfiles] =
+    useState(false);
+  const [recommendationProfilesError, setRecommendationProfilesError] =
+    useState<string | null>(null);
 
   const activeQuestions: Question[] = getActiveQuestions(answers.gender);
 
@@ -688,6 +707,9 @@ export default function App() {
       setSelectedKnowledgeTopicSlug(undefined);
       setKnowledgeOriginRoute(undefined);
     }
+    if (route !== "/profiles") {
+      setProfilesOriginRoute(undefined);
+    }
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
@@ -714,6 +736,23 @@ export default function App() {
     setCurrentRoute("/knowledge");
     setSelectedKnowledgeTopicSlug(topicSlug);
     setKnowledgeOriginRoute(nextKnowledgeOriginRoute);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  const navigateToProfiles = () => {
+    const nextProfilesOriginRoute =
+      currentRoute === "/profiles" ? profilesOriginRoute : currentRoute;
+    if (window.location.pathname !== "/profiles") {
+      window.history.pushState(
+        { profilesOriginRoute: nextProfilesOriginRoute } satisfies AppHistoryState,
+        "",
+        "/profiles",
+      );
+    }
+    setCurrentRoute("/profiles");
+    setSelectedKnowledgeTopicSlug(undefined);
+    setKnowledgeOriginRoute(undefined);
+    setProfilesOriginRoute(nextProfilesOriginRoute);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
@@ -755,6 +794,39 @@ export default function App() {
     };
   }, []);
 
+  async function fetchRecommendationProfiles(session = supabaseSession) {
+    const authToken =
+      session?.access_token ||
+      (await getCurrentSupabaseSession())?.access_token ||
+      "";
+
+    if (!authToken) {
+      setRecommendationProfiles([]);
+      setRecommendationProfilesError("需要登录后才能查看我的装备匹配档案。");
+      return;
+    }
+
+    setIsLoadingRecommendationProfiles(true);
+    setRecommendationProfilesError(null);
+
+    try {
+      const result = await listRecommendationProfiles({ authToken });
+      setRecommendationProfiles(result.profiles);
+    } catch (error) {
+      setRecommendationProfilesError(
+        error instanceof Error ? error.message : "读取装备匹配档案失败，请稍后重试。",
+      );
+    } finally {
+      setIsLoadingRecommendationProfiles(false);
+    }
+  }
+
+  useEffect(() => {
+    if (currentRoute === "/profiles") {
+      void fetchRecommendationProfiles();
+    }
+  }, [currentRoute, supabaseSession?.access_token]);
+
   useEffect(() => {
     const handlePopState = () => {
       const nextRoute = detectRoute(window.location.pathname);
@@ -774,6 +846,11 @@ export default function App() {
       setKnowledgeOriginRoute(
         nextRoute === "/knowledge"
           ? (window.history.state as AppHistoryState | null)?.knowledgeOriginRoute
+          : undefined,
+      );
+      setProfilesOriginRoute(
+        nextRoute === "/profiles"
+          ? (window.history.state as AppHistoryState | null)?.profilesOriginRoute
           : undefined,
       );
     };
@@ -1422,6 +1499,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     try {
       await signOutOfSupabase();
       setSupabaseSession(null);
+      setRecommendationProfiles([]);
       setAuthStatusMessage("已退出登录。");
       setSaveRecommendationProfileMessage("登录后可加密保存到云端");
     } catch (error) {
@@ -1458,7 +1536,10 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
           shoppingGuidance,
         }),
       });
-      setSaveRecommendationProfileMessage("已加密保存到云端推荐档案。");
+      setSaveRecommendationProfileMessage(
+        "已加密保存到我的装备匹配档案，可随时回看。",
+      );
+      void fetchRecommendationProfiles();
     } catch (error) {
       setSaveRecommendationProfileMessage(
         error instanceof Error ? error.message : "保存推荐档案失败，请稍后重试。",
@@ -1722,6 +1803,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       ? "max-w-none"
       : currentRoute === "/knowledge" && selectedKnowledgeTopicSlug != null
         ? "max-w-none"
+      : currentRoute === "/profiles"
+      ? "max-w-5xl"
       : currentRoute === "/results" || currentRoute === "/knowledge"
       ? "max-w-6xl"
       : currentRoute === "/quiz" && step === activeQuestions.length
@@ -1732,6 +1815,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       ? "overflow-hidden"
       : currentRoute === "/knowledge" && selectedKnowledgeTopicSlug != null
         ? "overflow-hidden"
+      : currentRoute === "/profiles"
+      ? "overflow-visible"
       : currentRoute === "/knowledge" ||
         (currentRoute === "/quiz" && step === activeQuestions.length)
       ? "overflow-visible"
@@ -1768,6 +1853,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               onOpenKnowledgeNebula={() => {
                 navigateToKnowledgeNebula();
               }}
+              onOpenProfiles={navigateToProfiles}
               authPanel={authPanel}
             />
           )}
@@ -1813,10 +1899,22 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               onRecalibrateResults={recalibrateCurrentResults}
               onTuneResults={handleTuneResults}
               onSaveRecommendationProfile={handleSaveRecommendationProfile}
+              onOpenRecommendationProfiles={navigateToProfiles}
               isSavingRecommendationProfile={isSavingRecommendationProfile}
               saveRecommendationProfileMessage={saveRecommendationProfileMessage}
               authPanel={authPanel}
               onReset={resetQuiz}
+            />
+          )}
+
+          {currentRoute === "/profiles" && (
+            <ProfilesPage
+              profiles={recommendationProfiles}
+              isLoading={isLoadingRecommendationProfiles}
+              error={recommendationProfilesError}
+              userLabel={authPanel.userLabel}
+              onBack={() => navigateTo(resolveProfilesReturnRoute(profilesOriginRoute))}
+              onReload={() => void fetchRecommendationProfiles()}
             />
           )}
 

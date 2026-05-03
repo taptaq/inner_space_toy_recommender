@@ -34,10 +34,11 @@ export function QuizPage({
       className="quiz-scan-shell relative isolate left-1/2 flex w-screen -translate-x-1/2 flex-col items-center justify-center overflow-hidden px-4 py-3 sm:px-6"
     >
       <div className="quiz-starfield pointer-events-none absolute inset-0 -z-10 opacity-75" />
-      <div className="quiz-scan-beam pointer-events-none absolute inset-x-[-12%] top-20 -z-10 h-40 rotate-[-8deg] bg-gradient-to-r from-transparent via-cyan-200/10 to-transparent" />
-      <div className="quiz-orbit-arc pointer-events-none absolute left-1/2 top-10 -z-10 h-[30rem] w-[52rem] -translate-x-1/2 rounded-[50%] border border-cyan-200/10 shadow-[inset_0_0_70px_rgba(34,211,238,0.06)]" />
-      <div className="pointer-events-none absolute -right-24 top-28 -z-10 h-64 w-64 rounded-full bg-cyan-400/8 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-8 -z-10 h-56 w-56 rounded-full bg-indigo-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 top-20 -z-10 h-56 w-56 rounded-full bg-cyan-400/8 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-8rem] left-[-4rem] -z-10 h-64 w-64 rounded-full bg-indigo-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-[10%] top-[18%] -z-10 h-1.5 w-1.5 rounded-full bg-cyan-100/70 shadow-[0_0_16px_rgba(186,230,253,0.5)]" />
+      <div className="pointer-events-none absolute right-[18%] top-[26%] -z-10 h-1 w-1 rounded-full bg-slate-100/60 shadow-[0_0_12px_rgba(255,255,255,0.35)]" />
+      <div className="pointer-events-none absolute left-[24%] bottom-[24%] -z-10 h-1 w-1 rounded-full bg-indigo-200/50 shadow-[0_0_14px_rgba(165,180,252,0.35)]" />
 
       <div className="mb-4 flex w-full max-w-xl items-center justify-between gap-3 px-1 sm:px-2">
         <button

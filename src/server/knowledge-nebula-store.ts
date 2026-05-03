@@ -145,7 +145,12 @@ export async function ensureKnowledgeNebulaSchema(
           accent
         )
         VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (slug) DO NOTHING
+        ON CONFLICT (slug) DO UPDATE
+        SET
+          title = EXCLUDED.title,
+          short_label = EXCLUDED.short_label,
+          summary = EXCLUDED.summary,
+          accent = EXCLUDED.accent
       `,
       [topic.slug, topic.title, topic.shortLabel, topic.summary, topic.accent],
     );

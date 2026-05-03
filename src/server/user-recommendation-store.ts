@@ -8,12 +8,24 @@ export type UserRecommendationStore = {
     encryptedPayload: unknown,
     metadata: UserRecommendationProfileMetadata,
   ) => Promise<{ id: string }>;
+  listEncryptedProfiles: (
+    userId: string,
+  ) => Promise<UserRecommendationProfileRow[]>;
 };
 
 export type UserRecommendationProfileMetadata = {
   title: string;
   summary: string;
   topProductIds: string[];
+};
+
+export type UserRecommendationProfileRow = {
+  id: string;
+  title: string;
+  summary: string;
+  topProductIds: string[];
+  savedAt: string;
+  encryptedPayload: unknown;
 };
 
 export async function ensureUserRecommendationSchema(
@@ -92,6 +104,51 @@ export function createUserRecommendationStore({
       );
       const row = result.rows[0] as { id?: string } | undefined;
       return { id: row?.id ?? "" };
+    },
+    async listEncryptedProfiles(userId) {
+      const result = await pool.query(
+        `
+          SELECT
+            id,
+            title,
+            summary,
+            top_product_ids,
+            saved_at,
+            encrypted_payload
+          FROM public.user_recommendation_profiles
+          WHERE user_id = $1
+            AND deleted_at IS NULL
+          ORDER BY saved_at DESC
+          LIMIT 50
+        `,
+        [userId],
+      );
+
+      return result.rows.map((row) => {
+        const profileRow = row as {
+          id?: string;
+          title?: string;
+          summary?: string;
+          top_product_ids?: unknown;
+          saved_at?: string | Date;
+          encrypted_payload?: unknown;
+        };
+        return {
+          id: profileRow.id ?? "",
+          title: profileRow.title ?? "推荐档案",
+          summary: profileRow.summary ?? "",
+          topProductIds: Array.isArray(profileRow.top_product_ids)
+            ? profileRow.top_product_ids.filter(
+                (item): item is string => typeof item === "string",
+              )
+            : [],
+          savedAt:
+            profileRow.saved_at instanceof Date
+              ? profileRow.saved_at.toISOString()
+              : String(profileRow.saved_at ?? ""),
+          encryptedPayload: profileRow.encrypted_payload,
+        };
+      });
     },
   };
 }

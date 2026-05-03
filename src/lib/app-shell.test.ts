@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   APP_STATE_STORAGE_KEY,
+  detectRoute,
   readSessionJsonStorage,
+  resolveProfilesReturnRoute,
   writeSessionJsonStorage,
 } from "./app-shell.ts";
 
@@ -55,4 +57,15 @@ test("private app state uses session storage instead of long-lived local storage
       value: previousWindow,
     });
   }
+});
+
+test('detectRoute returns "/profiles" for saved equipment matching profiles', () => {
+  assert.equal(detectRoute("/profiles"), "/profiles");
+});
+
+test("resolveProfilesReturnRoute sends profiles back to the route that opened it", () => {
+  assert.equal(resolveProfilesReturnRoute("/results"), "/results");
+  assert.equal(resolveProfilesReturnRoute("/"), "/");
+  assert.equal(resolveProfilesReturnRoute(undefined), "/");
+  assert.equal(resolveProfilesReturnRoute("/profiles"), "/");
 });

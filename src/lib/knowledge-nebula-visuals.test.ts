@@ -21,7 +21,7 @@ test("knowledge nebula hover transition uses a spring instead of a hard step", (
 test("knowledge nebula texture variants stay crisp instead of adding extra blur haze", () => {
   const variants = buildNebulaTextureVariants();
 
-  assert.equal(variants.length, 5);
+  assert.equal(variants.length, 6);
   assert.ok(
     variants.every((variant) => variant.filter.includes("contrast(")),
   );

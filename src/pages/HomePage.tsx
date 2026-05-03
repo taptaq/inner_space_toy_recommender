@@ -53,6 +53,7 @@ function SecondaryEntryButton({
 
 function HomeAuthEntry({
   authPanel,
+  onOpenProfiles,
 }: {
   authPanel: {
     isConfigured: boolean;
@@ -62,6 +63,7 @@ function HomeAuthEntry({
     onSubmit: (mode: AuthPanelMode, username: string, password: string) => Promise<void>;
     onSignOut: () => Promise<void>;
   };
+  onOpenProfiles: () => void;
 }) {
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
 
@@ -77,15 +79,24 @@ function HomeAuthEntry({
             {authPanel.userLabel}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void authPanel.onSignOut()}
-          disabled={authPanel.isSubmitting}
-          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200/16 bg-emerald-100/8 px-3 py-1.5 text-xs text-emerald-50 transition-colors hover:bg-emerald-100/14 disabled:cursor-wait disabled:opacity-60"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          退出
-        </button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onOpenProfiles}
+            className="inline-flex items-center gap-1 rounded-full border border-cyan-200/16 bg-cyan-100/8 px-3 py-1.5 text-xs text-cyan-50 transition-colors hover:bg-cyan-100/14"
+          >
+            我的装备匹配档案
+          </button>
+          <button
+            type="button"
+            onClick={() => void authPanel.onSignOut()}
+            disabled={authPanel.isSubmitting}
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-200/16 bg-emerald-100/8 px-3 py-1.5 text-xs text-emerald-50 transition-colors hover:bg-emerald-100/14 disabled:cursor-wait disabled:opacity-60"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            退出
+          </button>
+        </div>
       </div>
     );
   }
@@ -141,12 +152,14 @@ export function HomePage({
   onStart,
   onBrowseLibrary,
   onOpenKnowledgeNebula,
+  onOpenProfiles,
   authPanel,
 }: {
   pageVariants: any;
   onStart: () => void;
   onBrowseLibrary: () => void;
   onOpenKnowledgeNebula: () => void;
+  onOpenProfiles: () => void;
   authPanel: {
     isConfigured: boolean;
     userLabel: string | null;
@@ -263,7 +276,7 @@ export function HomePage({
           </span>
         </div>
 
-        <HomeAuthEntry authPanel={authPanel} />
+        <HomeAuthEntry authPanel={authPanel} onOpenProfiles={onOpenProfiles} />
       </div>
     </motion.div>
   );
