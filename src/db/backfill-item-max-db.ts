@@ -4,9 +4,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const { Pool } = pg;
-const DEFAULT_TOY_MAX_DB = 50;
+const DEFAULT_DEVICE_MAX_DB = 50;
 
-async function backfillToyMaxDb() {
+async function backfillDeviceMaxDb() {
   const pool = new Pool({
     connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL,
   });
@@ -14,18 +14,18 @@ async function backfillToyMaxDb() {
   const client = await pool.connect();
 
   try {
-    console.log(`[backfill-toy-max-db] 开始回填 toy 默认 max_db=${DEFAULT_TOY_MAX_DB} ...`);
+    console.log(`[backfill-item-max-db] 开始回填 device 默认 max_db=${DEFAULT_DEVICE_MAX_DB} ...`);
     await client.query('BEGIN');
 
-    const toyResult = await client.query(
+    const deviceResult = await client.query(
       `
-        UPDATE public.recommender_toys
+        UPDATE public.recommender_items
         SET max_db = $1,
             updated_at = NOW()
         WHERE max_db IS NULL
         RETURNING id
       `,
-      [DEFAULT_TOY_MAX_DB],
+      [DEFAULT_DEVICE_MAX_DB],
     );
 
     const productResult = await client.query(
@@ -37,7 +37,7 @@ async function backfillToyMaxDb() {
           to_jsonb(COALESCE(t.max_db, $1)),
           true
         )
-        FROM public.recommender_toys AS t
+        FROM public.recommender_items AS t
         WHERE t.original_id = p.id
           AND (
             p.specs IS NULL
@@ -46,7 +46,7 @@ async function backfillToyMaxDb() {
           )
         RETURNING p.id
       `,
-      [DEFAULT_TOY_MAX_DB],
+      [DEFAULT_DEVICE_MAX_DB],
     );
 
     await client.query('COMMIT');
@@ -54,8 +54,8 @@ async function backfillToyMaxDb() {
     console.log(
       JSON.stringify(
         {
-          default_max_db: DEFAULT_TOY_MAX_DB,
-          recommender_toys_updated: toyResult.rowCount,
+          default_max_db: DEFAULT_DEVICE_MAX_DB,
+          recommender_items_updated: deviceResult.rowCount,
           products_updated: productResult.rowCount,
         },
         null,
@@ -71,7 +71,7 @@ async function backfillToyMaxDb() {
   }
 }
 
-backfillToyMaxDb().catch((error) => {
-  console.error('[backfill-toy-max-db] 执行失败:', error);
+backfillDeviceMaxDb().catch((error) => {
+  console.error('[backfill-item-max-db] 执行失败:', error);
   process.exitCode = 1;
 });

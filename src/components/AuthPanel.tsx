@@ -37,7 +37,7 @@ export function AuthPanel({
   if (userLabel) {
     return (
       <div className={signedInPanelClassName}>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-sm font-medium text-emerald-50">
               <ShieldCheck className="h-4 w-4 text-emerald-200/80" />
@@ -49,7 +49,7 @@ export function AuthPanel({
             type="button"
             onClick={() => void onSignOut()}
             disabled={isSubmitting}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200/20 bg-emerald-100/8 px-3 py-1.5 text-xs text-emerald-50 transition-colors hover:bg-emerald-100/14 disabled:cursor-wait disabled:opacity-60"
+            className="inline-flex w-full shrink-0 justify-center gap-1 rounded-full border border-emerald-200/20 bg-emerald-100/8 px-3 py-1.5 text-xs text-emerald-50 transition-colors hover:bg-emerald-100/14 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:items-center"
           >
             <LogOut className="h-3.5 w-3.5" />
             退出
@@ -70,7 +70,7 @@ export function AuthPanel({
         void onSubmit(mode, username, password);
       }}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="flex items-center gap-2 text-sm font-medium text-cyan-50">
             <KeyRound className="h-4 w-4 text-cyan-200/75" />
@@ -83,7 +83,7 @@ export function AuthPanel({
         <button
           type="button"
           onClick={() => setMode((currentMode) => (currentMode === "signin" ? "signup" : "signin"))}
-          className="shrink-0 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+          className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5 text-xs text-slate-200 transition-colors hover:bg-white/[0.07] sm:w-auto"
         >
           {mode === "signin" ? "去注册" : "去登录"}
         </button>

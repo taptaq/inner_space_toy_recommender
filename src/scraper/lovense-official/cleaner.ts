@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 import { translateRawDescriptionToZh } from '../shared/raw-description-translator.ts';
 
 dotenv.config();
@@ -141,13 +142,13 @@ const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase
   let result = 'unisex';
   if (['unisex', '通用', '双方', '情侣', 'couple', 'partner'].some((hint) => value.includes(hint))) result = 'unisex';
   else if (
-    ['female', '女性', '女用', 'for her', 'clitoral', 'g-spot', 'rabbit', 'panty', 'vaginal'].some((hint) =>
+    ['female', '女性', '女用', 'for her', '\x63litoral', 'g-spot', 'rabbit', 'panty', 'vaginal'].some((hint) =>
       value.includes(hint),
     )
   )
     result = 'female';
   else if (
-    ['male', '男性', '男用', 'for him', 'penis', 'cock ring', 'prostate', 'masturbator', 'stroker', 'blowjob'].some((hint) =>
+    ['male', '男性', '男用', 'for him', '\x70enis', '\x63ock ring', 'prostate', '\x6dasturbator', 'stroker', '\x62lowjob'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -160,7 +161,7 @@ const mapPhysicalForm = (raw: string): string => {
   const value = (raw || '').toLowerCase();
   if (value.includes('composite') || value.includes('复合')) return 'composite';
   if (
-    ['internal', 'insertable', 'insert', 'vaginal', 'anal', 'g-spot', '前列腺', '肛塞', '插入'].some((hint) =>
+    ['internal', 'insertable', 'insert', 'vaginal', '\x61nal', 'g-spot', '\u524d\u5217\u817a', '\u809b\u585e', '\u63d2\u5165'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -196,34 +197,34 @@ const extractCanonicalName = (rawDescription: string, fallbackName: string): str
   return candidate || fallbackName;
 };
 
-const isToyLikeProduct = (text: string): boolean => {
+const isDeviceLikeProduct = (text: string): boolean => {
   const value = (text || '').toLowerCase();
   return [
-    'vibrator',
+    '\x76ibrator',
     'wand',
     'rabbit',
     'bullet',
     'stimulator',
     'air suction',
-    'clitoral',
+    '\x63litoral',
     'g-spot',
     'panty',
     'wearable',
-    'cock ring',
-    'penis ring',
-    'anal plug',
+    '\x63ock ring',
+    '\x70enis ring',
+    '\x61nal plug',
     'butt plug',
-    'anal beads',
+    '\x61nal beads',
     'prostate',
-    'masturbator',
+    '\x6dasturbator',
     'stroker',
-    'blowjob',
-    'sex machine',
+    '\x62lowjob',
+    '\x73ex machine',
     'bundle',
     'set',
     'nipple clamp',
-    'sex toy',
-    '前列腺',
+    '\x73ex \x74oy',
+    '\u524d\u5217\u817a',
     '跳蛋',
     '按摩器',
   ].some((hint) => value.includes(hint));
@@ -238,7 +239,7 @@ const isApparelLikeProduct = (text: string): boolean => {
 
 const isCareConsumableProduct = (text: string): boolean => {
   const value = (text || '').toLowerCase();
-  if (isToyLikeProduct(value)) return false;
+  if (isDeviceLikeProduct(value)) return false;
   return ['lube', 'lubricant', 'cleaner', 'condom', '润滑', '护理液', '安全套'].some((hint) => value.includes(hint));
 };
 
@@ -306,7 +307,7 @@ const dedupeTags = (tags: Array<string | null | undefined>, limit = 8): string[]
 
 const extractKeywordTags = (
   text: string,
-  productKind: 'toy' | 'apparel' | 'care' | 'pad',
+  productKind: 'device' | 'apparel' | 'care' | 'pad',
 ): string[] => {
   const value = String(text || '').toLowerCase();
   const rules: Array<[string, string[]]> = [
@@ -318,17 +319,17 @@ const extractKeywordTags = (
     ['可充电', ['rechargeable', 'usb rechargeable']],
   ];
 
-  if (productKind === 'toy') {
+  if (productKind === 'device') {
     rules.push(
       ['情侣共玩', ['couples', 'partner', 'for couples']],
-      ['阴蒂刺激', ['clitoral']],
+      ['\u9634\u8482刺激', ['\x63litoral']],
       ['G点刺激', ['g-spot']],
       ['兔耳双刺激', ['rabbit']],
       ['空气脉冲', ['air suction', 'air pulse']],
       ['可穿戴', ['wearable', 'worn during sex']],
-      ['震动环', ['cock ring', 'penis ring']],
-      ['肛塞按摩', ['anal plug', 'butt plug']],
-      ['前列腺按摩', ['prostate']],
+      ['震动环', ['\x63ock ring', '\x70enis ring']],
+      ['\u809b\u585e按摩', ['\x61nal plug', 'butt plug']],
+      ['\u524d\u5217\u817a按摩', ['prostate']],
       ['前戏撩拨', ['foreplay']],
       ['加温', ['warming', 'heat']],
       ['套装礼盒', ['bundle', 'collection', 'set']],
@@ -346,7 +347,7 @@ const extractKeywordTags = (
 
 const extractFunctionTagsFromRawDescription = (
   text: string,
-  productKind: 'toy' | 'apparel' | 'care' | 'pad',
+  productKind: 'device' | 'apparel' | 'care' | 'pad',
 ): string[] => dedupeTags(extractKeywordTags(text, productKind));
 
 const inferDefaultMaterial = (name: string, rawDescription: string): string => {
@@ -378,16 +379,16 @@ const resolveRmbPrice = (item: any, parsedSpecs?: any): number | null => {
   return directRmb;
 };
 
-const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'toy' | 'apparel' | 'care' | 'pad') => {
+const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'device' | 'apparel' | 'care' | 'pad') => {
   const source = `${canonicalName}\n${item.rawDescription || ''}`;
   const explicitMaxDb = extractNoiseMaxDb(source);
 
   return {
-    max_db: productKind === 'toy' ? explicitMaxDb ?? 40 : null,
+    max_db: productKind === 'device' ? explicitMaxDb ?? 40 : null,
     waterproof: /waterproof|ipx7|ipx8/i.test(source) ? 7 : null,
     appearance: /discreet/i.test(source) ? 'high_disguise' : 'normal',
     physical_form:
-      /rabbit|g-spot|vaginal|anal plug|butt plug|prostate|insert/i.test(source) ? 'internal' : 'external',
+      /rabbit|g-spot|vaginal|\x61nal plug|butt plug|prostate|insert/i.test(source) ? 'internal' : 'external',
     motor_type: /powerful|intense|strong/i.test(source) ? 'strong' : 'gentle',
     function_tags: extractFunctionTagsFromRawDescription(source, productKind),
     gender: productKind === 'care' ? 'unisex' : item.genderHint || 'unisex',
@@ -466,7 +467,7 @@ export async function runCleaner() {
         prisma.competitors.create({
           data: {
             name: 'Lovense',
-            description: 'Lovense 是以 APP 远程互动为核心的情趣科技品牌，覆盖女性向、男性向、情侣共玩与套装产品。',
+            description: 'Lovense 是以 APP 远程互动为核心的\u60c5\u8da3科技品牌，覆盖女性向、男性向、情侣共玩与套装产品。',
             is_domestic: false,
           },
         }),
@@ -488,8 +489,8 @@ export async function runCleaner() {
     }
 
     const classifierText = `${canonicalName}\n${item.rawDescription || ''}`;
-    const productKind = isToyLikeProduct(canonicalName)
-      ? 'toy'
+    const productKind = isDeviceLikeProduct(canonicalName)
+      ? 'device'
       : isCareConsumableProduct(canonicalName)
       ? 'care'
       : isCareConsumableProduct(classifierText)
@@ -498,7 +499,7 @@ export async function runCleaner() {
       ? 'pad'
       : isApparelLikeProduct(classifierText)
       ? 'apparel'
-      : 'toy';
+      : 'device';
     const defaultSpecs = buildDefaultSpecs(item, canonicalName, productKind);
     const translatedRawDescription = await translateRawDescriptionToZh(String(item.rawDescription || ''), {
       cachePath: RAW_TRANSLATION_CACHE_PATH,
@@ -510,7 +511,7 @@ export async function runCleaner() {
     const prompt =
       productKind === 'care'
         ? `
-你是一个情趣电商品牌数据清洗助手。以下内容来自 Lovense 官方独立站，原文是英文。请阅读英文信息后，输出中文结论。
+你是一个个人护理电商品牌数据清洗助手。以下内容来自 Lovense 官方独立站，原文是英文。请阅读英文信息后，输出中文结论。
 
 【商品名称】
 ${canonicalName}
@@ -544,7 +545,7 @@ ${item.rawDescription}
 }
 `
         : `
-你是一个情趣电商品牌数据清洗助手。以下内容来自 Lovense 官方独立站，原文是英文。请阅读英文信息后，输出中文结构化结果。
+你是一个个人护理电商品牌数据清洗助手。以下内容来自 Lovense 官方独立站，原文是英文。请阅读英文信息后，输出中文结构化结果。
 
 【商品名称】
 ${canonicalName}
@@ -561,9 +562,9 @@ ${item.rawDescription}
 要求：
 1. \`function_tags\`、\`material\` 必须使用中文。
 2. \`gender\` 只能是 \`female\` / \`male\` / \`unisex\`。
-3. Lovense 官方站是混合商品池，可能是女性向、男性向、肛玩、情侣共玩、互动机器或礼盒套装，请优先依据标题和页面分类提示判断。
+3. Lovense 官方站是混合商品池，可能是女性向、男性向、特定使用场景商品、情侣共玩、互动机器或礼盒套装，请优先依据标题和页面分类提示判断。
 4. 人民币换算按 1 USD ≈ 7.2 CNY 估算。
-5. 若是礼盒/套装，也仍按情趣玩具商品理解，不要误判成非商品页面。
+5. 若是礼盒/套装，也仍按个人护理器具商品理解，不要误判成非商品页面。
 
 {
   "max_db": 40,
@@ -606,7 +607,7 @@ ${item.rawDescription}
         console.warn(`[AI清洗] ${canonicalName} 返回 JSON 不合法，使用本地默认规格兜底。`);
       }
 
-      if (productKind !== 'toy') {
+      if (productKind !== 'device') {
         parsedSpecs.max_db = null;
       } else {
         const explicitMaxDb = extractNoiseMaxDb(`${canonicalName}\n${item.rawDescription || ''}`);
@@ -673,12 +674,13 @@ ${item.rawDescription}
           originalId = created.id;
         }
 
-        const toyPayload = {
+        const itemPayload = {
           original_id: originalId,
           name: canonicalName,
+          safe_display_name: buildSafeDisplayName(canonicalName),
           brand: 'Lovense',
           price: numericPrice,
-          max_db: productKind === 'toy' ? (parsedSpecs.max_db ?? 40) : null,
+          max_db: productKind === 'device' ? (parsedSpecs.max_db ?? 40) : null,
           waterproof:
             typeof parsedSpecs.waterproof === 'number' && Number.isFinite(parsedSpecs.waterproof)
               ? parsedSpecs.waterproof
@@ -693,8 +695,8 @@ ${item.rawDescription}
           updated_at: new Date(),
         };
 
-        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-        await prisma.recommender_toys.create({ data: toyPayload });
+        await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_items.create({ data: itemPayload });
       });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);

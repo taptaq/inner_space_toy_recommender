@@ -61,6 +61,13 @@ test("createRecalibrateResultsHandler routes the request through automatic model
       rankedCandidates: [{ id: "p-1" }, { id: "b-1" }],
       filteredCount: 6,
       recommendationTips: ["tip-1"],
+      recalibrationContext: {
+        attemptCount: 2,
+        currentResultProvider: "dmxapi-mimo",
+        currentResultModelName: "mimo-v2.5-free",
+        previousTopProducts: [{ id: "p-1", reason: "更安静，也更适合日常使用" }],
+        previousShoppingGuidanceCount: 2,
+      },
     }),
     mockResponse.response,
   );
@@ -73,6 +80,13 @@ test("createRecalibrateResultsHandler routes the request through automatic model
     rankedCandidates: [{ id: "p-1" }, { id: "b-1" }],
     filteredCount: 6,
     recommendationTips: ["tip-1"],
+    recalibrationContext: {
+      attemptCount: 2,
+      currentResultProvider: "dmxapi-mimo",
+      currentResultModelName: "mimo-v2.5-free",
+      previousTopProducts: [{ id: "p-1", reason: "更安静，也更适合日常使用" }],
+      previousShoppingGuidanceCount: 2,
+    },
   });
   assert.deepEqual(mockResponse.readJsonPayload(), {
     topProducts: [],

@@ -48,3 +48,25 @@ test("knowledge topic detail page does not render TOPIC MAP", () => {
 
   assert.doesNotMatch(html, /TOPIC MAP/);
 });
+
+test("knowledge nebula landing page keeps a more compact mobile shell", () => {
+  const html = renderToStaticMarkup(
+    <KnowledgeNebulaPage
+      pageVariants={{}}
+      onBack={() => {}}
+      onSelectTopic={() => {}}
+    />,
+  );
+
+  assert.match(html, /pt-20/);
+  assert.match(html, /sm:pt-28/);
+  assert.match(html, /gap-2\.5/);
+  assert.match(html, /sm:gap-3/);
+  assert.match(html, /text-xl font-light tracking-\[0\.2em\] text-white sm:text-3xl/);
+  assert.match(html, /max-w-\[17\.5rem\] text-\[13px\] leading-relaxed text-slate-300\/88 sm:max-w-2xl sm:text-sm/);
+  assert.match(html, /top-\[10rem\]/);
+  assert.match(html, /sm:top-\[12\.75rem\]/);
+  assert.match(html, /px-5/);
+  assert.match(html, /text-center/);
+  assert.match(html, /sm:px-6/);
+});

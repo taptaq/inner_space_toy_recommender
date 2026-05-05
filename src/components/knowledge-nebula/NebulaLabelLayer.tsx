@@ -78,7 +78,7 @@ export function NebulaLabelLayer({
             onMouseEnter={() => onHoverTopic(topic.slug)}
             onMouseLeave={() => onHoverTopic(undefined)}
             className={[
-              "group absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer px-2 py-2 text-center transition-all duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:px-3",
+              "group absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer px-2.5 py-2.5 text-center transition-all duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:px-3 sm:py-2",
               DEPTH_Z_INDEX[anchor.depth],
               accent.glow,
               isFocused
@@ -94,13 +94,17 @@ export function NebulaLabelLayer({
             }}
             aria-label={`进入 ${topic.title}`}
           >
-            <span className={`text-[10px] font-mono tracking-[0.28em] ${accent.number}`}>
+            <span
+              className={`text-[9px] font-mono tracking-[0.24em] sm:text-[10px] sm:tracking-[0.28em] ${accent.number}`}
+            >
               {String(index + 1).padStart(2, "0")}
             </span>
-            <h3 className={`mt-2 text-sm font-medium tracking-[0.14em] sm:text-base ${accent.title}`}>
+            <h3
+              className={`mt-1.5 text-[13px] font-medium tracking-[0.12em] sm:mt-2 sm:text-base sm:tracking-[0.14em] ${accent.title}`}
+            >
               {topic.title}
             </h3>
-            <p className={`mt-1 text-[11px] leading-relaxed sm:text-xs ${accent.summary}`}>
+            <p className={`mt-1 text-[10px] leading-[1.55] sm:text-xs ${accent.summary}`}>
               {isFocused ? "正在穿入这片星云" : "进入主题"}
             </p>
           </button>

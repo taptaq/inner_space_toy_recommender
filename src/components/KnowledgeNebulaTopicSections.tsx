@@ -58,7 +58,7 @@ const ACCENT_STYLES = {
 
 const COCKPIT_SCREEN_GROUP_SIZE = {
   desktop: 6,
-  mobile: 3,
+  mobile: 5,
 } as const;
 
 const KNOWLEDGE_CARD_VIEWER_KEY = "inner-space-knowledge-card-viewer";
@@ -453,7 +453,7 @@ export function KnowledgeNebulaTopicSections({
         <div className="pointer-events-none absolute bottom-[11dvh] left-[7vw] z-30 h-px w-[24vw] rotate-[-13deg] bg-gradient-to-r from-transparent via-cyan-100/24 to-transparent" />
         <div className="pointer-events-none absolute bottom-[11dvh] right-[7vw] z-30 h-px w-[24vw] rotate-[13deg] bg-gradient-to-l from-transparent via-cyan-100/24 to-transparent" />
 
-        <div className="pointer-events-none absolute left-1/2 top-[6.5%] z-20 w-[min(58rem,90vw)] -translate-x-1/2 text-center sm:top-[8%]">
+        <div className="pointer-events-none absolute left-1/2 top-[5.2%] z-20 w-[min(58rem,90vw)] -translate-x-1/2 text-center sm:top-[8%]">
           <div className="flex items-center justify-center gap-4">
             <span className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-100/18 to-cyan-100/34" />
             <span className="relative inline-flex items-center gap-2 rounded-full border border-cyan-200/18 bg-slate-950/34 px-4 py-1.5 text-[10px] tracking-[0.28em] text-cyan-50/78 shadow-[0_0_34px_rgba(34,211,238,0.08)] backdrop-blur-md">
@@ -515,7 +515,7 @@ export function KnowledgeNebulaTopicSections({
         </div>
 
         {openSection ? (
-          <div className="pointer-events-auto absolute inset-x-[3.5vw] top-[10.5dvh] z-[65] h-[67dvh] sm:inset-x-[5vw] sm:top-[10.5dvh] sm:h-[68dvh]">
+          <div className="pointer-events-auto absolute inset-x-[3.5vw] top-[8.8dvh] z-[65] h-[72dvh] sm:inset-x-[5vw] sm:top-[10.5dvh] sm:h-[68dvh]">
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -562,7 +562,7 @@ export function KnowledgeNebulaTopicSections({
                 </button>
               </div>
 
-              <div className="relative z-10 mt-4 grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[1fr_16rem]">
+              <div className="relative z-10 mt-3 grid min-h-0 flex-1 gap-3 overflow-hidden sm:mt-4 sm:gap-4 lg:grid-cols-[1fr_16rem]">
                 <div className="min-h-0 overflow-y-auto pr-1 [mask-image:linear-gradient(to_bottom,black,black_calc(100%_-_18px),transparent)]">
                   <div className="space-y-4">
                     {openSection.body.map((paragraph, paragraphIndex) => (
@@ -620,8 +620,8 @@ export function KnowledgeNebulaTopicSections({
           </div>
         ) : null}
 
-        <div className="absolute inset-x-4 bottom-5 z-40 mx-auto max-w-5xl sm:bottom-7">
-          <div className="relative overflow-hidden rounded-[1.75rem] border border-cyan-100/12 bg-[linear-gradient(180deg,rgba(5,20,36,0.72),rgba(1,6,16,0.9))] px-4 py-3.5 shadow-[0_0_80px_rgba(14,165,233,0.12)] backdrop-blur-xl sm:px-5 sm:py-4">
+        <div className="absolute inset-x-3 bottom-3 z-40 mx-auto max-w-5xl sm:inset-x-4 sm:bottom-7">
+          <div className="relative overflow-hidden rounded-[1.45rem] border border-cyan-100/12 bg-[linear-gradient(180deg,rgba(5,20,36,0.72),rgba(1,6,16,0.9))] px-3.5 py-3 shadow-[0_0_80px_rgba(14,165,233,0.12)] backdrop-blur-xl sm:rounded-[1.75rem] sm:px-5 sm:py-4">
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(125,211,252,0.08),transparent)]" />
             <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">

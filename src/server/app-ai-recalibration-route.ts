@@ -52,6 +52,43 @@ export function createRecalibrateResultsHandler({
         recommendationTips: Array.isArray(body.recommendationTips)
           ? body.recommendationTips
           : [],
+        recalibrationContext:
+          body.recalibrationContext &&
+          typeof body.recalibrationContext === "object"
+            ? {
+                attemptCount: isFiniteNumber(body.recalibrationContext.attemptCount)
+                  ? body.recalibrationContext.attemptCount
+                  : 1,
+                currentResultProvider:
+                  typeof body.recalibrationContext.currentResultProvider === "string"
+                    ? body.recalibrationContext.currentResultProvider
+                    : undefined,
+                currentResultModelName:
+                  typeof body.recalibrationContext.currentResultModelName === "string"
+                    ? body.recalibrationContext.currentResultModelName
+                    : undefined,
+                previousTopProducts: Array.isArray(
+                  body.recalibrationContext.previousTopProducts,
+                )
+                  ? body.recalibrationContext.previousTopProducts
+                      .filter(
+                        (product: unknown) =>
+                          product &&
+                          typeof product === "object" &&
+                          typeof (product as { id?: unknown }).id === "string",
+                      )
+                      .map((product: { id: string; reason?: string }) => ({
+                        id: product.id,
+                        reason: String(product.reason || "").trim(),
+                      }))
+                  : [],
+                previousShoppingGuidanceCount: isFiniteNumber(
+                  body.recalibrationContext.previousShoppingGuidanceCount,
+                )
+                  ? body.recalibrationContext.previousShoppingGuidanceCount
+                  : 0,
+              }
+            : undefined,
       });
       res.json(result);
     } catch (error) {

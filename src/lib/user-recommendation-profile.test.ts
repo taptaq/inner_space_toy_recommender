@@ -10,7 +10,7 @@ import {
 
 function makeProduct(overrides: Partial<RankedProduct>): RankedProduct {
   return {
-    id: "toy-1",
+    id: "item-1",
     name: "Nebula Match",
     price: 269,
     score: 96,
@@ -35,8 +35,8 @@ test("buildRecommendationProfilePayload keeps enough recommendation context for 
       maxDb: 50,
     },
     topProducts: [
-      makeProduct({ id: "toy-1", name: "Top Pick" }),
-      makeProduct({ id: "toy-2", name: "Second Pick", score: 88 }),
+      makeProduct({ id: "item-1", name: "Top Pick" }),
+      makeProduct({ id: "item-2", name: "Second Pick", score: 88 }),
     ],
     backupProducts: [],
     recommendationTips: ["可以放宽预算"],
@@ -46,10 +46,10 @@ test("buildRecommendationProfilePayload keeps enough recommendation context for 
   assert.deepEqual(payload.answers, { tags: ["静音"], maxDb: 50 });
   assert.equal(payload.title, "Top Pick 等 2 个推荐");
   assert.match(payload.summary, /静音/);
-  assert.deepEqual(payload.topProductIds, ["toy-1", "toy-2"]);
+  assert.deepEqual(payload.topProductIds, ["item-1", "item-2"]);
   assert.deepEqual(payload.topProducts, [
-    { id: "toy-1", name: "Top Pick", score: 96 },
-    { id: "toy-2", name: "Second Pick", score: 88 },
+    { id: "item-1", name: "Top Pick", score: 96 },
+    { id: "item-2", name: "Second Pick", score: 88 },
   ]);
   assert.deepEqual(payload.recommendationTips, ["可以放宽预算"]);
   assert.deepEqual(payload.shoppingGuidance, ["优先看售后"]);
@@ -62,7 +62,7 @@ test("buildRecommendationProfilePayload dedupes saved preference tags", () => {
       tags: ["静音", " 入门级 ", "静音", "", "入门级", "防水"],
       maxDb: 50,
     },
-    topProducts: [makeProduct({ id: "toy-1", name: "Top Pick" })],
+    topProducts: [makeProduct({ id: "item-1", name: "Top Pick" })],
     backupProducts: [],
     recommendationTips: [],
     shoppingGuidance: [],
@@ -72,32 +72,28 @@ test("buildRecommendationProfilePayload dedupes saved preference tags", () => {
   assert.equal(payload.summary, "偏好：静音、入门级、防水；推荐：Top Pick");
 });
 
-test("buildRecommendationProfilePayload saves selected candidates for later comparison", () => {
+test("buildRecommendationProfilePayload no longer saves later-comparison candidates", () => {
   const payload = buildRecommendationProfilePayload({
     answers: {
       tags: ["静音"],
     },
     topProducts: [
-      makeProduct({ id: "toy-1", name: "Top Pick" }),
-      makeProduct({ id: "toy-2", name: "Second Pick", score: 88 }),
+      makeProduct({ id: "item-1", name: "Top Pick" }),
+      makeProduct({ id: "item-2", name: "Second Pick", score: 88 }),
     ],
     backupProducts: [
       {
-        ...makeProduct({ id: "toy-3", name: "Budget Backup", score: 82 }),
+        ...makeProduct({ id: "item-3", name: "Budget Backup", score: 82 }),
         backupLabel: "更省预算",
         backupReason: "预算压力更小",
       },
     ],
-    savedCandidateIds: ["toy-2", "toy-3", "toy-2", "missing"],
     recommendationTips: [],
     shoppingGuidance: [],
   });
 
-  assert.deepEqual(payload.savedCandidateIds, ["toy-2", "toy-3"]);
-  assert.deepEqual(payload.savedCandidates, [
-    { id: "toy-2", name: "Second Pick", score: 88 },
-    { id: "toy-3", name: "Budget Backup", score: 82 },
-  ]);
+  assert.equal("savedCandidateIds" in payload, false);
+  assert.equal("savedCandidates" in payload, false);
 });
 
 test("saveRecommendationProfile posts the payload with bearer authorization", async () => {
@@ -109,7 +105,7 @@ test("saveRecommendationProfile posts the payload with bearer authorization", as
       createdAt: "2026-05-01T00:00:00.000Z",
       title: "推荐档案",
       summary: "偏好：静音",
-      topProductIds: ["toy-1"],
+      topProductIds: ["item-1"],
       answers: { tags: ["静音"] },
       topProducts: [],
       backupProducts: [],
@@ -204,15 +200,15 @@ test("listRecommendationProfiles fetches saved equipment matching profiles", asy
               id: "profile-1",
               title: "我的装备匹配档案",
               summary: "偏好：静音",
-              topProductIds: ["toy-1"],
+              topProductIds: ["item-1"],
               savedAt: "2026-05-02T12:00:00.000Z",
               payload: {
                 createdAt: "2026-05-02T12:00:00.000Z",
                 title: "我的装备匹配档案",
                 summary: "偏好：静音",
-                topProductIds: ["toy-1"],
+                topProductIds: ["item-1"],
                 answers: { tags: ["静音"] },
-                topProducts: [{ id: "toy-1", name: "Nebula Pick", score: 96 }],
+                topProducts: [{ id: "item-1", name: "Nebula Pick", score: 96 }],
                 backupProducts: [],
                 recommendationTips: [],
                 shoppingGuidance: [],

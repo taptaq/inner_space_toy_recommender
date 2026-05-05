@@ -9,6 +9,7 @@ import {
   getKnowledgeNebulaTimeline,
   type KnowledgeNebulaViewport,
 } from "../lib/knowledge-nebula-field.ts";
+import { getKnowledgeNebulaDecorativeBudget } from "../lib/knowledge-nebula-performance.ts";
 import {
   buildNebulaTextureVariants,
   buildNebulaFocusMotion,
@@ -127,6 +128,15 @@ export function KnowledgeNebulaField({
   const nebulaTextureVariants = useMemo(() => buildNebulaTextureVariants(), []);
   const shootingStars = useMemo(() => buildShootingStars(), []);
   const focusMotion = useMemo(() => buildNebulaFocusMotion(), []);
+  const decorativeBudget = useMemo(
+    () =>
+      getKnowledgeNebulaDecorativeBudget({
+        viewport,
+        isVisible: true,
+        prefersReducedMotion: reducedMotionPreference,
+      }),
+    [reducedMotionPreference, viewport],
+  );
   const focusedAnchor = focusedTopicSlug
     ? anchors.find((anchor) => anchor.topicSlug === focusedTopicSlug)
     : undefined;
@@ -295,7 +305,7 @@ export function KnowledgeNebulaField({
   };
 
   return (
-    <div className="relative left-1/2 isolate h-dvh w-screen -translate-x-1/2 overflow-hidden px-0 pb-8 pt-24 sm:pb-10 sm:pt-28">
+    <div className="relative left-1/2 isolate h-dvh w-screen -translate-x-1/2 overflow-hidden px-0 pb-8 pt-20 sm:pb-10 sm:pt-28">
       <div className="pointer-events-none absolute inset-x-[5%] top-2 h-52 rounded-full bg-cyan-400/7 blur-3xl" />
       <div className="pointer-events-none absolute bottom-4 right-[8%] h-44 w-44 rounded-full bg-indigo-400/9 blur-3xl" />
 
@@ -303,7 +313,7 @@ export function KnowledgeNebulaField({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-[1] [mask-image:linear-gradient(to_bottom,transparent,black_5%,black_96%,transparent)]"
       >
-        {PARTICLE_STAR_LAYERS.map((layer) => (
+        {PARTICLE_STAR_LAYERS.slice(0, decorativeBudget.particleLayerCount).map((layer) => (
           <motion.span
             key={layer.id}
             className="absolute left-0 top-0 rounded-full bg-white shadow-[0_0_8px_currentColor] will-change-opacity"
@@ -329,7 +339,7 @@ export function KnowledgeNebulaField({
             }}
           />
         ))}
-        {shootingStars.map((star) => (
+        {shootingStars.slice(0, decorativeBudget.shootingStarCount).map((star) => (
           <motion.span
             key={star.id}
             className="absolute h-[2px] origin-left rounded-full bg-gradient-to-r from-white via-cyan-100/80 to-transparent shadow-[0_0_18px_rgba(186,230,253,0.78)] will-change-transform"
@@ -373,19 +383,19 @@ export function KnowledgeNebulaField({
         ))}
       </div>
 
-      <div className="relative z-30 mb-6 flex flex-col gap-3 px-6 text-center">
+      <div className="relative z-30 mb-5 flex flex-col gap-2.5 px-5 text-center sm:mb-6 sm:gap-3 sm:px-6">
         <span className="mx-auto inline-flex items-center rounded-full border border-cyan-400/15 bg-cyan-400/8 px-3 py-1 text-[10px] font-mono tracking-[0.24em] text-cyan-200/75">
           KNOWLEDGE NEBULA
         </span>
-        <h2 className="text-2xl font-light tracking-[0.24em] text-white sm:text-3xl">
+        <h2 className="text-xl font-light tracking-[0.2em] text-white sm:text-3xl sm:tracking-[0.24em]">
           知识星云
         </h2>
-        <p className="mx-auto max-w-[20rem] text-sm leading-relaxed text-slate-300/88 sm:max-w-2xl">
+        <p className="mx-auto max-w-[17.5rem] text-[13px] leading-relaxed text-slate-300/88 sm:max-w-2xl sm:text-sm">
           在整片深空星幕中选择你想进入的主题星云
         </p>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 top-[11.75rem] mx-auto w-full overflow-hidden sm:top-[12.75rem]">
+      <div className="absolute inset-x-0 bottom-0 top-[10rem] mx-auto w-full overflow-hidden sm:top-[12.75rem]">
         {anchors.map((anchor, index) => {
           const variant =
             nebulaTextureVariants[index % nebulaTextureVariants.length];
@@ -404,6 +414,8 @@ export function KnowledgeNebulaField({
             opacity * (isInteractive ? variant.hoverOpacityBoost : 1),
           );
           const wrapperScale = isInteractive ? variant.hoverScale : 1;
+          const shouldIdlePulse =
+            decorativeBudget.animateIdleNebulas || isInteractive;
 
           return (
             <div
@@ -454,7 +466,8 @@ export function KnowledgeNebulaField({
                           scaleX: variant.scaleX,
                           scaleY: variant.scaleY,
                         }
-                      : {
+                      : shouldIdlePulse
+                        ? {
                           scaleX: [
                             variant.scaleX * 0.98,
                             variant.scaleX * (isInteractive ? 1.14 : 1.03),
@@ -471,13 +484,19 @@ export function KnowledgeNebulaField({
                             variant.rotate - 1,
                           ],
                         }
+                        : {
+                            rotate: variant.rotate,
+                            scaleX: variant.scaleX,
+                            scaleY: variant.scaleY,
+                          }
                   }
                   transition={{
                     duration: isInteractive
                       ? Math.max(3.8, variant.idleDuration - 2.2)
                       : variant.idleDuration,
                     ease: "easeInOut",
-                    repeat: reducedMotionPreference ? 0 : repeat,
+                    repeat:
+                      reducedMotionPreference || !shouldIdlePulse ? 0 : repeat,
                   }}
                 />
               </motion.div>

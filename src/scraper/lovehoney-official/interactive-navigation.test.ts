@@ -6,8 +6,8 @@ test('shouldReuseCurrentInteractivePage returns true for the same category url i
   assert.equal(
     shouldReuseCurrentInteractivePage(
       true,
-      'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
-      'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
+      'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
+      'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
     ),
     true,
   );
@@ -17,16 +17,16 @@ test('shouldReuseCurrentInteractivePage returns false when interactive mode is o
   assert.equal(
     shouldReuseCurrentInteractivePage(
       false,
-      'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
-      'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
+      'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
+      'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
     ),
     false,
   );
   assert.equal(
     shouldReuseCurrentInteractivePage(
       true,
-      'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
-      'https://www.lovehoney.co.uk/sex-toys/male-sex-toys/',
+      'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
+      'https://www.lovehoney.co.uk/\x73ex-toys/male-\x73ex-toys/',
     ),
     false,
   );

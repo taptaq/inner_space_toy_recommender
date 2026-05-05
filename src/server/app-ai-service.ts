@@ -18,8 +18,10 @@ import {
 import type {
   ResultRecalibrationRequest,
   ResultRecalibrationResponse,
+  ResultRecalibrationContext,
 } from "../lib/result-recalibration.ts";
 import { buildProductDescriptionSignalsSummary } from "../lib/product-description-signals.ts";
+import { getProductDisplayName } from "../lib/product-display-name.ts";
 import { runAppAiProviderLadder } from "./app-ai-proxy.ts";
 
 const FINAL_SELECTION_COUNT = 3;
@@ -110,6 +112,12 @@ type ResultEnhancementPayload = {
   shoppingGuidance?: string[];
 };
 
+type RecalibrationPlan = {
+  rerankProvider: AppAiProvider;
+  enhancementProvider: AppAiProvider;
+  fallbackOrder: AppAiProvider[];
+};
+
 export type AiProxyEnvelope<T> = {
   data: T;
   modelName: string;
@@ -149,6 +157,24 @@ function requireKey(value: string | undefined, label: string) {
 
 function normalizeReason(value: unknown) {
   return String(value || "").trim();
+}
+
+function dedupeProviderOrder(order: AppAiProvider[]) {
+  return order.filter((provider, index) => order.indexOf(provider) === index);
+}
+
+function hasWeakReason(reason: string) {
+  const normalized = String(reason || "").trim();
+  if (!normalized) return true;
+  if (normalized.length <= 8) return true;
+  return /适合你|也适合你|匹配度高|综合表现好/.test(normalized);
+}
+
+function hasWeakPreviousResult(context: ResultRecalibrationContext | undefined) {
+  if (!context) return false;
+  if (context.previousShoppingGuidanceCount < 3) return true;
+  if (context.previousTopProducts.length < 3) return true;
+  return context.previousTopProducts.some((product) => hasWeakReason(product.reason));
 }
 
 function buildLocalReason(
@@ -208,7 +234,7 @@ function buildRerankPrompt(
     rankedProducts: rankedProducts.map((product, index) => ({
       rank: index + 1,
       id: product.id,
-      name: product.name,
+      name: getProductDisplayName(product),
       brand: product.brand,
       price: product.price,
       gender: product.gender,
@@ -223,7 +249,7 @@ function buildRerankPrompt(
   };
 
   return `
-你是一个专业的性健康装备选品专家。
+你是一个专业的个人护理设备选品助手。
 当前候选池已经由结构化规则筛到较小范围。请你在这些候选商品中，重新挑选最匹配的前 3 名，并给出每个商品的推荐理由。
 
 用户偏好标签: [${context.userPreferences.join(", ")}]
@@ -257,7 +283,7 @@ function buildResultEnhancementPrompt(
     topProducts: finalTopProducts.map((product, index) => ({
       rank: index + 1,
       id: product.id,
-      name: product.name,
+      name: getProductDisplayName(product),
       brand: product.brand,
       price: product.price,
       reason: product.reason,
@@ -266,7 +292,7 @@ function buildResultEnhancementPrompt(
     backupCandidates: backupCandidates.map((product, index) => ({
       rank: index + 1,
       id: product.id,
-      name: product.name,
+      name: getProductDisplayName(product),
       brand: product.brand,
       price: product.price,
       backupLabel: product.backupLabel,
@@ -278,7 +304,7 @@ function buildResultEnhancementPrompt(
   };
 
   return `
-你是一个专业的性健康装备选品专家。
+你是一个专业的个人护理设备选品助手。
 Top 3 主推荐已经确定，请只补充两个结果区域：
 1. 为备选卡片写一句简短说明
 2. 为结果页写 3-5 条选购建议
@@ -457,11 +483,13 @@ export function createAppAiService({
     temperature,
     emptyJson,
     logContext,
+    providerOrder = APP_RECOMMENDATION_PROVIDER_ORDER,
   }: {
     prompt: string;
     temperature: number;
     emptyJson: string;
     logContext: string;
+    providerOrder?: readonly AppAiProvider[];
   }) {
     const providers = buildProviderExecutors<T>({
       prompt,
@@ -474,7 +502,7 @@ export function createAppAiService({
     });
 
     return runAppAiProviderLadder({
-      providerOrder: APP_RECOMMENDATION_PROVIDER_ORDER,
+      providerOrder,
       providers,
       onProviderError(provider, error) {
         logger.warn(
@@ -485,18 +513,56 @@ export function createAppAiService({
     });
   }
 
+  function resolveRecalibrationPlan(
+    context: ResultRecalibrationContext | undefined,
+  ): RecalibrationPlan {
+    const attemptCount = Math.max(1, context?.attemptCount || 1);
+    const isRetryEscalation = attemptCount >= 2;
+    const shouldEscalateRerank =
+      attemptCount >= 3 || (isRetryEscalation && hasWeakPreviousResult(context));
+    const rerankProvider: AppAiProvider = shouldEscalateRerank
+      ? "dmxapi-minimax"
+      : "dmxapi-mimo";
+    const enhancementProvider: AppAiProvider = "dmxapi-qwen";
+    const fallbackOrder = dedupeProviderOrder([
+      rerankProvider,
+      "dmxapi-minimax",
+      enhancementProvider,
+      "dmxapi-mimo",
+      "dmxapi-qwen",
+      "dmxapi-glm",
+      "dmxapi-kimi",
+      "deepseek",
+      "qwen",
+      "glm",
+    ]);
+
+    return {
+      rerankProvider,
+      enhancementProvider,
+      fallbackOrder,
+    };
+  }
+
   async function runResultRecalibration({
     answers,
     rerankPool,
     rankedCandidates,
     filteredCount,
     recommendationTips,
+    recalibrationContext,
   }: ResultRecalibrationRequest): Promise<ResultRecalibrationResponse> {
+    const recalibrationPlan = resolveRecalibrationPlan(recalibrationContext);
+    const rerankProviderOrder = dedupeProviderOrder([
+      recalibrationPlan.rerankProvider,
+      ...recalibrationPlan.fallbackOrder,
+    ]);
     const rerankResult = await runServerAiProxy<BackupReasonResult[]>({
       prompt: buildRerankPrompt(answers, rerankPool),
       temperature: 0.1,
       emptyJson: "[]",
       logContext: "结果重校准 Top3 重排",
+      providerOrder: rerankProviderOrder,
     });
     const reasonMap = new Map<string, string>();
     const poolById = new Map(rerankPool.map((product) => [product.id, product]));
@@ -542,6 +608,10 @@ export function createAppAiService({
       temperature: 0.3,
       emptyJson: "{}",
       logContext: "结果重校准 备选说明与选购建议",
+      providerOrder: dedupeProviderOrder([
+        recalibrationPlan.enhancementProvider,
+        ...recalibrationPlan.fallbackOrder,
+      ]),
     });
     const backupReasonMap = new Map<string, string>();
     const backupIds = new Set(backupCandidates.map((product) => product.id));
@@ -591,6 +661,7 @@ export function createAppAiService({
     createProviderExecutors,
     runSingleProvider,
     runServerAiProxy,
+    resolveRecalibrationPlan,
     runResultRecalibration,
   };
 }

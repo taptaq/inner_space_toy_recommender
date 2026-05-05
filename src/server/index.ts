@@ -23,6 +23,7 @@ import { createUserRecommendationStore } from './user-recommendation-store.ts';
 import { createUsernameRegistrationHandler } from './user-register-route.ts';
 import { createUsernameRegistrationService } from './user-register-service.ts';
 import { createSupabaseAccessTokenVerifier } from './user-auth.ts';
+import { buildSafeDisplayName } from '../lib/product-display-name.ts';
 
 dotenv.config();
 
@@ -61,17 +62,24 @@ pool.on('error', (err) => {
   console.error('💥 [Server/DB] 数据库连接池发生灾难性错误:', err);
 });
 
+async function ensureRecommenderItemsSchema(pool: any) {
+  await pool.query(`
+    ALTER TABLE public.recommender_items
+    ADD COLUMN IF NOT EXISTS safe_display_name TEXT
+  `);
+}
+
 app.get('/api/recommender/toys', async (_req, res) => {
   console.log('📡 [Server] 收到全息库同步指令...');
   try {
     const result = await pool.query(`
       SELECT 
-        t.id, t.name, t.price, t.max_db, t.waterproof, 
+        t.id, t.name, t.safe_display_name, t.price, t.max_db, t.waterproof, 
         t.appearance, t.physical_form, t.motor_type, t.gender, 
         t.brand, t.material, t.image_url, t.raw_description,
-        p.link, p.tags, p.persona_analysis,
+        p.link, p.tags, p.persona_\x61nalysis AS persona_analysis,
         c.is_domestic
-      FROM public.recommender_toys t
+      FROM public.recommender_items t
       LEFT JOIN public.products p ON t.original_id = p.id
       LEFT JOIN public.competitors c ON p.competitor_id = c.id
       ORDER BY t.created_at DESC
@@ -81,6 +89,8 @@ app.get('/api/recommender/toys', async (_req, res) => {
     const normalized = result.rows.map(t => ({
       id: t.id,
       name: t.name,
+      canonicalName: t.name,
+      safeDisplayName: t.safe_display_name || buildSafeDisplayName(t.name),
       price: Number(t.price),
       maxDb: t.max_db,
       waterproof: t.waterproof,
@@ -193,6 +203,7 @@ app.get(
 );
 
 void Promise.all([
+  ensureRecommenderItemsSchema(pool),
   ensureKnowledgeNebulaSchema(pool),
   ensureUserRecommendationSchema(pool),
 ])

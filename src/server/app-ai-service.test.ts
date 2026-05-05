@@ -10,6 +10,7 @@ import type {
   RecommendationRankedProduct,
 } from "../lib/recommendation-results.ts";
 import type { ResultRecalibrationResponse } from "../lib/result-recalibration.ts";
+import type { AppAiProvider } from "../lib/app-ai-chain.ts";
 
 function createRankedProduct(
   id: string,
@@ -176,6 +177,13 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
     rankedCandidates,
     filteredCount: 8,
     recommendationTips: ["如果放宽预算，可看到更多旗舰选项。"],
+    recalibrationContext: {
+      attemptCount: 1,
+      currentResultProvider: "qwen",
+      currentResultModelName: "qwen-turbo",
+      previousTopProducts: [],
+      previousShoppingGuidanceCount: 0,
+    },
   });
 
   assert.deepEqual(
@@ -268,4 +276,98 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
   assert.match(requests[1]?.prompt || "", /"descriptionSignals": "低噪静音、可穿戴"/);
   assert.match(requests[1]?.prompt || "", /"descriptionSignals": "低噪静音"/);
   assert.match(requests[1]?.prompt || "", /"descriptionSignals": "易清洗"/);
+});
+
+test("resolveRecalibrationPlan keeps the first retry on the steadier default providers", () => {
+  const service = createAppAiService();
+
+  const plan = service.resolveRecalibrationPlan({
+    attemptCount: 1,
+    currentResultProvider: "dmxapi-mimo",
+    currentResultModelName: "mimo-v2.5-free",
+    previousTopProducts: [{ id: "p-1", reason: "静音更稳" }],
+    previousShoppingGuidanceCount: 4,
+  });
+
+  assert.equal(plan.rerankProvider, "dmxapi-mimo");
+  assert.equal(plan.enhancementProvider, "dmxapi-qwen");
+  assert.deepEqual(plan.fallbackOrder.slice(0, 3), [
+    "dmxapi-mimo",
+    "dmxapi-minimax",
+    "dmxapi-qwen",
+  ]);
+});
+
+test("resolveRecalibrationPlan upgrades providers when the user retries again with weak previous guidance", () => {
+  const service = createAppAiService();
+
+  const plan = service.resolveRecalibrationPlan({
+    attemptCount: 3,
+    currentResultProvider: "dmxapi-mimo",
+    currentResultModelName: "mimo-v2.5-free",
+    previousTopProducts: [
+      { id: "p-1", reason: "适合你" },
+      { id: "p-2", reason: "也适合你" },
+    ],
+    previousShoppingGuidanceCount: 1,
+  });
+
+  assert.equal(plan.rerankProvider, "dmxapi-minimax");
+  assert.equal(plan.enhancementProvider, "dmxapi-qwen");
+  assert.equal(plan.fallbackOrder[0], "dmxapi-minimax");
+  assert.ok(plan.fallbackOrder.includes("dmxapi-mimo"));
+});
+
+test("runResultRecalibration follows the resolved split-provider plan for rerank and enhancement", async () => {
+  const requests: ChatCompletionRequest[] = [];
+  const service = createAppAiService({
+    env: {
+      DMXAPI_API_KEY: "dmx-key",
+    } as NodeJS.ProcessEnv,
+    chatCompletionRunner: async (request) => {
+      requests.push(request);
+      if (requests.length === 1) {
+        return JSON.stringify([{ id: "p-1", reason: "第一步先保留更稳的静音路线" }]);
+      }
+
+      return JSON.stringify({
+        backupProducts: [],
+        shoppingGuidance: ["先从更轻压力的使用场景开始。", "第一次优先保留更温和的节奏。"],
+      });
+    },
+  });
+
+  const answers: RecommendationAnswers = {
+    tags: ["静音", "高伪装"],
+    gender: "female",
+    physicalForm: "external",
+    motorType: "gentle",
+  };
+  const rerankPool = [
+    createRankedProduct("p-1", { score: 96 }),
+    createRankedProduct("p-2", { score: 93 }),
+    createRankedProduct("p-3", { score: 91 }),
+  ];
+
+  await service.runResultRecalibration({
+    answers,
+    strategy: "auto",
+    rerankPool,
+    rankedCandidates: rerankPool,
+    filteredCount: 3,
+    recommendationTips: [],
+    recalibrationContext: {
+      attemptCount: 3,
+      currentResultProvider: "dmxapi-mimo",
+      currentResultModelName: "mimo-v2.5-free",
+      previousTopProducts: [{ id: "p-1", reason: "适合你" }],
+      previousShoppingGuidanceCount: 1,
+    },
+  });
+
+  const models = requests.map((request) => request.model);
+  assert.deepEqual(models.slice(0, 2), [
+    "MiniMax-M2.7-free",
+    "qwen3.5-plus-free",
+  ]);
 });

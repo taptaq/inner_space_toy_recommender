@@ -70,10 +70,10 @@ test('hasMeaningfulEnglish only flags substantial untranslated English', () => {
   assert.equal((hasMeaningfulEnglish as (input: string) => boolean)('[基础信息]\n商品名: Wild Rabbit 2'), false);
   assert.equal(
     (hasMeaningfulEnglish as (input: string) => boolean)(
-      '[基础信息]\n商品名: Wild Rabbit 2\n副标题: Rechargeable rabbit vibrator for g-spot exploration',
+      '[基础信息]\n商品名: Wild Rabbit 2\n副标题: Rechargeable rabbit \x76ibrator for g-spot exploration',
     ),
     true,
   );
   assert.equal((hasMeaningfulEnglish as (input: string) => boolean)('[基础信息]\n商品名: USB 充电线\n价格: USD 39'), false);
-  assert.equal((hasMeaningfulEnglish as (input: string) => boolean)('[基础信息]\n副标题: 专为阴蒂刺激设计的可充电玩具'), false);
+  assert.equal((hasMeaningfulEnglish as (input: string) => boolean)('[基础信息]\n副标题: 专为\u9634\u8482刺激设计的可充电玩具'), false);
 });

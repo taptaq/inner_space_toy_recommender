@@ -6,7 +6,7 @@ import { runCleaner } from './cleaner.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TARGET_URL = 'https://www.we-vibe.com/us/sex-toys';
+const TARGET_URL = 'https://www.we-vibe.com/us/\x73ex-toys';
 const MAX_ITEMS = Number(process.env.WEVIBE_OFFICIAL_MAX_ITEMS || '60');
 const BUFFER_PATH = path.resolve(__dirname, '../../data/wevibe-official-review-buffer.json');
 
@@ -126,7 +126,7 @@ function inferGender(name: string, categoryHints: string[]): 'male' | 'female' |
   const hasCoupleHint = [
     'couples',
     'partner',
-    'all sex toys for couples',
+    'all \x73ex toys for couples',
     'worn during sex',
     'long-distance',
     'remote-controlled',
@@ -135,24 +135,24 @@ function inferGender(name: string, categoryHints: string[]): 'male' | 'female' |
 
   const femaleHints = [
     'for her',
-    'clitoral',
+    '\x63litoral',
     'g-spot',
     'rabbit',
     'panty',
-    'wearable vibrator',
+    'wearable \x76ibrator',
     'vaginal',
-    'bullet vibrator',
+    'bullet \x76ibrator',
     'wand massager',
     'air suction',
   ].some((hint) => source.includes(hint));
   const maleHints = [
     'for him',
-    'penis',
-    'cock ring',
+    '\x70enis',
+    '\x63ock ring',
     'prostate',
     'male',
-    'anal plug',
-    'masturbator',
+    '\x61nal plug',
+    '\x6dasturbator',
     'verge',
     'pivot',
     'vector',

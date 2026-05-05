@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 import { translateRawDescriptionToZh } from '../shared/raw-description-translator.ts';
 import {
   extractCanonicalName,
@@ -159,13 +160,13 @@ const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase
   let result = 'unisex';
   if (['unisex', '通用', '双方', '情侣', 'couple', 'partner'].some((hint) => value.includes(hint))) result = 'unisex';
   else if (
-    ['female', '女性', '女用', 'for her', 'clitoral', 'g-spot', 'rabbit', 'vaginal', 'woman'].some((hint) =>
+    ['female', '女性', '女用', 'for her', '\x63litoral', 'g-spot', 'rabbit', 'vaginal', 'woman'].some((hint) =>
       value.includes(hint),
     )
   )
     result = 'female';
   else if (
-    ['male', '男性', '男用', 'for him', 'penis', 'cock ring', 'prostate', 'masturbator', 'stroker'].some((hint) =>
+    ['male', '男性', '男用', 'for him', '\x70enis', '\x63ock ring', 'prostate', '\x6dasturbator', 'stroker'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -177,9 +178,9 @@ const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase
 const inferExplicitGender = (text: string): 'male' | 'female' | 'unisex' | null => {
   const value = (text || '').toLowerCase();
   if (['unisex', 'couple', 'partner', '情侣', '通用'].some((hint) => value.includes(hint))) return 'unisex';
-  if (['female', 'for her', 'g-spot', 'clitoral', 'rabbit', 'vaginal', 'woman'].some((hint) => value.includes(hint)))
+  if (['female', 'for her', 'g-spot', '\x63litoral', 'rabbit', 'vaginal', 'woman'].some((hint) => value.includes(hint)))
     return 'female';
-  if (['male', 'for him', 'prostate', 'penis', 'cock ring', 'masturbator', 'stroker'].some((hint) => value.includes(hint)))
+  if (['male', 'for him', 'prostate', '\x70enis', '\x63ock ring', '\x6dasturbator', 'stroker'].some((hint) => value.includes(hint)))
     return 'male';
   return null;
 };
@@ -188,7 +189,7 @@ const mapPhysicalForm = (raw: string): string => {
   const value = (raw || '').toLowerCase();
   if (['composite', '复合', 'rabbit', 'double', 'dual'].some((hint) => value.includes(hint))) return 'composite';
   if (
-    ['internal', 'insertable', 'vaginal', 'anal', 'g-spot', 'prostate', 'insert', '肛塞', '插入'].some((hint) =>
+    ['internal', 'insertable', 'vaginal', '\x61nal', 'g-spot', 'prostate', 'insert', '\u809b\u585e', '\u63d2\u5165'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -260,15 +261,15 @@ function extractFunctionTags(name: string, rawDescription: string): string[] {
   const source = `${name}\n${rawDescription}`.toLowerCase();
   const pairs: Array<[string, string[]]> = [
     ['APP互联', ['connect app', 'remotyca', 'app control', 'app-supported']],
-    ['阴蒂刺激', ['clitoris', 'clitoral', 'clit']],
+    ['\u9634\u8482刺激', ['\x63litoris', '\x63litoral', '\x63lit']],
     ['G点刺激', ['g-spot']],
     ['兔耳双刺激', ['rabbit']],
-    ['前列腺刺激', ['prostate']],
-    ['锁精环', ['cock ring']],
+    ['\u524d\u5217\u817a刺激', ['prostate']],
+    ['锁精环', ['\x63ock ring']],
     ['穿戴', ['wearable']],
     ['情侣互动', ['couple', 'partner', 'for couples']],
     ['吮吸', ['air-pulse', 'pressure wave', 'suction']],
-    ['震动', ['vibration', 'vibrator', 'with vibration']],
+    ['震动', ['vibration', '\x76ibrator', 'with vibration']],
     ['防水', ['waterproof', 'water resistant', 'ipx']],
     ['可充电', ['battery: akku', 'rechargeable', 'usb rechargeable']],
     ['静音', ['quiet', 'whisper']],
@@ -298,7 +299,7 @@ function buildDefaultSpecs(item: CleanerBufferItem, canonicalName: string, rawDe
     max_db: extractNoiseMaxDb(`${canonicalName}\n${rawDescription}`) ?? 40,
     waterproof: extractWaterproofLevel(rawDescription),
     appearance: /wearable|discreet/i.test(rawDescription) ? 'high_disguise' : 'normal',
-    physical_form: /rabbit|g-spot|vaginal|anal|prostate|insert/i.test(rawDescription) ? 'internal' : 'external',
+    physical_form: /rabbit|g-spot|vaginal|\x61nal|prostate|insert/i.test(rawDescription) ? 'internal' : 'external',
     motor_type: /strong|powerful|intense|rumbling/i.test(rawDescription) ? 'strong' : 'gentle',
     function_tags: extractFunctionTags(canonicalName, rawDescription),
     gender,
@@ -392,7 +393,7 @@ export async function runCleaner() {
         prisma.competitors.create({
           data: {
             name: 'Satisfyer',
-            description: 'Satisfyer 是以吸吮、震动、情侣互动和应用互联产品见长的国际情趣品牌。',
+            description: 'Satisfyer 是以吸吮、震动、情侣互动和应用互联产品见长的国际\u60c5\u8da3品牌。',
             is_domestic: false,
           },
         }),
@@ -482,9 +483,10 @@ export async function runCleaner() {
       await withDbRetry(`同步商品 ${canonicalName}`, async () => {
         const created = await prisma.products.create({ data: productPayload });
 
-        const toyPayload = {
+        const itemPayload = {
           original_id: created.id,
           name: canonicalName,
+          safe_display_name: buildSafeDisplayName(canonicalName),
           brand: 'Satisfyer',
           price: numericPrice,
           max_db: specs.max_db ?? 40,
@@ -499,8 +501,8 @@ export async function runCleaner() {
           updated_at: new Date(),
         };
 
-        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-        await prisma.recommender_toys.create({ data: toyPayload });
+        await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_items.create({ data: itemPayload });
       });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);

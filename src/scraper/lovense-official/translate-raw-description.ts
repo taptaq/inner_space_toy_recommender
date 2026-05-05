@@ -103,7 +103,7 @@ async function main() {
   }
 
   let translatedCount = 0;
-  let toysUpdated = 0;
+  let itemsUpdated = 0;
   let productsUpdated = 0;
 
   const translatedRows = await mapWithConcurrency(rows, 4, async (rawItem, index) => {
@@ -146,7 +146,7 @@ async function main() {
       item.rawDescription = translatedRaw;
     }
 
-    const toyUpdate = await prisma.recommender_toys.updateMany({
+    const itemUpdate = await prisma.recommender_items.updateMany({
       where: {
         name,
         brand: { equals: 'Lovense', mode: 'insensitive' },
@@ -156,7 +156,7 @@ async function main() {
         updated_at: new Date(),
       },
     });
-    toysUpdated += toyUpdate.count;
+    itemsUpdated += itemUpdate.count;
 
     const product = await prisma.products.findFirst({
       where: {
@@ -197,7 +197,7 @@ async function main() {
       {
         cleaned_file_total: rows.length,
         translated_count: translatedCount,
-        recommender_toys_updated: toysUpdated,
+        recommender_items_updated: itemsUpdated,
         products_updated: productsUpdated,
         cleaned_path: CLEANED_PATH,
         cache_path: CACHE_PATH,

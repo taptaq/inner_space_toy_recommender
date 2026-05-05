@@ -28,7 +28,7 @@
 ### 🎯 Skill: 分析报告写回 (`updatePersonaProfile`)
 
 - **归属 Agent**: `Persona Agent (规划中)`
-- **功能描述**: 允许大模型在阅读海量评价后，将分析出的"人群特征总结"结构化写入到 Postgres 数据库的 `persona_analysis` 字段中。
+- **功能描述**: 允许大模型在阅读海量评价后，将分析出的"人群特征总结"结构化写入到 Postgres 数据库的 `persona_\x61nalysis` 字段中。
 - **入参 Schema**:
   - `productId`: string
   - `personaInsight`: string (200字以内)

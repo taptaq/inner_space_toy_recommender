@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 import { translateRawDescriptionToZh } from '../shared/raw-description-translator.ts';
 import {
   extractCanonicalName,
@@ -145,13 +146,13 @@ const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase
   let result = 'unisex';
   if (['unisex', '通用', '双方', '情侣', 'couple', 'partner'].some((hint) => value.includes(hint))) result = 'unisex';
   else if (
-    ['female', '女性', '女用', 'for her', 'clitoral', 'g-spot', 'rabbit', 'kegel', 'vaginal'].some((hint) =>
+    ['female', '女性', '女用', 'for her', '\x63litoral', 'g-spot', 'rabbit', 'kegel', 'vaginal'].some((hint) =>
       value.includes(hint),
     )
   )
     result = 'female';
   else if (
-    ['male', '男性', '男用', 'for him', 'penis', 'prostate', 'masturbator', 'stroker', 'p-spot'].some((hint) =>
+    ['male', '男性', '男用', 'for him', '\x70enis', 'prostate', '\x6dasturbator', 'stroker', 'p-spot'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -165,10 +166,10 @@ const inferExplicitGender = (text: string): 'male' | 'female' | 'unisex' | null 
   if (['unisex', 'couple', 'partner', '情侣', '通用', 'lubricant', 'accessory'].some((hint) => value.includes(hint))) {
     return 'unisex';
   }
-  if (['female', 'for her', 'g-spot', 'clitoral', 'rabbit', 'kegel', 'vagina'].some((hint) => value.includes(hint))) {
+  if (['female', 'for her', 'g-spot', '\x63litoral', 'rabbit', 'kegel', 'vagina'].some((hint) => value.includes(hint))) {
     return 'female';
   }
-  if (['male', 'for him', 'prostate', 'penis', 'masturbator', 'p-spot'].some((hint) => value.includes(hint))) {
+  if (['male', 'for him', 'prostate', '\x70enis', '\x6dasturbator', 'p-spot'].some((hint) => value.includes(hint))) {
     return 'male';
   }
   return null;
@@ -178,7 +179,7 @@ const mapPhysicalForm = (raw: string): string => {
   const value = (raw || '').toLowerCase();
   if (value.includes('composite') || value.includes('复合') || value.includes('dual')) return 'composite';
   if (
-    ['internal', 'insertable', 'vaginal', 'anal', 'g-spot', 'prostate', 'insert', '肛塞', '插入'].some((hint) =>
+    ['internal', 'insertable', 'vaginal', '\x61nal', 'g-spot', 'prostate', 'insert', '\u809b\u585e', '\u63d2\u5165'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -199,23 +200,23 @@ const mapAppearance = (raw: string): string => {
   return 'normal';
 };
 
-const isToyLikeProduct = (text: string): boolean => {
+const isDeviceLikeProduct = (text: string): boolean => {
   const value = (text || '').toLowerCase();
   return [
-    'vibrator',
+    '\x76ibrator',
     'rabbit',
     'wand',
     'bullet',
     'g-spot',
-    'clitoral',
+    '\x63litoral',
     'kegel',
-    'anal',
+    '\x61nal',
     'prostate',
-    'dildo',
+    '\x64ildo',
     'massager',
     'plug',
     'egg',
-    'sex toy',
+    '\x73ex \x74oy',
     '震动',
     '按摩',
   ].some((hint) => value.includes(hint));
@@ -223,7 +224,7 @@ const isToyLikeProduct = (text: string): boolean => {
 
 const isCareConsumableProduct = (text: string): boolean => {
   const value = (text || '').toLowerCase();
-  if (isToyLikeProduct(value)) return false;
+  if (isDeviceLikeProduct(value)) return false;
   return ['lotion', 'lubricant', 'lube', 'spray', 'cleaner', '润滑', '护理液'].some((hint) => value.includes(hint));
 };
 
@@ -284,7 +285,7 @@ const dedupeTags = (tags: Array<string | null | undefined>, limit = 8): string[]
   return result;
 };
 
-const extractKeywordTags = (text: string, productKind: 'toy' | 'care'): string[] => {
+const extractKeywordTags = (text: string, productKind: 'device' | 'care'): string[] => {
   const value = String(text || '').toLowerCase();
   const rules: Array<[string, string[]]> = [
     ['静音', ['quiet', 'whisper quiet', 'discreet']],
@@ -292,13 +293,13 @@ const extractKeywordTags = (text: string, productKind: 'toy' | 'care'): string[]
     ['可充电', ['rechargeable', 'usb rechargeable']],
   ];
 
-  if (productKind === 'toy') {
+  if (productKind === 'device') {
     rules.push(
-      ['阴蒂刺激', ['clitoral', 'clit']],
+      ['\u9634\u8482刺激', ['\x63litoral', '\x63lit']],
       ['G点刺激', ['g-spot']],
       ['兔耳双刺激', ['rabbit']],
-      ['肛塞按摩', ['anal plug', 'butt plug']],
-      ['前列腺按摩', ['prostate', 'p-spot']],
+      ['\u809b\u585e按摩', ['\x61nal plug', 'butt plug']],
+      ['\u524d\u5217\u817a按摩', ['prostate', 'p-spot']],
       ['凯格尔训练', ['kegel']],
       ['远程控制', ['remote']],
       ['加温', ['heating', 'heat']],
@@ -310,7 +311,7 @@ const extractKeywordTags = (text: string, productKind: 'toy' | 'care'): string[]
   return rules.filter(([, hints]) => hints.some((hint) => value.includes(hint))).map(([tag]) => tag);
 };
 
-const extractFunctionTagsFromRawDescription = (text: string, productKind: 'toy' | 'care'): string[] =>
+const extractFunctionTagsFromRawDescription = (text: string, productKind: 'device' | 'care'): string[] =>
   dedupeTags(extractKeywordTags(text, productKind));
 
 const inferDefaultMaterial = (name: string, rawDescription: string): string => {
@@ -342,15 +343,15 @@ const resolveRmbPrice = (item: any, parsedSpecs?: any): number | null => {
   return directRmb;
 };
 
-const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'toy' | 'care') => {
+const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'device' | 'care') => {
   const source = `${canonicalName}\n${item.rawDescription || ''}`;
   const explicitMaxDb = extractNoiseMaxDb(source);
 
   return {
-    max_db: productKind === 'toy' ? explicitMaxDb ?? 40 : null,
+    max_db: productKind === 'device' ? explicitMaxDb ?? 40 : null,
     waterproof: /waterproof|ipx7|ipx8/i.test(source) ? 7 : null,
     appearance: /discreet|compact|lipstick/i.test(source) ? 'high_disguise' : 'normal',
-    physical_form: /rabbit|g-spot|vaginal|anal|insert|prostate/i.test(source) ? 'internal' : 'external',
+    physical_form: /rabbit|g-spot|vaginal|\x61nal|insert|prostate/i.test(source) ? 'internal' : 'external',
     motor_type: /powerful|intense|strong|rumbling/i.test(source) ? 'strong' : 'gentle',
     function_tags: extractFunctionTagsFromRawDescription(source, productKind),
     gender: productKind === 'care' ? 'unisex' : item.genderHint || 'unisex',
@@ -439,7 +440,7 @@ export async function runCleaner() {
         prisma.competitors.create({
           data: {
             name: 'Nomi Tang',
-            description: 'Nomi Tang 是德国设计导向的情趣品牌，覆盖振动器、前列腺玩具、凯格尔球与护理耗材。',
+            description: 'Nomi Tang 是德国设计导向的\u60c5\u8da3品牌，覆盖振动器、\u524d\u5217\u817a玩具、凯格尔球与护理耗材。',
             is_domestic: false,
           },
         }),
@@ -465,7 +466,7 @@ export async function runCleaner() {
     }
 
     const classifierText = `${canonicalName}\n${rawDescription}`;
-    const productKind = isCareConsumableProduct(classifierText) ? 'care' : 'toy';
+    const productKind = isCareConsumableProduct(classifierText) ? 'care' : 'device';
     const defaultSpecs = buildDefaultSpecs(item, canonicalName, productKind);
     const translatedRawDescription = await translateRawDescriptionToZh(rawDescription, {
       cachePath: RAW_TRANSLATION_CACHE_PATH,
@@ -486,7 +487,7 @@ export async function runCleaner() {
     const prompt =
       productKind === 'care'
         ? `
-你是一个情趣电商品牌数据清洗助手。以下内容来自 nomiTang 官方独立站，原文是英文。请阅读英文信息后，输出中文结论。
+你是一个个人护理电商品牌数据清洗助手。以下内容来自 nomiTang 官方独立站，原文是英文。请阅读英文信息后，输出中文结论。
 
 【商品名称】
 ${canonicalName}
@@ -520,7 +521,7 @@ ${rawDescription}
 }
 `
         : `
-你是一个情趣电商品牌数据清洗助手。以下内容来自 nomiTang 官方独立站，原文是英文。请阅读英文信息后，输出中文结构化结果。
+你是一个个人护理电商品牌数据清洗助手。以下内容来自 nomiTang 官方独立站，原文是英文。请阅读英文信息后，输出中文结构化结果。
 
 【商品名称】
 ${canonicalName}
@@ -537,7 +538,7 @@ ${rawDescription}
 要求：
 1. \`function_tags\`、\`material\` 必须使用中文。
 2. \`gender\` 只能是 \`female\` / \`male\` / \`unisex\`。
-3. nomiTang 商品可能是女性向、男性向、肛玩、情侣或护理品，请优先依据标题和正文特征判断。
+3. nomiTang 商品可能是女性向、男性向、特定使用场景商品、情侣或护理品，请优先依据标题和正文特征判断。
 4. 人民币换算按 1 USD ≈ 7.2 CNY 估算。
 
 {
@@ -581,7 +582,7 @@ ${rawDescription}
         console.warn(`[AI清洗] ${canonicalName} 返回 JSON 不合法，使用本地默认规格兜底。`);
       }
 
-      if (productKind !== 'toy') {
+      if (productKind !== 'device') {
         parsedSpecs.max_db = null;
       } else {
         const explicitMaxDb = extractNoiseMaxDb(`${canonicalName}\n${rawDescription}`);
@@ -644,12 +645,13 @@ ${rawDescription}
           originalId = created.id;
         }
 
-        const toyPayload = {
+        const itemPayload = {
           original_id: originalId,
           name: canonicalName,
+          safe_display_name: buildSafeDisplayName(canonicalName),
           brand: 'Nomi Tang',
           price: numericPrice,
-          max_db: productKind === 'toy' ? (parsedSpecs.max_db ?? 40) : null,
+          max_db: productKind === 'device' ? (parsedSpecs.max_db ?? 40) : null,
           waterproof:
             typeof parsedSpecs.waterproof === 'number' && Number.isFinite(parsedSpecs.waterproof)
               ? parsedSpecs.waterproof
@@ -664,8 +666,8 @@ ${rawDescription}
           updated_at: new Date(),
         };
 
-        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-        await prisma.recommender_toys.create({ data: toyPayload });
+        await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_items.create({ data: itemPayload });
       });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);

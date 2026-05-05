@@ -10,6 +10,7 @@ export function QuizPage({
   onSelectOption,
   onBackQuestion,
   onBackHome,
+  onJumpToQuestion,
 }: {
   pageVariants: any;
   step: number;
@@ -22,6 +23,7 @@ export function QuizPage({
   ) => void;
   onBackQuestion: () => void;
   onBackHome: () => void;
+  onJumpToQuestion?: (questionIndex: number) => void;
 }) {
   const currentQuestion = activeQuestions[step];
   const { shouldAnimate } = usePagePerformanceState();
@@ -73,9 +75,25 @@ export function QuizPage({
         </span>
         <div className="flex flex-1 justify-end gap-1.5">
           {activeQuestions.map((_, index) => (
-            <div
+            <button
               key={index}
-              className={`h-1.5 rounded-full transition-all duration-500 ${index === step ? "w-8 bg-cyan-200 shadow-[0_0_14px_rgba(103,232,249,0.62)]" : index < step ? "w-3 bg-cyan-700/70" : "w-3 bg-white/10"}`}
+              type="button"
+              onClick={() => {
+                if (index < step) {
+                  onJumpToQuestion?.(index);
+                }
+              }}
+              disabled={index >= step}
+              title={index < step ? `返回修改第 ${index + 1} 题` : undefined}
+              className={[
+                "h-1.5 rounded-full transition-all duration-500",
+                index === step
+                  ? "w-8 bg-cyan-200 shadow-[0_0_14px_rgba(103,232,249,0.62)]"
+                  : index < step
+                    ? "w-3 cursor-pointer bg-cyan-700/70 hover:bg-cyan-300/80"
+                    : "w-3 bg-white/10",
+                index >= step ? "cursor-default" : "",
+              ].join(" ")}
             />
           ))}
         </div>
@@ -91,6 +109,11 @@ export function QuizPage({
               信号校准中
             </span>
             <span className="h-px flex-1 bg-gradient-to-r from-cyan-100/20 to-transparent" />
+          </div>
+          <div className="mb-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.06] px-3 py-2.5">
+            <p className="text-[11px] leading-5 text-cyan-50/78">
+              拿不准也没关系，可先让系统帮你判断，再从结果里回看哪条路线更贴近你。
+            </p>
           </div>
           <h2 className="mb-2 text-xl font-medium tracking-[0.04em] text-white sm:text-2xl">
             {currentQuestion.title}

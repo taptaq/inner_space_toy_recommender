@@ -215,7 +215,6 @@ const MATCHING_SLOTS: FloatingKnowledgeSlot[] = withFragmentTraits([
     depth: "far",
     className: "floating-knowledge-slot-matching-7",
     delayMs: 720,
-    mobileHidden: true,
   },
   {
     id: "matching-near-lower-left",
@@ -223,7 +222,6 @@ const MATCHING_SLOTS: FloatingKnowledgeSlot[] = withFragmentTraits([
     depth: "near",
     className: "floating-knowledge-slot-matching-8",
     delayMs: 840,
-    mobileHidden: true,
   },
   {
     id: "matching-far-top-center",

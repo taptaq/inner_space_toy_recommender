@@ -13,7 +13,7 @@ test("private recommendation json is encrypted and can be decrypted with the sam
       gender: "female",
       tags: ["静音", "高伪装"],
     },
-    topProductIds: ["toy-1", "toy-2"],
+    topProductIds: ["item-1", "item-2"],
   };
 
   const encrypted = encryptPrivateJson(payload, key);

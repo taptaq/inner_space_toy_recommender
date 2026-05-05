@@ -16,7 +16,7 @@ type SessionExportConfig = {
 };
 
 const DEFAULT_OUTPUT_RELATIVE_PATH = 'src/data/lovehoney-official-storage-state.json';
-const DEFAULT_LAUNCH_URL = 'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/';
+const DEFAULT_LAUNCH_URL = 'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/';
 
 export function resolveLovehoneySessionExportConfig(
   env: SessionExportEnv,

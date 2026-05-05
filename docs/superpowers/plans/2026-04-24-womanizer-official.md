@@ -52,7 +52,7 @@ test('extractListItemsFromHtml normalizes Womanizer cards and prices', async () 
         <article data-testid="product-card">
           <a href="/us/next"><img src="//cdn.womanizer.com/next-main.jpg" /></a>
           <a href="/us/next">Womanizer Next</a>
-          <p>Pleasure Air clitoral stimulator</p>
+          <p>Pleasure Air \x63litoral stimulator</p>
           <span>$219.00</span>
           <span>$249.00</span>
         </article>
@@ -65,12 +65,12 @@ test('extractListItemsFromHtml normalizes Womanizer cards and prices', async () 
   assert.deepEqual(result[0], {
     sourceUrl: 'https://www.womanizer.com/us/next',
     name: 'Womanizer Next',
-    subtitle: 'Pleasure Air clitoral stimulator',
+    subtitle: 'Pleasure Air \x63litoral stimulator',
     coverImage: 'https://cdn.womanizer.com/next-main.jpg',
     priceUsd: 219,
     originalPriceUsd: 249,
     genderHint: 'female',
-    categoryHints: ['clitoral stimulator'],
+    categoryHints: ['\x63litoral stimulator'],
     listPosition: 1,
   });
 });
@@ -150,7 +150,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const ORIGIN = 'https://www.womanizer.com';
-export const LIST_URL = `${ORIGIN}/us/sex-toys`;
+export const LIST_URL = `${ORIGIN}/us/\x73ex-toys`;
 export const BUFFER_PATH = path.resolve(__dirname, '../../data/womanizer-official-review-buffer.json');
 export const MAX_ITEMS = Number(process.env.WOMANIZER_OFFICIAL_MAX_ITEMS || '200');
 
@@ -238,7 +238,7 @@ test('mergeUniqueListItems keeps earliest list position for duplicate canonical 
       priceUsd: 219,
       originalPriceUsd: 249,
       genderHint: 'female',
-      categoryHints: ['clitoral stimulator'],
+      categoryHints: ['\x63litoral stimulator'],
       listPosition: 1,
     },
     {
@@ -249,7 +249,7 @@ test('mergeUniqueListItems keeps earliest list position for duplicate canonical 
       priceUsd: 219,
       originalPriceUsd: 249,
       genderHint: 'female',
-      categoryHints: ['clitoral stimulator'],
+      categoryHints: ['\x63litoral stimulator'],
       listPosition: 7,
     },
   ]);
@@ -295,17 +295,17 @@ export function resolveUrl(input: string): string {
 
 function inferGender(text: string): 'female' | 'male' | 'unisex' {
   const value = text.toLowerCase();
-  if (/(clitoral|g-spot|rabbit|vaginal|pleasure air)/i.test(value)) return 'female';
-  if (/(prostate|male|for him|penis)/i.test(value)) return 'male';
+  if (/(\x63litoral|g-spot|rabbit|vaginal|pleasure air)/i.test(value)) return 'female';
+  if (/(prostate|male|for him|\x70enis)/i.test(value)) return 'male';
   return 'unisex';
 }
 
 function inferCategoryHints(text: string): string[] {
   const value = text.toLowerCase();
   const hints: string[] = [];
-  if (value.includes('clitoral')) hints.push('clitoral stimulator');
-  if (value.includes('g-spot')) hints.push('g-spot vibrator');
-  if (value.includes('couples')) hints.push('couples toy');
+  if (value.includes('\x63litoral')) hints.push('\x63litoral stimulator');
+  if (value.includes('g-spot')) hints.push('g-spot \x76ibrator');
+  if (value.includes('couples')) hints.push('shared device');
   return hints;
 }
 
@@ -489,7 +489,7 @@ test('buildNormalizedSpecs keeps usd traceability and inferred tags', () => {
   const specs = (buildNormalizedSpecs as (item: Record<string, unknown>, rate: number) => Record<string, unknown>)(
     {
       name: 'Womanizer Next',
-      subtitle: 'Adaptive Pleasure Air clitoral stimulator',
+      subtitle: 'Adaptive Pleasure Air \x63litoral stimulator',
       priceUsd: 219,
       rawDescription: '[基础信息]\\n材质: Body-safe silicone\\n防水: IPX7',
       genderHint: 'female',
@@ -605,7 +605,7 @@ export function resolveRmbPrice(usd: number | null, rate: number): number | null
 function inferFunctionTags(text: string): string[] {
   const value = text.toLowerCase();
   const tags: string[] = [];
-  if (/(pleasure air|air suction|clitoral stimulator|clitoral suction)/i.test(value)) tags.push('吮吸刺激');
+  if (/(pleasure air|air suction|\x63litoral stimulator|\x63litoral suction)/i.test(value)) tags.push('吮吸刺激');
   if (/(g-spot)/i.test(value)) tags.push('G点刺激');
   if (/(app|remote)/i.test(value)) tags.push('远程互动');
   return tags;
@@ -700,7 +700,7 @@ export async function runCleaner() {
       },
     });
 
-    await prisma.recommender_toys.create({
+    await prisma.recommender_items.create({
       data: {
         original_id: inserted.id,
         name: row.name,

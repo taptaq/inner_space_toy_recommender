@@ -21,7 +21,7 @@ test('buildNormalizedSpecs infers price, material, waterproof, tags, and gender'
 
 [卖点详情]
 Waterproof IPX7: You want to dive deeper? Since your Womanizer is IPX7 waterproof.
-Smart Silence: The toy only starts when it meets your skin.
+Smart Silence: The device only starts when it meets your skin.
 Soft Silicone: Fully coated in soft-touch silicone that feels great on the skin.
 
 [规格参数]
@@ -41,7 +41,7 @@ Soft Silicone: Fully coated in soft-touch silicone that feels great on the skin.
   assert.equal(specs.motor_type, 'gentle');
 });
 
-test('buildNormalizedSpecs defaults toy max_db to 50 when no noise clue is present', () => {
+test('buildNormalizedSpecs defaults device max_db to 50 when no noise clue is present', () => {
   const specs = cleaner.buildNormalizedSpecs({
     name: 'Womanizer Liberty 2',
     subtitle: 'Discreet Clitoral Stimulator',

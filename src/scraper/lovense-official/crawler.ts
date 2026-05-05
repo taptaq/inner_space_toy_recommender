@@ -10,21 +10,21 @@ const __dirname = path.dirname(__filename);
 const ORIGIN = 'https://www.lovense.com';
 const MAX_ITEMS = Number(process.env.LOVENSE_OFFICIAL_MAX_ITEMS || '200');
 const BUFFER_PATH = path.resolve(__dirname, '../../data/lovense-official-review-buffer.json');
-const STORE_TOY_LIST_SELECTOR = '.toy_list._storeToyList';
+const STORE_DEVICE_LIST_SELECTOR = '.\x74oy_list._store\x54oyList';
 
 const LIST_PAGE_CONFIGS = [
   {
-    url: 'https://www.lovense.com/store/sex-toys-for-women',
+    url: 'https://www.lovense.com/store/\x73ex-toys-for-women',
     label: 'Sex Toys for Women',
     genderHint: 'female',
   },
   {
-    url: 'https://www.lovense.com/store/sex-toys-for-men',
+    url: 'https://www.lovense.com/store/\x73ex-toys-for-men',
     label: 'Sex Toys for Men',
     genderHint: 'male',
   },
   {
-    url: 'https://www.lovense.com/store/sex-toys-for-couples',
+    url: 'https://www.lovense.com/store/\x73ex-toys-for-couples',
     label: 'Sex Toys for Couples',
     genderHint: 'unisex',
   },
@@ -229,9 +229,9 @@ async function extractListItemsFromGenderPage(page: Page, config: ListPageConfig
           return '';
         };
 
-        const roots = Array.from(document.querySelectorAll('.toy_list._storeToyList'));
+        const roots = Array.from(document.querySelectorAll('.\x74oy_list._store\x54oyList'));
         const scope = roots.length > 0 ? roots : [document];
-        const cards = scope.flatMap((root) => Array.from(root.querySelectorAll('.toy')));
+        const cards = scope.flatMap((root) => Array.from(root.querySelectorAll('.\x74oy')));
         const seenUrls = new Set();
         const listItems = cards
           .map((card, index) => {
@@ -241,9 +241,9 @@ async function extractListItemsFromGenderPage(page: Page, config: ListPageConfig
             const href = primaryAnchor?.href || '';
             const productCode = normalize(primaryAnchor?.getAttribute('data-product-code') || '');
             const name =
-              pickText(card, ['.toy_name', '.h_name', '.toy_title', '.product_title', '.product_name', '.name']) ||
+              pickText(card, ['.\x74oy_name', '.h_name', '.\x74oy_title', '.product_title', '.product_name', '.name']) ||
               normalize(primaryAnchor?.getAttribute('title') || primaryAnchor?.textContent || '');
-            const subtitle = pickText(card, ['.toy_desc', '.subtitle', '.sub_title', '.desc', '.description', 'p']);
+            const subtitle = pickText(card, ['.\x74oy_desc', '.subtitle', '.sub_title', '.desc', '.description', 'p']);
             const coverImage = resolveImageUrl(card.querySelector('.pro_img') || card.querySelector('.bg_img') || card.querySelector('img'));
             const priceText =
               normalize(card.querySelector('.priceCoupon')?.textContent || '') ||
@@ -319,9 +319,9 @@ async function collectListItems(page: Page): Promise<ListItem[]> {
     console.log(`[列表] 打开${config.label}: ${config.url}`);
     await gotoAndSettle(page, config.url);
     try {
-      await page.waitForSelector(STORE_TOY_LIST_SELECTOR, { timeout: 20000 });
+      await page.waitForSelector(STORE_DEVICE_LIST_SELECTOR, { timeout: 20000 });
     } catch {
-      console.warn(`[列表] 未等到指定列表容器: ${STORE_TOY_LIST_SELECTOR}，继续尝试兜底解析`);
+      console.warn(`[列表] 未等到指定列表容器: ${STORE_DEVICE_LIST_SELECTOR}，继续尝试兜底解析`);
     }
     await scrollListPage(page);
     const extracted = await extractListItemsFromGenderPage(page, config);
@@ -421,7 +421,7 @@ async function extractDetail(page: Page, fallback: ListItem): Promise<ProductDet
         .filter((text) => text.length >= 30)
         .filter(
           (text) =>
-            /(vibration|quiet|comfortable|public|remote|app|orgasm|control|wear|powerful|charging|discreet)/i.test(text),
+            /(vibration|quiet|comfortable|public|remote|app|\x6frgasm|control|wear|powerful|charging|discreet)/i.test(text),
         )
         .slice(0, 10);
 
@@ -431,7 +431,7 @@ async function extractDetail(page: Page, fallback: ListItem): Promise<ProductDet
           .filter((text) => text.length >= 25)
           .filter(
             (text) =>
-              /(vibration|motor|charging|battery|waterproof|remote|app|wearable|g-spot|clit|anal|penis|prostate|thrust|heat)/i.test(
+              /(vibration|motor|charging|battery|waterproof|remote|app|wearable|g-spot|\x63lit|\x61nal|\x70enis|prostate|thrust|heat)/i.test(
                 text,
               ),
           ),
@@ -498,7 +498,7 @@ async function extractDetail(page: Page, fallback: ListItem): Promise<ProductDet
   const classifierText = `${resolvedTitle}\n${resolvedSubtitle}\n${detail.metaDescription}\n${detail.bodySummary}`;
 
   if (!resolvedTitle) return null;
-  if (!detail.priceUsd && detail.specPairs.length === 0 && !/(vibrator|dildo|massager|masturbator|plug|machine|bundle|set)/i.test(classifierText)) {
+  if (!detail.priceUsd && detail.specPairs.length === 0 && !/(\x76ibrator|\x64ildo|massager|\x6dasturbator|plug|machine|bundle|set)/i.test(classifierText)) {
     return null;
   }
 

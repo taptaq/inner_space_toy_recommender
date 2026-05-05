@@ -4,7 +4,7 @@
 
 Add a full `womanizer-official` scraper pipeline for the Womanizer US independent site, starting from:
 
-- `https://www.womanizer.com/us/sex-toys`
+- `https://www.womanizer.com/us/\x73ex-toys`
 
 The pipeline should:
 
@@ -19,7 +19,7 @@ The pipeline should:
 
 Browser inspection on April 24, 2026 confirmed:
 
-- the list page at `/us/sex-toys` renders a standard product grid
+- the list page at `/us/\x73ex-toys` renders a standard product grid
 - product cards expose product name, product link, image, descriptive text, and price text
 - detail pages expose richer marketing copy, image gallery content, and product metadata
 - detail pages also expose structure that can be parsed from visible DOM and supplemented from metadata or embedded structured data
@@ -68,7 +68,7 @@ The crawler owns browser automation, raw extraction, deduplication, and review-b
 
 Responsibilities:
 
-- open `https://www.womanizer.com/us/sex-toys`
+- open `https://www.womanizer.com/us/\x73ex-toys`
 - discover additional listing content by pagination, load-more behavior, or controlled scrolling as needed
 - parse product cards from the listing
 - deduplicate list items by canonical detail URL
@@ -111,14 +111,14 @@ Responsibilities:
 - normalize strings, URLs, images, and product metadata
 - translate `rawDescription` into Chinese using the shared translation flow already used by other official-site cleaners
 - convert USD prices into CNY
-- map data into the repo's standard `products` and `recommender_toys` shapes
+- map data into the repo's standard `products` and `recommender_items` shapes
 - skip invalid or duplicate records
 - emit `src/data/womanizer-official-cleaned-data.json`
 - write valid non-duplicate records into the database
 
 ## Data Flow
 
-1. Start from `/us/sex-toys`
+1. Start from `/us/\x73ex-toys`
 2. Collect visible product cards from the current listing state
 3. If the storefront exposes more items through pagination or dynamic loading, continue until no new products appear or configured limits are reached
 4. Normalize and deduplicate product URLs
@@ -134,7 +134,7 @@ Responsibilities:
 
 Primary strategy:
 
-- parse the `/us/sex-toys` listing DOM directly
+- parse the `/us/\x73ex-toys` listing DOM directly
 - detect whether the site exposes explicit pagination, load-more controls, or appended cards
 - continue crawling with the least fragile available mechanism
 

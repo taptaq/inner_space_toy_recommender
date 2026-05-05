@@ -68,3 +68,19 @@ test("nebula topic labels advertise pointer cursor affordance", () => {
 
   assert.match(source, /cursor-pointer/);
 });
+
+test("nebula topic labels use tighter mobile spacing without shrinking desktop rhythm", () => {
+  const source = fs.readFileSync(
+    path.resolve(
+      process.cwd(),
+      "src/components/knowledge-nebula/NebulaLabelLayer.tsx",
+    ),
+    "utf8",
+  );
+
+  assert.match(source, /px-2\.5 py-2\.5 text-center/);
+  assert.match(source, /sm:px-3 sm:py-2/);
+  assert.match(source, /text-\[9px\] font-mono tracking-\[0\.24em\] sm:text-\[10px\] sm:tracking-\[0\.28em\]/);
+  assert.match(source, /mt-1\.5 text-\[13px\] font-medium tracking-\[0\.12em\] sm:mt-2 sm:text-base sm:tracking-\[0\.14em\]/);
+  assert.match(source, /mt-1 text-\[10px\] leading-\[1\.55\] sm:text-xs/);
+});

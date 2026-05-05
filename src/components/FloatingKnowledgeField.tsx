@@ -5,7 +5,10 @@ import {
   type FloatingKnowledgeViewport,
 } from "../lib/floating-knowledge-field.ts";
 import type { LoadingFunFact } from "../lib/loading-fun-facts.ts";
-import { getFloatingKnowledgeItemBudget } from "../lib/knowledge-nebula-performance.ts";
+import {
+  getFloatingKnowledgeItemBudget,
+  shouldEnableFloatingKnowledgePointerEffects,
+} from "../lib/knowledge-nebula-performance.ts";
 import { usePagePerformanceState } from "../lib/page-performance.ts";
 
 export function FloatingKnowledgeField({
@@ -17,19 +20,28 @@ export function FloatingKnowledgeField({
   variant: FloatingKnowledgeVariant;
   className?: string;
 }) {
-  const { isVisible, shouldAnimate } = usePagePerformanceState();
+  const { isVisible, prefersReducedMotion, shouldAnimate } = usePagePerformanceState();
+  const hasFinePointer =
+    typeof window !== "undefined" &&
+    "matchMedia" in window &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   const shouldFloat = shouldAnimate;
+  const shouldEnablePointerEffects = shouldEnableFloatingKnowledgePointerEffects({
+    isVisible,
+    prefersReducedMotion,
+    hasFinePointer,
+  });
   const buildBudgetedItems = (viewport: FloatingKnowledgeViewport) =>
     buildFloatingKnowledgeItems(facts, {
       variant,
-      viewport,
-      maxItems: getFloatingKnowledgeItemBudget({
-        variant,
         viewport,
-        isVisible,
-        prefersReducedMotion: !shouldAnimate,
-      }),
-    });
+        maxItems: getFloatingKnowledgeItemBudget({
+          variant,
+          viewport,
+          isVisible,
+          prefersReducedMotion,
+        }),
+      });
   const mobileItems = buildBudgetedItems("mobile");
   const budgetedDesktopItems = buildBudgetedItems("desktop");
 
@@ -38,7 +50,7 @@ export function FloatingKnowledgeField({
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!shouldFloat) {
+    if (!shouldEnablePointerEffects) {
       return;
     }
 
@@ -113,8 +125,8 @@ export function FloatingKnowledgeField({
               delay: shouldFloat ? item.slot.delayMs / 1000 : 0,
               ease: "easeOut",
             }}
-            onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
+            onPointerMove={shouldEnablePointerEffects ? handlePointerMove : undefined}
+            onPointerLeave={shouldEnablePointerEffects ? handlePointerLeave : undefined}
           >
             <span>{item.fact.title}</span>
           </motion.div>

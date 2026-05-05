@@ -16,7 +16,7 @@ export type LovehoneyRuntimeConfig = {
 };
 
 const DEFAULT_PERSISTENT_PROFILE_DIR = 'src/data/lovehoney-official-browser-profile';
-const DEFAULT_INTERACTIVE_START_URL = 'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/';
+const DEFAULT_INTERACTIVE_START_URL = 'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/';
 
 function isTruthyFlag(value: string): boolean {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());

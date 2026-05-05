@@ -514,7 +514,7 @@ function createLgbtqCards(): KnowledgeNebulaSectionSeed[] {
       ],
     ),
     card(
-      "lgbtq-first-queer-toy",
+      "lgbtq-first-queer-gear",
       "第一次买，不必追求代表身份",
       "第一件装备先服务你，不先服务标签。",
       ["LGBT+", "第一次", "选择"],

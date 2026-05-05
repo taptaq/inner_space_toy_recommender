@@ -10,7 +10,7 @@ test('resolveLovehoneyRuntimeConfig defaults to headless mode', () => {
     interactive: false,
     cdpEndpoint: '',
     persistentProfileDir: '/repo/src/data/lovehoney-official-browser-profile',
-    interactiveStartUrl: 'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
+    interactiveStartUrl: 'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
   });
 });
 

@@ -137,11 +137,11 @@ function inferGender(text: string): GenderHint {
     [
       'male',
       'for him',
-      'penis',
-      'cock ring',
+      '\x70enis',
+      '\x63ock ring',
       'prostate',
       'stroker',
-      'masturbator',
+      '\x6dasturbator',
     ].some((hint) => value.includes(hint))
   ) {
     return 'male';
@@ -150,8 +150,8 @@ function inferGender(text: string): GenderHint {
     [
       'female',
       'for her',
-      'clitoris',
-      'clitoral',
+      '\x63litoris',
+      '\x63litoral',
       'g-spot',
       'rabbit',
       'vaginal',

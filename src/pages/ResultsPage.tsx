@@ -29,7 +29,10 @@ import {
   buildBackupDirectionTeaser,
   buildResultAvoidanceTips,
   buildResultConfidenceSummary,
+  buildResultNextStepGroups,
+  buildResultRouteSummary,
 } from "../lib/recommendation-results.ts";
+import { getProductDisplayName } from "../lib/product-display-name.ts";
 import type { BackupCandidate } from "../lib/recommendation-results.ts";
 import { getResultLeadCopy } from "../lib/quiz-branching.ts";
 import { AuthPanel, type AuthPanelMode } from "../components/AuthPanel.tsx";
@@ -125,13 +128,13 @@ function dedupeGuidanceItems(items: string[]) {
 }
 
 function renderProductImage(
-  product: Pick<RankedProduct, "imagePlaceholder" | "name">,
+  product: Pick<RankedProduct, "imagePlaceholder" | "name" | "safeDisplayName">,
   iconClassName: string,
 ) {
   return (
     <ProductImage
       imageValue={product.imagePlaceholder}
-      alt={product.name}
+      alt={getProductDisplayName(product)}
       iconClassName={iconClassName}
       imageClassName="h-full w-full object-cover opacity-90"
     />
@@ -312,8 +315,6 @@ type ResultsPageProps = {
   onRecalibrateResults: () => void;
   onTuneResults: (mode: ResultTuningMode) => void;
   onEditQuizCondition?: (condition: ResultEditableCondition) => void;
-  savedCandidateIds?: string[];
-  onToggleSavedCandidate?: (productId: string) => void;
   onSaveRecommendationProfile: () => Promise<void>;
   onOpenRecommendationProfiles: () => void;
   onOpenKnowledgeNebula?: (path?: string) => void;
@@ -342,8 +343,6 @@ export function ResultsPage({
   onRecalibrateResults,
   onTuneResults,
   onEditQuizCondition,
-  savedCandidateIds = [],
-  onToggleSavedCandidate,
   onSaveRecommendationProfile,
   onOpenRecommendationProfiles,
   onOpenKnowledgeNebula,
@@ -387,6 +386,9 @@ export function ResultsPage({
   const primaryConfidenceSummary = topProducts[0]
     ? buildResultConfidenceSummary(topProducts[0], answers)
     : null;
+  const primaryRouteSummary = topProducts[0]
+    ? buildResultRouteSummary(topProducts[0], answers)
+    : null;
   const prePurchaseChecklist = buildPrePurchaseChecklist(answers, topProducts[0]);
   const avoidanceTips = buildResultAvoidanceTips(answers);
   const visibleResultTags = resultTags.slice(0, 4);
@@ -396,19 +398,11 @@ export function ResultsPage({
   );
   const isSignedIn = Boolean(authPanel.userLabel);
   const sortedParameterPreviewItems = getSortedParameterPreviewItems(answers);
-  const savedCandidateLimit = 3;
-  const savedCandidateIdSet = new Set(savedCandidateIds);
-  const laterComparisonCandidates = [
-    ...topProducts.slice(0, 3),
-    ...backupProducts.slice(0, 3),
-  ].reduce<Array<RankedProduct | ResultsBackupProduct>>((items, product) => {
-    if (!product?.id || items.some((item) => item.id === product.id)) {
-      return items;
-    }
-
-    items.push(product);
-    return items;
-  }, []);
+  const nextStepGroups = buildResultNextStepGroups({
+    answers,
+    relaxationTips,
+    shoppingGuidanceItems,
+  });
   const handleOpenKnowledgeTopic = (
     topicSlug: "science" | "people" | "care",
     sectionId?: string,
@@ -475,7 +469,7 @@ export function ResultsPage({
                     主推荐方案
                   </span>
                   <h3 className="break-words text-xl font-medium leading-snug text-white">
-                    {topProducts[0].name}
+                    {getProductDisplayName(topProducts[0])}
                   </h3>
                 </div>
                 <span className="shrink-0 text-xl font-semibold text-cyan-300">
@@ -497,6 +491,28 @@ export function ResultsPage({
 
                 {primaryConfidenceSummary &&
                   renderConfidenceSummary(primaryConfidenceSummary)}
+
+                {primaryRouteSummary && (
+                  <div className="mt-3 rounded-2xl border border-cyan-300/12 bg-cyan-400/[0.05] p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5 text-cyan-200/80" />
+                      <p className="text-[11px] font-medium tracking-wide text-cyan-100/86">
+                        为什么这条路线更适合你
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] font-medium text-cyan-100/84">
+                        这次更适合先走 {primaryRouteSummary.routeLabel}
+                      </p>
+                      <p className="mt-1.5 text-[11px] leading-5 text-slate-200">
+                        {primaryRouteSummary.summary}
+                      </p>
+                      <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                        {primaryRouteSummary.nextPriority}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {avoidanceTips.length > 0 && (
                   <div className="mt-3 rounded-2xl border border-rose-300/12 bg-rose-400/[0.05] p-3">
@@ -682,12 +698,12 @@ export function ResultsPage({
                   </p>
                 </div>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
+              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
                 {!isSignedIn && (
                   <button
                     type="button"
                     onClick={() => setIsSavePanelOpen((isOpen) => !isOpen)}
-                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+                    className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
                   >
                     {isSavePanelOpen ? "收起登录" : "登录 / 注册"}
                   </button>
@@ -696,19 +712,19 @@ export function ResultsPage({
                   type="button"
                   onClick={() => void onSaveRecommendationProfile()}
                   disabled={isSavingRecommendationProfile}
-                  className="inline-flex items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
                 >
                   {isSavingRecommendationProfile ? "保存中..." : "保存推荐档案"}
                 </button>
                 <button
                   type="button"
                   onClick={onOpenRecommendationProfiles}
-                  className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+                  className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
                 >
                   查看档案
                 </button>
               </div>
-            </div>
+          </div>
 
             {saveRecommendationProfileMessage && (
               <p className="text-xs leading-5 text-cyan-100/65">
@@ -717,71 +733,6 @@ export function ResultsPage({
             )}
 
             {!isSignedIn && isSavePanelOpen && <AuthPanel {...authPanel} />}
-          </div>
-        </section>
-      )}
-
-      {onToggleSavedCandidate && laterComparisonCandidates.length > 0 && (
-        <section className="relative z-10 overflow-hidden rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4 sm:p-5">
-          <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/32 to-transparent" />
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-white">稍后比较</h3>
-              <p className="mt-1 text-xs leading-5 text-cyan-100/58">
-                先把犹豫的 2-3 个候选留下，保存档案后可回来继续比较。
-              </p>
-            </div>
-            <span className="inline-flex shrink-0 items-center self-start rounded-full border border-cyan-300/18 bg-cyan-300/10 px-3 py-1.5 text-xs text-cyan-100/78">
-              已选 {Math.min(savedCandidateIds.length, savedCandidateLimit)}/{savedCandidateLimit}
-            </span>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {laterComparisonCandidates.map((product, index) => {
-              const isSaved = savedCandidateIdSet.has(product.id);
-              const isDisabled =
-                !isSaved && savedCandidateIds.length >= savedCandidateLimit;
-
-              return (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => onToggleSavedCandidate(product.id)}
-                  disabled={isDisabled}
-                  className={[
-                    "group flex min-h-[5.5rem] cursor-pointer flex-col justify-between rounded-2xl border p-3 text-left transition-all duration-200",
-                    isSaved
-                      ? "border-cyan-200/28 bg-cyan-300/[0.105] shadow-[0_0_30px_rgba(34,211,238,0.08)]"
-                      : "border-white/8 bg-white/[0.032] hover:-translate-y-0.5 hover:border-cyan-300/24 hover:bg-cyan-300/[0.07]",
-                    isDisabled ? "cursor-not-allowed opacity-55 hover:translate-y-0" : "",
-                  ].join(" ")}
-                >
-                  <div className="min-w-0">
-                    <p className="mb-1 text-[10px] tracking-[0.18em] text-cyan-200/48">
-                      CANDIDATE {index + 1}
-                    </p>
-                    <p className="line-clamp-2 text-sm font-medium leading-5 text-white">
-                      {product.name}
-                    </p>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <span className="text-xs text-cyan-100/66">
-                      匹配 {Math.round(product.score)}
-                    </span>
-                    <span
-                      className={[
-                        "rounded-full border px-2.5 py-1 text-[11px]",
-                        isSaved
-                          ? "border-cyan-200/30 bg-cyan-200/12 text-cyan-50"
-                          : "border-white/10 bg-white/[0.035] text-slate-300 group-hover:border-cyan-300/20 group-hover:text-cyan-100",
-                      ].join(" ")}
-                    >
-                      {isSaved ? "已加入比较" : "稍后比较"}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
           </div>
         </section>
       )}
@@ -823,8 +774,54 @@ export function ResultsPage({
           >
             <div className="overflow-hidden">
               <div className="border-t border-white/8 pt-4">
-                <div className="overflow-x-auto">
-                  <div className="min-w-[44rem]">
+                <div className="space-y-3 md:hidden">
+                  <div className="rounded-2xl border border-cyan-400/12 bg-cyan-400/[0.05] px-3 py-3">
+                    <p className="text-[11px] font-medium text-cyan-100/82">
+                      手机快速对比
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-slate-400">
+                      不用横向大表格，先快速看每个候选的关键差异。
+                    </p>
+                  </div>
+
+                  {comparisonProducts.map((product, index) => (
+                    <div
+                      key={`mobile-comparison-${product.id}`}
+                      className="rounded-2xl border border-white/8 bg-white/[0.03] p-3"
+                    >
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-cyan-200/70">
+                            第 {index + 1} 推荐
+                          </p>
+                          <p className="mt-1 break-words text-sm font-medium text-white">
+                            {getProductDisplayName(product)}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-cyan-400/18 bg-cyan-400/8 px-2.5 py-1 text-[11px] text-cyan-100/80">
+                          匹配 {Math.round(product.score)}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {comparisonRows.map((row) => (
+                          <div
+                            key={`mobile-${product.id}-${row.id}`}
+                            className="rounded-xl border border-white/8 bg-black/10 px-3 py-2.5"
+                          >
+                            <p className="text-[10px] text-slate-500">{row.label}</p>
+                            <p className="mt-1 text-[11px] leading-5 text-slate-200">
+                              {row.values[index]}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
+                  <div>
                     <div
                       className="grid gap-2 border-b border-white/8 pb-3"
                       style={{
@@ -838,7 +835,7 @@ export function ResultsPage({
                             第 {index + 1} 推荐
                           </div>
                           <div className="truncate text-xs font-medium text-white">
-                            {product.name}
+                            {getProductDisplayName(product)}
                           </div>
                         </div>
                       ))}
@@ -991,7 +988,7 @@ export function ResultsPage({
         </motion.section>
       )}
 
-      {hasGuidance && (
+      {nextStepGroups.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1002,15 +999,18 @@ export function ResultsPage({
             <span className="text-sm font-medium tracking-wide">下一步建议</span>
           </div>
           <div className="space-y-4">
-            {relaxationTips.length > 0 && (
-              <div>
+            {nextStepGroups.map((group) => (
+              <div
+                key={group.id}
+                className="rounded-2xl border border-white/8 bg-black/10 p-3"
+              >
                 <h3 className="mb-2 text-sm font-medium text-amber-200">
-                  如果还在犹豫
+                  {group.title}
                 </h3>
                 <ul className="space-y-2">
-                  {relaxationTips.map((tip, index) => (
+                  {group.items.map((tip, index) => (
                     <li
-                      key={`relaxation-${index}`}
+                      key={`${group.id}-${index}`}
                       className="flex items-start gap-2 text-sm leading-6 text-amber-100/85"
                     >
                       <span className="mt-1 shrink-0 text-amber-300">•</span>
@@ -1019,26 +1019,7 @@ export function ResultsPage({
                   ))}
                 </ul>
               </div>
-            )}
-
-            {shoppingGuidanceItems.length > 0 && (
-              <div>
-                <h3 className="mb-2 text-sm font-medium text-amber-200">
-                  购买与开始使用前
-                </h3>
-                <ul className="space-y-2">
-                  {shoppingGuidanceItems.map((tip, index) => (
-                    <li
-                      key={`shopping-${index}`}
-                      className="flex items-start gap-2 text-sm leading-6 text-amber-100/85"
-                    >
-                      <span className="mt-1 shrink-0 text-amber-300">•</span>
-                      <span className="break-words">{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            ))}
           </div>
         </motion.div>
       )}
@@ -1067,7 +1048,7 @@ export function ResultsPage({
                     </span>
                   </div>
                   <h3 className="mb-1 break-words text-sm font-medium leading-relaxed text-white">
-                    {product.name}
+                    {getProductDisplayName(product)}
                   </h3>
                   {product.tags && product.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
@@ -1112,7 +1093,7 @@ export function ResultsPage({
                     </span>
                   </div>
                   <h3 className="mb-1 break-words text-sm font-medium leading-relaxed text-white">
-                    {product.name}
+                    {getProductDisplayName(product)}
                   </h3>
                   {product.tags && product.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
@@ -1208,7 +1189,7 @@ export function ResultsPage({
                                       </span>
                                     </span>
                                     <h4 className="break-words text-base font-medium leading-6 text-white">
-                                      {product.name}
+                                      {getProductDisplayName(product)}
                                     </h4>
                                   </div>
 
@@ -1267,7 +1248,7 @@ export function ResultsPage({
                                       </span>
                                     </span>
                                     <h4 className="break-words text-base font-medium leading-6 text-white">
-                                      {product.name}
+                                      {getProductDisplayName(product)}
                                     </h4>
                                   </div>
 

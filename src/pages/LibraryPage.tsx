@@ -70,12 +70,12 @@ export function LibraryPage({
   return (
     <div
       ref={containerRef}
-      className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8 relative overflow-hidden overflow-y-auto w-full"
+      className="relative min-h-screen w-full overflow-hidden overflow-y-auto p-4 flex flex-col items-center justify-start sm:p-6 md:p-8"
     >
       <div className="fixed top-[-10%] left-[-10%] w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="w-full max-w-5xl relative z-10 pb-20">
+      <div className="relative z-10 w-full max-w-5xl pb-20 sm:pb-24">
         <button
           onClick={onBack}
           className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 mb-8 transition-colors mt-4"
@@ -84,8 +84,8 @@ export function LibraryPage({
           返回指挥舱
         </button>
 
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-light tracking-widest text-white mb-2">
+        <div className="text-center mb-8 sm:mb-10">
+          <h1 className="text-2xl font-light tracking-[0.2em] text-white mb-2 sm:text-3xl sm:tracking-widest">
             全息装备库
           </h1>
           <p className="text-slate-400 text-sm">
@@ -100,8 +100,8 @@ export function LibraryPage({
           </button>
         </div>
 
-        <div className="glass-panel rounded-2xl p-6 mb-10 border border-white/5 bg-white/5">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="glass-panel rounded-[1.35rem] p-4 mb-8 border border-white/5 bg-white/5 sm:rounded-2xl sm:p-6 sm:mb-10">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
                 适用对象
@@ -156,7 +156,7 @@ export function LibraryPage({
             </div>
           </div>
 
-          <div className="mt-5 border-t border-white/8 pt-4">
+          <div className="mt-4 border-t border-white/8 pt-4 sm:mt-5">
             <button
               type="button"
               onClick={() => setIsAdvancedFiltersOpen((isOpen) => !isOpen)}
@@ -172,7 +172,7 @@ export function LibraryPage({
             </button>
 
             {isAdvancedFiltersOpen && (
-              <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
                     品牌厂商
@@ -275,7 +275,7 @@ export function LibraryPage({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {products
             .filter((product) => {
               const matchGender =
@@ -314,14 +314,14 @@ export function LibraryPage({
                   href={productUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="glass-panel rounded-2xl overflow-hidden flex flex-col group hover:border-cyan-500/40 transition-all hover:bg-white/5 cursor-pointer"
+                  className="glass-panel rounded-[1.35rem] overflow-hidden flex flex-col group hover:border-cyan-500/40 transition-all hover:bg-white/5 cursor-pointer sm:rounded-2xl"
                 >
                   <ProductCardContent product={product} />
                 </a>
               ) : (
                 <div
                   key={product.id}
-                  className="glass-panel rounded-2xl overflow-hidden flex flex-col group hover:border-cyan-500/40 transition-all hover:bg-white/5"
+                  className="glass-panel rounded-[1.35rem] overflow-hidden flex flex-col group hover:border-cyan-500/40 transition-all hover:bg-white/5 sm:rounded-2xl"
                 >
                   <ProductCardContent product={product} />
                 </div>
@@ -335,7 +335,7 @@ export function LibraryPage({
         type="button"
         onClick={handleBackToTop}
         aria-label="回到顶部"
-        className={`fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-slate-950/80 px-4 py-2 text-xs text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.18)] backdrop-blur-md transition-all duration-300 hover:border-cyan-300/70 hover:bg-cyan-950/85 hover:text-white sm:bottom-8 sm:right-8 ${
+        className={`fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-slate-950/80 px-4 py-2 text-xs text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.18)] backdrop-blur-md transition-all duration-300 hover:border-cyan-300/70 hover:bg-cyan-950/85 hover:text-white sm:bottom-8 sm:right-8 ${
           showBackToTop
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-3 opacity-0 pointer-events-none"

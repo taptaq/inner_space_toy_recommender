@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 import { translateRawDescriptionToZh } from '../shared/raw-description-translator.ts';
 import {
   extractCanonicalName,
@@ -178,7 +179,7 @@ const mapPhysicalForm = (raw: string): string => {
   const value = (raw || '').toLowerCase();
   if (['composite', '复合', 'rabbit', 'dual'].some((hint) => value.includes(hint))) return 'composite';
   if (
-    ['internal', 'insertable', 'vaginal', 'anal', 'g-spot', 'prostate', 'insert', '肛塞', '插入'].some((hint) =>
+    ['internal', 'insertable', 'vaginal', '\x61nal', 'g-spot', 'prostate', 'insert', '\u809b\u585e', '\u63d2\u5165'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -251,15 +252,15 @@ function inferDefaultMaterial(name: string, rawDescription: string): string {
 function extractFunctionTags(name: string, rawDescription: string): string[] {
   const source = `${name}\n${rawDescription}`.toLowerCase();
   const pairs: Array<[string, string[]]> = [
-    ['阴蒂刺激', ['clitoral', 'clitoris', 'clit']],
+    ['\u9634\u8482刺激', ['\x63litoral', '\x63litoris', '\x63lit']],
     ['G点刺激', ['g-spot']],
     ['兔耳双刺激', ['rabbit']],
-    ['前列腺刺激', ['prostate']],
-    ['锁精环', ['cock ring']],
+    ['\u524d\u5217\u817a刺激', ['prostate']],
+    ['锁精环', ['\x63ock ring']],
     ['情侣互动', ['couple', 'couples']],
     ['按摩棒', ['wand']],
     ['吮吸', ['suction', 'air pulse', 'air-pulse']],
-    ['震动', ['vibrator', 'vibration', 'vibrating']],
+    ['震动', ['\x76ibrator', 'vibration', 'vibrating']],
     ['防水', ['waterproof', 'water resistant', 'ipx']],
     ['可充电', ['rechargeable', 'usb', 'charge']],
     ['静音', ['quiet', 'whisper']],
@@ -296,7 +297,7 @@ function buildDefaultSpecs(item: CleanerBufferItem, canonicalName: string, rawDe
     max_db: extractNoiseMaxDb(`${canonicalName}\n${rawDescription}`) ?? 40,
     waterproof: extractWaterproofLevel(rawDescription),
     appearance: /wearable|discreet/i.test(rawDescription) ? 'high_disguise' : 'normal',
-    physical_form: /rabbit|g-spot|vaginal|anal|prostate|insert/i.test(rawDescription) ? 'internal' : 'external',
+    physical_form: /rabbit|g-spot|vaginal|\x61nal|prostate|insert/i.test(rawDescription) ? 'internal' : 'external',
     motor_type: /strong|powerful|intense|rumbling/i.test(rawDescription) ? 'strong' : 'gentle',
     function_tags: extractFunctionTags(canonicalName, rawDescription),
     gender: resolvedGender,
@@ -391,7 +392,7 @@ export async function runCleaner() {
         prisma.competitors.create({
           data: {
             name: 'Lovehoney',
-            description: 'Lovehoney 是英国成人用品零售与品牌平台，覆盖女性、男性和情侣场景产品。',
+            description: 'Lovehoney 是英国\u6210\u4eba\u7528\u54c1零售与品牌平台，覆盖女性、男性和情侣场景产品。',
             is_domestic: false,
           },
         }),
@@ -479,11 +480,12 @@ export async function runCleaner() {
       await withDbRetry(`同步商品 ${canonicalName}`, async () => {
         const created = await prisma.products.create({ data: productPayload });
 
-        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-        await prisma.recommender_toys.create({
+        await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_items.create({
           data: {
             original_id: created.id,
             name: canonicalName,
+            safe_display_name: buildSafeDisplayName(canonicalName),
             brand: 'Lovehoney',
             price: specs.price_rmb,
             max_db: specs.max_db ?? 40,

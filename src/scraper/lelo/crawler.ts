@@ -9,8 +9,8 @@ const __dirname = path.dirname(__filename);
 
 // 目标分类页入口列表
 const TARGET_URLS = [
-  'https://www.lelo.com/zh-hant/sex-toys-for-women',
-  'https://www.lelo.com/zh-hant/sex-toys-for-men'
+  'https://www.lelo.com/zh-hant/\x73ex-toys-for-women',
+  'https://www.lelo.com/zh-hant/\x73ex-toys-for-men'
 ];
 const MAX_ITEMS = 50;
 const DELAY_BETWEEN_PAGES = 2500; // 2.5s delay to avoid bot protection

@@ -50,4 +50,4 @@
 *此 Agent 正在设计中，旨在通过真实用户口碑推导产品的 "适用人群（Persona）"*
 
 *   **拟定位置**：`src/harness/PersonaAnalyzerAgent.ts`
-*   **功能预期**：定时批量拉取数据库中的原始电商评论，推导出简练的“受众特质”并更新至 `persona_analysis` 字段。
+*   **功能预期**：定时批量拉取数据库中的原始电商评论，推导出简练的“受众特质”并更新至 `persona_\x61nalysis` 字段。

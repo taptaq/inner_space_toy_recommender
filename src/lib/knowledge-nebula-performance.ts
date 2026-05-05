@@ -9,13 +9,13 @@ export type KnowledgeNebulaPerformanceBudget = {
 };
 
 export const KNOWLEDGE_NEBULA_PERFORMANCE_BUDGET: KnowledgeNebulaPerformanceBudget = {
-  demandFrameIntervalMs: 96,
-  idleFrameIntervalMs: 144,
-  focusFrameIntervalMs: 72,
+  demandFrameIntervalMs: 112,
+  idleFrameIntervalMs: 168,
+  focusFrameIntervalMs: 84,
   maxStarCountDesktop: 760,
   maxStarCountMobile: 420,
-  maxFloatingKnowledgeDesktop: 18,
-  maxFloatingKnowledgeMobile: 6,
+  maxFloatingKnowledgeDesktop: 14,
+  maxFloatingKnowledgeMobile: 4,
 };
 
 export type PerformanceViewport = "desktop" | "mobile";
@@ -26,6 +26,12 @@ export type TopicDetailSceneComplexityBudget = {
   spectralTubes: number;
   dustLanes: number;
   starCount: number;
+};
+
+export type KnowledgeNebulaDecorativeBudget = {
+  particleLayerCount: number;
+  shootingStarCount: number;
+  animateIdleNebulas: boolean;
 };
 
 export function getKnowledgeNebulaSceneFrameIntervalMs({
@@ -93,10 +99,10 @@ export function getTopicDetailSceneComplexityBudget({
       isVisible,
       prefersReducedMotion,
     }),
-    emissionFilaments: reduction ? (mobile ? 24 : 38) : mobile ? 46 : 74,
-    spectralTubes: reduction ? (mobile ? 2 : 4) : mobile ? 4 : 8,
-    dustLanes: reduction ? (mobile ? 4 : 7) : mobile ? 7 : 12,
-    starCount: reduction ? (mobile ? 42 : 72) : mobile ? 92 : 160,
+    emissionFilaments: reduction ? (mobile ? 18 : 28) : mobile ? 32 : 56,
+    spectralTubes: reduction ? (mobile ? 1 : 3) : mobile ? 3 : 6,
+    dustLanes: reduction ? (mobile ? 3 : 5) : mobile ? 5 : 9,
+    starCount: reduction ? (mobile ? 28 : 54) : mobile ? 72 : 124,
   };
 }
 
@@ -126,4 +132,56 @@ export function getFloatingKnowledgeItemBudget({
   return variant === "matching"
     ? KNOWLEDGE_NEBULA_PERFORMANCE_BUDGET.maxFloatingKnowledgeDesktop
     : 12;
+}
+
+export function shouldEnableFloatingKnowledgePointerEffects({
+  isVisible,
+  prefersReducedMotion,
+  hasFinePointer,
+}: {
+  isVisible: boolean;
+  prefersReducedMotion: boolean;
+  hasFinePointer: boolean;
+}) {
+  return isVisible && !prefersReducedMotion && hasFinePointer;
+}
+
+export function getKnowledgeNebulaDecorativeBudget({
+  viewport,
+  isVisible,
+  prefersReducedMotion,
+}: {
+  viewport: PerformanceViewport;
+  isVisible: boolean;
+  prefersReducedMotion: boolean;
+}): KnowledgeNebulaDecorativeBudget {
+  if (!isVisible) {
+    return {
+      particleLayerCount: 0,
+      shootingStarCount: 0,
+      animateIdleNebulas: false,
+    };
+  }
+
+  if (prefersReducedMotion) {
+    return {
+      particleLayerCount: 1,
+      shootingStarCount: 0,
+      animateIdleNebulas: false,
+    };
+  }
+
+  if (viewport === "mobile") {
+    return {
+      particleLayerCount: 2,
+      shootingStarCount: 1,
+      animateIdleNebulas: false,
+    };
+  }
+
+  return {
+    particleLayerCount: 3,
+    shootingStarCount: 4,
+    animateIdleNebulas: true,
+  };
 }

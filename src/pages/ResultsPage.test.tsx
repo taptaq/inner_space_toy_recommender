@@ -271,7 +271,71 @@ test("results page offers direct entry points to revise key quiz conditions", ()
   assert.match(html, /改场景/);
 });
 
-test("results page exposes a later-comparison candidate picker near recommendations", () => {
+test("results page provides a mobile-friendly stacked comparison view instead of only relying on a wide table", () => {
+  const source = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音", "进阶级", "预算友好"] }}
+      topProducts={[
+        makeProduct({ id: "p1", name: "Primary Pick" }),
+        makeProduct({ id: "p2", name: "Second Pick", score: 88, price: 199 }),
+        makeProduct({ id: "p3", name: "Third Pick", score: 84, price: 329 }),
+      ]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(source, /手机快速对比/);
+  assert.match(source, /第 1 推荐/);
+  assert.match(source, /Primary Pick/);
+  assert.match(source, /Second Pick/);
+  assert.match(source, /Third Pick/);
+  assert.match(source, /hidden md:block/);
+  assert.match(source, /md:hidden/);
+  assert.doesNotMatch(source, /min-w-\[44rem\]/);
+});
+
+test("results page turns archive actions into full-width mobile buttons before returning to inline desktop layout", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap/);
+  assert.match(html, /w-full sm:w-auto/);
+});
+
+test("results page no longer exposes a later-comparison candidate picker", () => {
   const html = renderToStaticMarkup(
     <ResultsPage
       pageVariants={{}}
@@ -289,12 +353,10 @@ test("results page exposes a later-comparison candidate picker near recommendati
       ]}
       shoppingGuidance={[]}
       recommendationTips={[]}
-      savedCandidateIds={["p2"]}
       isRecalibratingResults={false}
       resultRecalibrationError={null}
       onRecalibrateResults={() => {}}
       onTuneResults={() => {}}
-      onToggleSavedCandidate={() => {}}
       onSaveRecommendationProfile={async () => {}}
       onOpenRecommendationProfiles={() => {}}
       onOpenKnowledgeNebula={() => {}}
@@ -305,9 +367,9 @@ test("results page exposes a later-comparison candidate picker near recommendati
     />,
   );
 
-  assert.match(html, /稍后比较/);
-  assert.match(html, /已加入比较/);
-  assert.match(html, /已选 1\/3/);
+  assert.doesNotMatch(html, /稍后比较/);
+  assert.doesNotMatch(html, /已加入比较/);
+  assert.doesNotMatch(html, /已选 1\/3/);
 });
 
 test("results page frames shopping guidance as next-step purchase guidance", () => {
@@ -377,6 +439,53 @@ test("results page shows a final pre-purchase checklist before the user decides"
   assert.match(html, /收纳隐私/);
   assert.match(html, /经验节奏/);
   assert.match(html, /下单前快速过一遍/);
+});
+
+test("results page closes the decision loop with route summary and structured next steps", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{
+        tags: ["同住", "新手友好", "高伪装"],
+        maxDb: 45,
+        waterproof: 7,
+        appearance: "high_disguise",
+        physicalForm: "external",
+        experienceLevel: "sensitive",
+      }}
+      topProducts={[
+        makeProduct({
+          id: "p1",
+          name: "Primary Pick",
+          reason: "42dB 更贴近静音需求，外部路线也更适合先找节奏。",
+        }),
+      ]}
+      backupProducts={[]}
+      shoppingGuidance={[
+        "购买前优先确认是否有明确售后和材质说明。",
+        "收到后先完成基础清洁，再进入第一次使用。",
+        "第一次开始时先从更低档位与更短时长试起。",
+      ]}
+      recommendationTips={["如果同住，先优先比较更安静的路线。"]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /为什么这条路线更适合你/);
+  assert.match(html, /这次更适合先走/);
+  assert.match(html, /下单前确认/);
+  assert.match(html, /收货后第一步/);
+  assert.match(html, /第一次开始时/);
 });
 
 test("results page shows lightweight parameter explanation entry near metric chips", () => {

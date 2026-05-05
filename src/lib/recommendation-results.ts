@@ -51,6 +51,18 @@ export type ResultConfidenceSummary = {
   caveats: string[];
 };
 
+export type ResultRouteSummary = {
+  routeLabel: string;
+  summary: string;
+  nextPriority: string;
+};
+
+export type ResultNextStepGroup = {
+  id: "hesitation" | "pre-purchase" | "first-receive" | "first-start";
+  title: string;
+  items: string[];
+};
+
 function hasPendingPreferenceTag(
   answers: Pick<RecommendationAnswers, "tags">,
   keyword: string,
@@ -466,4 +478,132 @@ export function buildLocalShoppingGuidance({
   }
 
   return lines.slice(0, 5);
+}
+
+export function buildResultRouteSummary(
+  product: Pick<RecommendationRankedProduct, "physicalForm" | "motorType" | "maxDb" | "appearance">,
+  answers: Pick<
+    RecommendationAnswers,
+    "tags" | "appearance" | "physicalForm" | "experienceLevel" | "maxDb"
+  >,
+): ResultRouteSummary {
+  const routeParts: string[] = [];
+  const tags = answers.tags ?? [];
+  const isSensitiveUser =
+    answers.experienceLevel === "sensitive" ||
+    tags.some((tag) => /新手|敏感|待判断/.test(tag));
+  const isQuietSensitive =
+    (answers.maxDb != null && answers.maxDb <= 50) ||
+    tags.some((tag) => /静音|同住|宿舍|深夜/.test(tag));
+  const isStorageSensitive =
+    answers.appearance === "high_disguise" ||
+    product.appearance === "high_disguise" ||
+    tags.some((tag) => /收纳|隐蔽|伪装/.test(tag));
+
+  routeParts.push(
+    product.physicalForm === "internal"
+      ? "入体"
+      : product.physicalForm === "composite"
+        ? "复合"
+        : "外部",
+  );
+  routeParts.push(product.motorType === "strong" ? "强反馈" : "温和探索");
+  if (isQuietSensitive) routeParts.push("低打扰");
+  if (isStorageSensitive) routeParts.push("易收纳");
+
+  const routeLabel = `${routeParts.join(" / ")}路线`;
+  const summaryParts = [
+    isSensitiveUser
+      ? "你现在更适合先走反馈稳定、进入门槛更低的路线。"
+      : "你这次更适合先走和当前偏好匹配度更高、节奏更顺手的路线。",
+    isQuietSensitive
+      ? "静音和使用环境对你很重要，所以不需要先追求更猛的参数。"
+      : "重点不是盲目堆参数，而是先确认体感路线和使用节奏对不对。",
+  ];
+
+  const nextPriority = isStorageSensitive
+    ? "下一步优先确认静音、收纳和清洁边界，再决定是否下单。"
+    : "下一步优先确认静音、清洁和第一次上手的节奏是否安心。";
+
+  return {
+    routeLabel,
+    summary: summaryParts.join(" "),
+    nextPriority,
+  };
+}
+
+export function buildResultNextStepGroups({
+  answers,
+  relaxationTips,
+  shoppingGuidanceItems,
+}: {
+  answers: Pick<RecommendationAnswers, "tags" | "experienceLevel" | "maxDb">;
+  relaxationTips: string[];
+  shoppingGuidanceItems: string[];
+}): ResultNextStepGroup[] {
+  const remainingGuidance = [...shoppingGuidanceItems];
+  const consumeMatches = (pattern: RegExp) => {
+    const matched = remainingGuidance.filter((item) => pattern.test(item));
+    for (const item of matched) {
+      const index = remainingGuidance.indexOf(item);
+      if (index >= 0) remainingGuidance.splice(index, 1);
+    }
+    return matched;
+  };
+
+  const isSensitiveUser =
+    answers.experienceLevel === "sensitive" ||
+    (answers.tags ?? []).some((tag) => /新手|敏感|待判断/.test(tag));
+  const isQuietSensitive =
+    (answers.maxDb != null && answers.maxDb <= 50) ||
+    (answers.tags ?? []).some((tag) => /静音|同住|宿舍|深夜/.test(tag));
+
+  const groups: ResultNextStepGroup[] = [];
+
+  if (relaxationTips.length > 0) {
+    groups.push({
+      id: "hesitation",
+      title: "如果还在犹豫",
+      items: relaxationTips,
+    });
+  }
+
+  const prePurchaseItems = consumeMatches(/购买前|下单前|确认|售后|材质|渠道|参数说明/);
+  if (prePurchaseItems.length > 0) {
+    groups.push({
+      id: "pre-purchase",
+      title: "下单前确认",
+      items: prePurchaseItems,
+    });
+  }
+
+  const firstReceiveItems = consumeMatches(/收到|开箱|基础清洁|先完成清洁|充电|到手/);
+  if (firstReceiveItems.length > 0) {
+    groups.push({
+      id: "first-receive",
+      title: "收货后第一步",
+      items: firstReceiveItems,
+    });
+  }
+
+  const firstStartItems = [
+    ...consumeMatches(/第一次|开始时|低档位|时长|节奏|慢慢/),
+  ];
+  if (firstStartItems.length === 0) {
+    firstStartItems.push(
+      isSensitiveUser
+        ? "第一次开始时先从更低档位与更短时长试起，先找舒服的节奏。"
+        : "第一次开始时先确认最顺手的档位和姿势，不用急着把参数拉满。",
+    );
+  }
+  if (isQuietSensitive) {
+    firstStartItems.push("如果是同住或夜间场景，第一次也顺手确认真实噪音会不会被床架和环境放大。");
+  }
+  groups.push({
+    id: "first-start",
+    title: "第一次开始时",
+    items: Array.from(new Set(firstStartItems)).slice(0, 3),
+  });
+
+  return groups.filter((group) => group.items.length > 0);
 }

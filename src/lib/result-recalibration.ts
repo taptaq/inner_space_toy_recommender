@@ -35,6 +35,14 @@ export type RecalibratedResultTopProduct = ResultRecalibrationCandidate & {
   reason: string;
 };
 
+export type ResultRecalibrationContext = {
+  attemptCount: number;
+  currentResultProvider?: AppAiProvider;
+  currentResultModelName?: string;
+  previousTopProducts: Array<Pick<RecalibratedResultTopProduct, "id" | "reason">>;
+  previousShoppingGuidanceCount: number;
+};
+
 export type ResultRecalibrationRequest = {
   answers: RecommendationAnswers;
   strategy: "auto";
@@ -42,6 +50,7 @@ export type ResultRecalibrationRequest = {
   rankedCandidates: ResultRecalibrationCandidate[];
   filteredCount: number;
   recommendationTips: string[];
+  recalibrationContext?: ResultRecalibrationContext;
 };
 
 export type ResultRecalibrationResponse = {
@@ -140,6 +149,25 @@ export function buildResultRecalibrationPayload(
     rankedCandidates: request.rankedCandidates.map(normalizeCandidate),
     filteredCount: request.filteredCount,
     recommendationTips: request.recommendationTips,
+    recalibrationContext: request.recalibrationContext
+      ? {
+          attemptCount: Math.max(1, request.recalibrationContext.attemptCount || 1),
+          currentResultProvider: request.recalibrationContext.currentResultProvider,
+          currentResultModelName: normalizeModelName(
+            request.recalibrationContext.currentResultModelName,
+          ),
+          previousTopProducts: request.recalibrationContext.previousTopProducts.map(
+            (product) => ({
+              id: product.id,
+              reason: String(product.reason || "").trim(),
+            }),
+          ),
+          previousShoppingGuidanceCount: Math.max(
+            0,
+            request.recalibrationContext.previousShoppingGuidanceCount || 0,
+          ),
+        }
+      : undefined,
   };
 }
 

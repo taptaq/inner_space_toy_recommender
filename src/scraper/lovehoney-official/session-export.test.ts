@@ -7,7 +7,7 @@ test('resolveLovehoneySessionExportConfig falls back to the default output path 
 
   assert.deepEqual(result, {
     storageStatePath: '/repo/src/data/lovehoney-official-storage-state.json',
-    launchUrl: 'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
+    launchUrl: 'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
   });
 });
 

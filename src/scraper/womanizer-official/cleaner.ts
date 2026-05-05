@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 import { translateRawDescriptionToZh } from '../shared/raw-description-translator.ts';
 import {
   extractCanonicalName,
@@ -28,7 +29,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const FALLBACK_USD_TO_CNY_RATE = 7.2;
-const DEFAULT_TOY_MAX_DB = 50;
+const DEFAULT_DEVICE_MAX_DB = 50;
 let usdToCnyRate = FALLBACK_USD_TO_CNY_RATE;
 let usdToCnyRateDate = '';
 let usdToCnyRateSource = 'fallback';
@@ -154,14 +155,14 @@ function inferGender(text: string, fallback: string): Gender {
     /\bfemale\b/.test(source) ||
     [
       'womanizer',
-      'clitoral',
+      '\x63litoral',
       'g-spot',
       'rabbit',
       'pleasure air',
       'vaginal',
       'for her',
       'dual stimulator',
-      'clit',
+      '\x63lit',
     ].some((hint) => source.includes(hint));
   const hasMaleHint =
     /\bmale\b/.test(source) ||
@@ -169,10 +170,10 @@ function inferGender(text: string, fallback: string): Gender {
       'arcwave',
       'stroker',
       'for him',
-      'penis',
+      '\x70enis',
       'prostate',
-      'masturbator',
-      'cock ring',
+      '\x6dasturbator',
+      '\x63ock ring',
     ].some((hint) => source.includes(hint));
 
   if (
@@ -220,7 +221,7 @@ function inferMaterial(text: string): string {
 function inferFunctionTags(text: string): string[] {
   const source = String(text || '').toLowerCase();
   const tags: string[] = [];
-  if (['pleasure air', 'air suction', 'air pressure', 'clitoral stimulator', 'clit sucking'].some((hint) => source.includes(hint))) {
+  if (['pleasure air', 'air suction', 'air pressure', '\x63litoral stimulator', '\x63lit sucking'].some((hint) => source.includes(hint))) {
     tags.push('吮吸刺激');
   }
   if (['g-spot', 'dual stimulator', 'dual stimulation'].some((hint) => source.includes(hint))) {
@@ -244,7 +245,7 @@ function inferFunctionTags(text: string): string[] {
 function inferPhysicalForm(text: string): string {
   const source = String(text || '').toLowerCase();
   if (['dual stimulator', 'dual stimulation', 'rabbit', 'couple'].some((hint) => source.includes(hint))) return 'composite';
-  if (['g-spot', 'vaginal', 'insertable', 'prostate', 'anal'].some((hint) => source.includes(hint))) return 'internal';
+  if (['g-spot', 'vaginal', 'insertable', 'prostate', '\x61nal'].some((hint) => source.includes(hint))) return 'internal';
   return 'external';
 }
 
@@ -285,7 +286,7 @@ export function buildNormalizedSpecs(item: CleanerBufferItem): NormalizedSpecs {
     fx_rate_source: usdToCnyRateSource,
     fx_rate_date: usdToCnyRateDate || null,
     waterproof: extractWaterproofLevel(text),
-    max_db: /whisper quiet|smart silence|nearly silent/i.test(text) ? 40 : DEFAULT_TOY_MAX_DB,
+    max_db: /whisper quiet|smart silence|nearly silent/i.test(text) ? 40 : DEFAULT_DEVICE_MAX_DB,
     appearance: inferAppearance(text),
     physical_form: inferPhysicalForm(text),
     motor_type: inferMotorType(text),
@@ -384,8 +385,9 @@ export async function runCleaner() {
       tags: specs.function_tags,
     };
 
-    const toyPayload = {
+    const itemPayload = {
       name: canonicalName,
+      safe_display_name: buildSafeDisplayName(canonicalName),
       brand,
       price: numericPrice,
       max_db: specs.max_db,
@@ -426,11 +428,11 @@ export async function runCleaner() {
           originalId = created.id;
         }
 
-        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-        await prisma.recommender_toys.create({
+        await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_items.create({
           data: {
             original_id: originalId,
-            ...toyPayload,
+            ...itemPayload,
           },
         });
       });

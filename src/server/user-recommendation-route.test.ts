@@ -111,7 +111,7 @@ test("save recommendation profile handler encrypts payload before storing", asyn
           "test-jwt-secret",
         )}`,
       },
-      body: { answers: { tags: ["静音"] }, topProductIds: ["toy-1"] },
+      body: { answers: { tags: ["静音"] }, topProductIds: ["item-1"] },
     }),
     mockResponse.response,
   );
@@ -119,7 +119,7 @@ test("save recommendation profile handler encrypts payload before storing", asyn
   assert.equal(mockResponse.readStatusCode(), 201);
   assert.deepEqual(mockResponse.readJsonPayload(), { id: "profile-1" });
   assert.match(JSON.stringify(captured), /6f78f6c4-6f1a-4d28-8f34-51ce2f10aa00/);
-  assert.match(JSON.stringify(captured), /toy-1/);
+  assert.match(JSON.stringify(captured), /item-1/);
   assert.match(JSON.stringify(captured), /推荐档案/);
   assert.doesNotMatch(JSON.stringify(captured), /静音/);
   assert.match(JSON.stringify(captured), /aes-256-gcm/);
@@ -198,12 +198,12 @@ test("list recommendation profile handler decrypts current user's profiles", asy
           id: "profile-1",
           title: "我的装备匹配档案",
           summary: "偏好：静音",
-          topProductIds: ["toy-1"],
+          topProductIds: ["item-1"],
           savedAt: "2026-05-02T12:00:00.000Z",
           encryptedPayload: encryptPrivateJson(
             {
               answers: { tags: ["静音"] },
-              topProducts: [{ id: "toy-1", name: "Nebula Pick", score: 96 }],
+              topProducts: [{ id: "item-1", name: "Nebula Pick", score: 96 }],
             },
             encryptionKey,
           ),

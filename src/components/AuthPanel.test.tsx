@@ -57,3 +57,45 @@ test("auth panel modal surface is opaque instead of glassy", () => {
   assert.match(html, /bg-slate-950/);
   assert.doesNotMatch(html, /bg-cyan-400\/\[/);
 });
+
+test("auth panel uses a calmer stacked layout on mobile for both auth and signed-in states", () => {
+  const signedOutHtml = renderToStaticMarkup(
+    <AuthPanel
+      isConfigured={true}
+      userLabel={null}
+      statusMessage={null}
+      isSubmitting={false}
+      surface="modal"
+      onSubmit={async () => {}}
+      onSignOut={async () => {}}
+    />,
+  );
+
+  assert.match(
+    signedOutHtml,
+    /mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between/,
+  );
+  assert.match(signedOutHtml, /w-full/);
+  assert.match(signedOutHtml, /justify-center/);
+  assert.match(signedOutHtml, /sm:w-auto/);
+
+  const signedInHtml = renderToStaticMarkup(
+    <AuthPanel
+      isConfigured={true}
+      userLabel="taptaq"
+      statusMessage={null}
+      isSubmitting={false}
+      surface="modal"
+      onSubmit={async () => {}}
+      onSignOut={async () => {}}
+    />,
+  );
+
+  assert.match(
+    signedInHtml,
+    /flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between/,
+  );
+  assert.match(signedInHtml, /w-full/);
+  assert.match(signedInHtml, /justify-center/);
+  assert.match(signedInHtml, /sm:w-auto/);
+});

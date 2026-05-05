@@ -1,4 +1,5 @@
 import { Product } from "../data/mock";
+import { buildSafeDisplayName } from "./product-display-name.ts";
 
 export type AppRoute =
   | "/"
@@ -65,13 +66,28 @@ export function readProductsCache(): Product[] {
 }
 
 export function normalizeProductsPayload(payload: unknown): Product[] {
-  if (Array.isArray(payload)) return payload as Product[];
+  if (Array.isArray(payload)) {
+    return payload.map((product) => {
+      if (!product || typeof product !== "object") {
+        return product as Product;
+      }
+
+      const typedProduct = product as Product;
+      const canonicalName = typedProduct.canonicalName || typedProduct.name;
+      return {
+        ...typedProduct,
+        canonicalName,
+        safeDisplayName:
+          typedProduct.safeDisplayName || buildSafeDisplayName(canonicalName),
+      };
+    }) as Product[];
+  }
   if (
     payload &&
     typeof payload === "object" &&
     Array.isArray((payload as ProductsCachePayload).products)
   ) {
-    return (payload as ProductsCachePayload).products;
+    return normalizeProductsPayload((payload as ProductsCachePayload).products);
   }
   return [];
 }

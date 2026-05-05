@@ -46,7 +46,7 @@ test("buildFloatingKnowledgeItems returns slightly reduced mobile density", () =
     viewport: "mobile",
   });
 
-  assert.equal(items.length, 6);
+  assert.equal(items.length, 8);
   assert.ok(items.every((item) => item.slot.mobileHidden !== true));
 });
 

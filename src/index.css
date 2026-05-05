@@ -1006,6 +1006,46 @@ textarea:disabled {
 }
 
 @media (max-width: 640px) {
+  .home-space-stars-b {
+    display: none;
+  }
+
+  .home-space-comet {
+    display: none;
+  }
+
+  .home-space-orbit-offset {
+    display: none;
+  }
+
+  .home-panel-scan {
+    animation: none !important;
+  }
+
+  .home-primary-ignition::after {
+    animation: none !important;
+  }
+
+  .radar-sweep {
+    animation: none !important;
+  }
+
+  .radar-container::before {
+    display: none;
+  }
+
+  .tag-flash {
+    animation: none !important;
+  }
+
+  .quiz-starfield::before {
+    background-size:
+      240px 280px,
+      340px 360px,
+      460px 500px;
+    opacity: 0.48;
+  }
+
   .floating-knowledge-desktop-only {
     display: none;
   }
@@ -1021,11 +1061,11 @@ textarea:disabled {
   }
 
   .floating-knowledge-capsule {
-    max-width: min(150px, 39vw);
-    min-width: 118px;
-    padding: 6px 9px;
+    max-width: min(158px, 41vw);
+    min-width: 112px;
+    padding: 6px 8px;
     font-size: 10px;
-    opacity: 0.58;
+    opacity: 0.52;
   }
 
   .floating-knowledge-shard-2,
@@ -1091,6 +1131,16 @@ textarea:disabled {
   .floating-knowledge-slot-matching-6 {
     right: 5%;
     bottom: 11%;
+  }
+
+  .floating-knowledge-slot-matching-7 {
+    top: 20%;
+    left: 17%;
+  }
+
+  .floating-knowledge-slot-matching-8 {
+    right: 17%;
+    bottom: 23%;
   }
 }
 

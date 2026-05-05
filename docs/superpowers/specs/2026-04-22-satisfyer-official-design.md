@@ -103,7 +103,7 @@ Responsibilities:
 - normalize strings, images, and product metadata
 - translate `rawDescription` into Chinese
 - convert USD prices into CNY
-- map data into the repo's `products` and `recommender_toys` shapes
+- map data into the repo's `products` and `recommender_items` shapes
 - skip duplicate inserts when an existing product with the same name is already present
 - emit `src/data/satisfyer-official-cleaned-data.json`
 - write non-duplicate records into the database

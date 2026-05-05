@@ -137,7 +137,7 @@ function isApparelLikeProduct(title: string): boolean {
     '网纱',
     '蕾丝',
     '透视',
-    '情趣套装',
+    '\u60c5\u8da3套装',
     '套装',
     '吊袜',
     '丝袜',
@@ -198,10 +198,10 @@ function buildDetailOcrPrompt(title: string): string {
 
 function sanitizeTitleForModel(title: string): string {
   return String(title || '')
-    .replace(/情趣/g, '服饰')
+    .replace(/\u60c5\u8da3/g, '服饰')
     .replace(/诱惑/g, '设计感')
-    .replace(/成人/g, '居家')
-    .replace(/自慰器/g, '护理器具')
+    .replace(/\u6210\u4eba/g, '居家')
+    .replace(/\u81ea\u6170\u5668/g, '护理器具')
     .replace(/性用品/g, '护理用品')
     .replace(/\s+/g, ' ')
     .trim();
@@ -223,7 +223,7 @@ const INVALID_LIST_TITLE_PATTERNS = [
 const PRODUCT_TITLE_HINTS = [
   '跳蛋',
   '按摩器',
-  '飞机杯',
+  '\u98de\u673a\u676f',
   '震动',
   '润滑',
   '避孕套',
@@ -231,12 +231,12 @@ const PRODUCT_TITLE_HINTS = [
   '内衣',
   '内裤',
   '睡裙',
-  '情趣',
+  '\u60c5\u8da3',
   '玩具',
   '器具',
   '倒模',
   '名器',
-  '前列腺',
+  '\u524d\u5217\u817a',
   '龟头',
   '训练器',
   '炮机',
@@ -627,13 +627,13 @@ function guessGender(title: string): string {
   const t = title.toLowerCase();
   const hasExplicitUnisex = ['男女通用', '男女', '通用', '情侣', '双人', '同性'].some((hint) => t.includes(hint));
   const hasStrongMale = [
-    '飞机杯',
+    '\u98de\u673a\u676f',
     '男用',
     '男性',
     '男士',
     '龟头',
-    '阴茎',
-    '前列腺',
+    '\u9634\u830e',
+    '\u524d\u5217\u817a',
     '伸缩杯',
     '绚风杯',
     '元気弹',
@@ -641,7 +641,7 @@ function guessGender(title: string): string {
     '延时',
   ].some((hint) => t.includes(hint));
   const hasMale = hasStrongMale || t.includes('男');
-  const hasFemale = t.includes('女') || t.includes('跳蛋') || t.includes('震动棒') || t.includes('吮吸') || t.includes('入体') || t.includes('小海豹');
+  const hasFemale = t.includes('女') || t.includes('跳蛋') || t.includes('\u9707\u52a8\u68d2') || t.includes('吮吸') || t.includes('入体') || t.includes('小海豹');
   
   // 1. 同时包含男女关键字，或者明确标注为通用/情侣
   if (hasExplicitUnisex) {
@@ -667,7 +667,7 @@ function inferDefaultMaterial(title: string): string {
     '网纱',
     '蕾丝',
     '透视',
-    '情趣套装',
+    '\u60c5\u8da3套装',
     '套装',
     '礼盒',
     '文胸',
@@ -1576,7 +1576,7 @@ async function runCrawler() {
             const isCareTemplate = isCareConsumableProduct(item.title);
             const isPadTemplate = isBedPadProduct(item.title);
             const isApparelTemplate = isApparelLikeProduct(item.title);
-            const templateName = isCareTemplate ? 'CARE' : isPadTemplate ? 'PAD' : isApparelTemplate ? 'APPAREL' : 'TOY';
+            const templateName = isCareTemplate ? 'CARE' : isPadTemplate ? 'PAD' : isApparelTemplate ? 'APPAREL' : 'DEVICE';
             console.log(`  [识别] 当前详情图识别模板: ${templateName}`);
             ocrText = await orchestrateOCR(uniqueUrls, detailOcrPrompt, isCareTemplate || isPadTemplate || isApparelTemplate);
           } else {

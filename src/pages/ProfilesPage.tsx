@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Clock, FileText, LockKeyhole, PackageSearch, X } from "lucide-react";
 import type { SavedRecommendationProfile } from "../lib/user-recommendation-profile.ts";
 import { dedupeDisplayTags } from "../lib/display-tags.ts";
+import { getProductDisplayName } from "../lib/product-display-name.ts";
 
 const ANSWER_VALUE_LABELS: Record<string, string> = {
   female: "女性向",
@@ -118,7 +119,7 @@ function buildProfileDecisionSummary(profile: SavedRecommendationProfile) {
     lines.push(
       `所以系统当时先把 ${profile.payload.topProducts
         .slice(0, 2)
-        .map((product) => product.name)
+        .map((product) => getProductDisplayName(product))
         .join("、")} 这类方向放在前面，更适合先回到那次判断继续比较。`,
     );
   }
@@ -152,7 +153,7 @@ function buildProfileDecisionSnapshot(profile: SavedRecommendationProfile) {
   ].filter(Boolean);
 
   const reasonParts = [
-    topProduct?.name ? `主推荐是 ${topProduct.name}` : "",
+    topProduct?.name ? `主推荐是 ${getProductDisplayName(topProduct)}` : "",
     profile.summary ? profile.summary : "",
   ].filter(Boolean);
 
@@ -170,7 +171,7 @@ function buildProfileDecisionSnapshot(profile: SavedRecommendationProfile) {
       value:
         routeParts.join(" / ") ||
         (topProduct?.name
-          ? `先围绕 ${topProduct.name} 这类方向继续看`
+          ? `先围绕 ${getProductDisplayName(topProduct)} 这类方向继续看`
           : "先从系统筛出的主推荐方向继续看。"),
     },
     {
@@ -229,7 +230,7 @@ export function ProfilesPage({
       <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 left-10 -z-10 h-72 w-72 rounded-full bg-indigo-400/10 blur-3xl" />
 
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-8 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <button
             type="button"
@@ -320,13 +321,13 @@ export function ProfilesPage({
 
       {selectedProfile ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/86 px-4 py-6 backdrop-blur-xl">
-          <div className="max-h-[88dvh] w-full max-w-3xl overflow-y-auto rounded-[1.75rem] border border-cyan-100/14 bg-slate-950 p-5 shadow-[0_24px_90px_rgba(8,47,73,0.34)] sm:p-6">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
+          <div className="max-h-[92dvh] w-full max-w-4xl overflow-y-auto rounded-[1.75rem] border border-cyan-100/14 bg-slate-950 p-5 shadow-[0_24px_90px_rgba(8,47,73,0.34)] sm:p-6">
+            <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-5 flex items-start justify-between gap-4 border-b border-cyan-100/10 bg-slate-950/92 px-5 py-4 backdrop-blur-xl sm:-mx-6 sm:-mt-6 sm:px-6 sm:py-5">
+              <div className="min-w-0">
                 <p className="mb-2 text-[10px] tracking-[0.28em] text-cyan-200/45">
                   ARCHIVE DETAIL
                 </p>
-                <h2 className="text-xl font-medium text-white">
+                <h2 className="text-lg font-medium text-white sm:text-xl">
                   {selectedProfile.title}
                 </h2>
                 <p className="mt-2 text-xs text-slate-500">
@@ -336,157 +337,133 @@ export function ProfilesPage({
               <button
                 type="button"
                 onClick={() => setSelectedProfile(null)}
-                className="rounded-full border border-white/10 bg-white/[0.035] p-2 text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.035] p-2 text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              {selectedProfileSummary.length > 0 && (
-                <section className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.055] p-4">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <div className="space-y-4">
+                {selectedProfileSummary.length > 0 && (
+                  <section className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.055] p-4">
+                    <h3 className="mb-3 text-sm font-medium text-cyan-50">
+                      这次为什么会得到这组推荐
+                    </h3>
+                    <div className="space-y-2">
+                      {selectedProfileSummary.map((line) => (
+                        <p
+                          key={line}
+                          className="text-sm leading-6 text-cyan-50/78"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                <section className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4">
                   <h3 className="mb-3 text-sm font-medium text-cyan-50">
-                    这次为什么会得到这组推荐
+                    决策快照
                   </h3>
-                  <div className="space-y-2">
-                    {selectedProfileSummary.map((line) => (
-                      <p
-                        key={line}
-                        className="text-sm leading-6 text-cyan-50/78"
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {selectedProfileSnapshot.map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-xl border border-cyan-200/10 bg-slate-950/30 px-3 py-3"
                       >
-                        {line}
-                      </p>
+                        <p className="text-[10px] tracking-[0.2em] text-cyan-200/48">
+                          {item.label}
+                        </p>
+                        <p className="mt-1.5 text-sm leading-6 text-cyan-50/82">
+                          {item.value}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </section>
-              )}
 
-              <section className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4">
-                <h3 className="mb-3 text-sm font-medium text-cyan-50">
-                  决策快照
-                </h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {selectedProfileSnapshot.map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-xl border border-cyan-200/10 bg-slate-950/30 px-3 py-3"
-                    >
-                      <p className="text-[10px] tracking-[0.2em] text-cyan-200/48">
-                        {item.label}
-                      </p>
-                      <p className="mt-1.5 text-sm leading-6 text-cyan-50/82">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-                  <LockKeyhole className="h-4 w-4 text-cyan-200/70" />
-                  当时的条件
-                </h3>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {selectedAnswerEntries.map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
-                    >
-                      <p className="text-[10px] tracking-[0.2em] text-cyan-200/45">
-                        {label}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-100">
-                        {formatAnswerCondition(label, value)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
-                  <FileText className="h-4 w-4 text-cyan-200/70" />
-                  当时的偏好
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {dedupeDisplayTags(selectedProfile.payload.answers.tags || []).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-cyan-300/14 bg-cyan-300/8 px-2.5 py-1 text-xs text-cyan-100/75"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <h3 className="mb-3 text-sm font-medium text-white">推荐快照</h3>
-                <div className="space-y-2">
-                  {selectedProfile.payload.topProducts.map((product, index) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-slate-100">
-                          {index + 1}. {product.name}
+                <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
+                    <LockKeyhole className="h-4 w-4 text-cyan-200/70" />
+                    当时的条件
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {selectedAnswerEntries.map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
+                      >
+                        <p className="text-[10px] tracking-[0.2em] text-cyan-200/45">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-100">
+                          {formatAnswerCondition(label, value)}
                         </p>
                       </div>
-                      <span className="text-xs text-cyan-100/65">
-                        {Math.round(product.score)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {(selectedProfile.payload.savedCandidates || []).length > 0 && (
-                <section className="rounded-2xl border border-cyan-300/14 bg-cyan-300/[0.045] p-4">
-                  <div className="mb-3">
-                    <h3 className="text-sm font-medium text-cyan-50">
-                      稍后比较
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-cyan-100/58">
-                      这些是当时特意留下来想继续看的候选。
-                    </p>
+                    ))}
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {(selectedProfile.payload.savedCandidates || []).map((product) => (
+                </section>
+              </div>
+
+              <div className="space-y-4 xl:space-y-3">
+                <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-white">
+                    <FileText className="h-4 w-4 text-cyan-200/70" />
+                    当时的偏好
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {dedupeDisplayTags(selectedProfile.payload.answers.tags || []).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-cyan-300/14 bg-cyan-300/8 px-2.5 py-1 text-xs text-cyan-100/75"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                  <h3 className="mb-3 text-sm font-medium text-white">推荐快照</h3>
+                  <div className="space-y-2">
+                    {selectedProfile.payload.topProducts.map((product, index) => (
                       <div
                         key={product.id}
-                        className="rounded-xl border border-cyan-200/10 bg-slate-950/28 px-3 py-3"
+                        className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
                       >
-                        <p className="line-clamp-2 text-sm leading-5 text-cyan-50">
-                          {product.name}
-                        </p>
-                        <p className="mt-1 text-xs text-cyan-100/55">
-                          当时匹配度 {Math.round(product.score)}
-                        </p>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-100">
+                            {index + 1}. {getProductDisplayName(product)}
+                          </p>
+                        </div>
+                        <span className="text-xs text-cyan-100/65">
+                          {Math.round(product.score)}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </section>
-              )}
 
-              {selectedProfile.payload.shoppingGuidance.length > 0 && (
-                <section className="rounded-2xl border border-amber-300/16 bg-amber-400/8 p-4">
-                  <h3 className="mb-2 text-sm font-medium text-amber-100">
-                    当时的选购提示
-                  </h3>
-                  <ul className="space-y-2">
-                    {selectedProfile.payload.shoppingGuidance.map((item, index) => (
-                      <li
-                        key={index}
-                        className="text-xs leading-5 text-amber-100/75"
-                      >
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
+                {selectedProfile.payload.shoppingGuidance.length > 0 && (
+                  <section className="rounded-2xl border border-amber-300/16 bg-amber-400/8 p-4">
+                    <h3 className="mb-2 text-sm font-medium text-amber-100">
+                      当时的选购提示
+                    </h3>
+                    <ul className="space-y-2">
+                      {selectedProfile.payload.shoppingGuidance.map((item, index) => (
+                        <li
+                          key={index}
+                          className="text-xs leading-5 text-amber-100/75"
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -60,3 +60,13 @@ export function removeQuizQuestionAnswer(
 
   return nextAnswers;
 }
+
+export function removeQuizAnswersFromQuestionIndex(
+  answers: AnswerState,
+  questions: Question[],
+  startIndex: number,
+): AnswerState {
+  return questions.slice(startIndex).reduce((nextAnswers, question) => {
+    return removeQuizQuestionAnswer(nextAnswers, question);
+  }, answers);
+}

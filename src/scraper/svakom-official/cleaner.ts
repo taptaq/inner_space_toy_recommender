@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 
 dotenv.config();
 
@@ -102,7 +103,7 @@ const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase
   )
     result = 'unisex';
   else if (
-    ['male', '男性', '男用', 'for him', 'penis', 'cock ring', 'prostate', '前列腺', '阴茎', '锁精环'].some((hint) =>
+    ['male', '男性', '男用', 'for him', '\x70enis', '\x63ock ring', 'prostate', '\u524d\u5217\u817a', '\u9634\u830e', '锁精环'].some((hint) =>
       value.includes(hint),
     )
   )
@@ -113,12 +114,12 @@ const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase
       '女性',
       '女用',
       'for her',
-      'clitoral',
+      '\x63litoral',
       'g-spot',
       'rabbit',
       'vaginal',
       'g点',
-      '阴蒂',
+      '\u9634\u8482',
       '吮吸',
       '按摩棒',
       '跳蛋',
@@ -141,7 +142,7 @@ const inferExplicitGender = (text: string): 'male' | 'female' | 'unisex' | null 
     return 'unisex';
   }
   if (
-    ['男用', '男性', 'for him', 'cock ring', 'penis', 'prostate', '前列腺', '阴茎', '锁精环'].some((hint) =>
+    ['男用', '男性', 'for him', '\x63ock ring', '\x70enis', 'prostate', '\u524d\u5217\u817a', '\u9634\u830e', '锁精环'].some((hint) =>
       value.includes(hint),
     )
   ) {
@@ -151,16 +152,16 @@ const inferExplicitGender = (text: string): 'male' | 'female' | 'unisex' | null 
     [
       '女用',
       '女性',
-      'clitoral',
+      '\x63litoral',
       'g-spot',
       'rabbit',
       'for her',
       'g点',
-      '阴蒂',
+      '\u9634\u8482',
       'c点',
       '按摩棒',
       '跳蛋',
-      '震动棒',
+      '\u9707\u52a8\u68d2',
       '拍打',
       '吮吸',
       '穿戴',
@@ -175,7 +176,7 @@ const mapPhysicalForm = (raw: string): string => {
   const value = (raw || '').toLowerCase();
   if (['composite', '复合', 'rabbit', '双头', 'dual', '双刺激'].some((hint) => value.includes(hint))) return 'composite';
   if (
-    ['internal', 'insertable', 'insert', 'vaginal', 'anal', 'g-spot', '前列腺', '肛塞', '插入', '抽插', '穿戴'].some(
+    ['internal', 'insertable', 'insert', 'vaginal', '\x61nal', 'g-spot', '\u524d\u5217\u817a', '\u809b\u585e', '\u63d2\u5165', '抽插', '穿戴'].some(
       (hint) => value.includes(hint),
     )
   )
@@ -278,11 +279,11 @@ const extractKeywordTags = (text: string): string[] => {
     ['防水', ['waterproof', 'ipx', '防水', '全身水洗']],
     ['可充电', ['rechargeable', 'usb', '充电', '磁吸充电']],
     ['G点刺激', ['g-spot', 'g点']],
-    ['阴蒂刺激', ['clitoral', '阴蒂', 'c点']],
+    ['\u9634\u8482刺激', ['\x63litoral', '\u9634\u8482', 'c点']],
     ['兔耳双刺激', ['rabbit', '双头']],
     ['抽插伸缩', ['thrust', 'thruster', '伸缩', '抽插']],
     ['可穿戴', ['wearable', '穿戴']],
-    ['震动环', ['cock ring', 'ring', '锁精环']],
+    ['震动环', ['\x63ock ring', 'ring', '锁精环']],
     ['情侣共玩', ['couple', 'partner', '情侣', '夫妻']],
     ['加温', ['heating', 'heat', '加温', '温热']],
     ['电击脉冲', ['电击', 'pulse']],
@@ -315,7 +316,7 @@ const buildDefaultSpecs = (item: any, canonicalName: string) => {
     waterproof: /waterproof|ipx|防水|全身水洗/i.test(source) ? 7 : null,
     appearance: /discreet|privacy|隐蔽|伪装|wearable|穿戴/i.test(source) ? 'high_disguise' : 'normal',
     physical_form:
-      /rabbit|双头|dual|g-spot|vaginal|anal|插入|抽插|穿戴/i.test(source)
+      /rabbit|双头|dual|g-spot|vaginal|\x61nal|\u63d2\u5165|抽插|穿戴/i.test(source)
         ? /rabbit|双头|dual/i.test(source)
           ? 'composite'
           : 'internal'
@@ -389,7 +390,7 @@ export async function runCleaner() {
         prisma.competitors.create({
           data: {
             name: 'SVAKOM',
-            description: 'SVAKOM 是主打设计感与智能交互体验的情趣科技品牌，覆盖女性向、男性向与伴侣共玩系列。',
+            description: 'SVAKOM 是主打设计感与智能交互体验的\u60c5\u8da3科技品牌，覆盖女性向、男性向与伴侣共玩系列。',
             is_domestic: false,
           },
         }),
@@ -414,7 +415,7 @@ export async function runCleaner() {
     console.log(`\n[AI清洗] 正在降维萃取: ${canonicalName}`);
 
     const prompt = `
-你是一个情趣商品数据清洗助手。以下内容来自 SVAKOM 官方独立站，信息以中文为主，价格单位是人民币。
+你是一个\u60c5\u8da3商品数据清洗助手。以下内容来自 SVAKOM 官方独立站，信息以中文为主，价格单位是人民币。
 
 【商品名称】
 ${canonicalName}
@@ -440,7 +441,7 @@ ${item.rawDescription}
   "appearance": "normal",
   "physical_form": "external",
   "motor_type": "gentle",
-  "function_tags": ["防水", "G点刺激", "静音"],
+  "function_tags": ["防水", "定点刺激", "静音"],
   "gender": "${item.genderHint || 'unisex'}",
   "material": "${defaultSpecs.material}",
   "price_rmb": ${defaultSpecs.price_rmb ?? 'null'}
@@ -520,9 +521,10 @@ ${item.rawDescription}
           originalId = created.id;
         }
 
-        const toyPayload = {
+        const itemPayload = {
           original_id: originalId,
           name: canonicalName,
+          safe_display_name: buildSafeDisplayName(canonicalName),
           brand: 'SVAKOM',
           price: numericPrice,
           max_db: parsedSpecs.max_db ?? 40,
@@ -540,8 +542,8 @@ ${item.rawDescription}
           updated_at: new Date(),
         };
 
-        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-        await prisma.recommender_toys.create({ data: toyPayload });
+        await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_items.create({ data: itemPayload });
       });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);

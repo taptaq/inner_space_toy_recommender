@@ -28,6 +28,7 @@ import {
 } from "./lib/recommendation-results";
 import {
   createClearedQuizSessionState,
+  removeQuizAnswersFromQuestionIndex,
   removeQuizQuestionAnswer,
   rewindQuizAnswer,
 } from "./lib/quiz-session";
@@ -46,6 +47,7 @@ import {
   type SavedRecommendationProfile,
   saveRecommendationProfile,
 } from "./lib/user-recommendation-profile";
+import { getProductDisplayName } from "./lib/product-display-name.ts";
 import {
   getCurrentSupabaseSession,
   isSupabaseAuthConfigured,
@@ -111,7 +113,6 @@ type PersistedAppState = {
   answers?: AnswerState;
   topProducts?: RankedProduct[];
   backupProducts?: BackupProduct[];
-  savedCandidateIds?: string[];
   recommendationTips?: string[];
   shoppingGuidance?: string[];
   filterGender?: string;
@@ -622,9 +623,6 @@ export default function App() {
   const [backupProducts, setBackupProducts] = useState<BackupProduct[]>(
     persistedState.backupProducts ?? [],
   );
-  const [savedCandidateIds, setSavedCandidateIds] = useState<string[]>(
-    persistedState.savedCandidateIds ?? [],
-  );
 
   const [loadingStep, setLoadingStep] = useState(0);
 
@@ -644,6 +642,8 @@ export default function App() {
   const [resultRecalibrationError, setResultRecalibrationError] = useState<
     string | null
   >(null);
+  const [resultRecalibrationAttemptCount, setResultRecalibrationAttemptCount] =
+    useState(0);
   const [isSavingRecommendationProfile, setIsSavingRecommendationProfile] =
     useState(false);
   const [
@@ -884,7 +884,6 @@ export default function App() {
         answers,
         topProducts,
         backupProducts,
-        savedCandidateIds,
         recommendationTips,
         shoppingGuidance,
         filterGender,
@@ -902,7 +901,6 @@ export default function App() {
     answers,
     topProducts,
     backupProducts,
-    savedCandidateIds,
     recommendationTips,
     shoppingGuidance,
     filterGender,
@@ -1057,9 +1055,31 @@ export default function App() {
     setShoppingGuidance([]);
     setResultRecalibrationError(null);
     setIsRecalibratingResults(false);
+    setResultRecalibrationAttemptCount(0);
     applyResultSourceState(clearResultSourceState());
     setStep(questionIndex);
     navigateTo("/quiz");
+  };
+
+  const handleJumpToQuizQuestion = (questionIndex: number) => {
+    if (questionIndex < 0 || questionIndex >= step) return;
+
+    setAnswers(
+      removeQuizAnswersFromQuestionIndex(
+        answers,
+        activeQuestions.slice(questionIndex),
+        0,
+      ),
+    );
+    setTopProducts([]);
+    setBackupProducts([]);
+    setRecommendationTips([]);
+    setShoppingGuidance([]);
+    setResultRecalibrationError(null);
+    setIsRecalibratingResults(false);
+    setResultRecalibrationAttemptCount(0);
+    applyResultSourceState(clearResultSourceState());
+    setStep(questionIndex);
   };
 
   const [isAiMatching, setIsAiMatching] = useState(false);
@@ -1260,7 +1280,7 @@ export default function App() {
       rankedProducts: rankedProducts.map((p, index) => ({
         rank: index + 1,
         id: p.id,
-        name: p.name,
+        name: getProductDisplayName(p),
         brand: p.brand,
         price: p.price,
         gender: p.gender,
@@ -1274,7 +1294,7 @@ export default function App() {
     };
 
     const prompt = `
-你是一个专业的性健康装备选品专家。
+你是一个专业的个人护理设备选品助手。
 当前候选池已经由结构化规则筛到较小范围。请你在这些候选商品中，重新挑选最匹配的前 3 名，并给出每个商品的推荐理由。
 
 用户偏好标签: [${context.userPreferences.join(", ")}]
@@ -1320,7 +1340,7 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
       topProducts: finalTopProducts.map((product, index) => ({
         rank: index + 1,
         id: product.id,
-        name: product.name,
+        name: getProductDisplayName(product),
         brand: product.brand,
         price: product.price,
         reason: product.reason || "",
@@ -1328,7 +1348,7 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
       backupCandidates: backupCandidates.map((product, index) => ({
         rank: index + 1,
         id: product.id,
-        name: product.name,
+        name: getProductDisplayName(product),
         brand: product.brand,
         price: product.price,
         backupLabel: product.backupLabel,
@@ -1343,7 +1363,7 @@ ${JSON.stringify(context.rankedProducts, null, 2)}
     };
 
     const prompt = `
-你是一个专业的性健康装备选品专家。
+你是一个专业的个人护理设备选品助手。
 Top 3 主推荐已经确定，请只补充两个结果区域：
 1. 为备选卡片写一句简短说明
 2. 为结果页写 3-5 条选购建议
@@ -1395,6 +1415,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
 
     setIsRecalibratingResults(true);
     setResultRecalibrationError(null);
+    const nextAttemptCount = resultRecalibrationAttemptCount + 1;
 
     try {
       const response = await postAppAiProxy<ResultRecalibrationResponse>(
@@ -1406,18 +1427,25 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
           rankedCandidates: localResult.rankedCandidates,
           filteredCount: localResult.filteredCount,
           recommendationTips: localResult.recommendationTips,
+          recalibrationContext: {
+            attemptCount: nextAttemptCount,
+            currentResultProvider,
+            currentResultModelName,
+            previousTopProducts: topProducts.map((product) => ({
+              id: product.id,
+              reason: String(product.reason || "").trim(),
+            })),
+            previousShoppingGuidanceCount: shoppingGuidance.length,
+          },
         }),
         { expectEnvelope: false },
       );
 
-      const nextCandidateIds = new Set(
-        [...response.topProducts, ...response.backupProducts].map((product) => product.id),
-      );
       setTopProducts(response.topProducts);
       setBackupProducts(response.backupProducts);
-      setSavedCandidateIds((ids) => ids.filter((id) => nextCandidateIds.has(id)));
       setShoppingGuidance(response.shoppingGuidance);
       setRecommendationTips(response.recommendationTips);
+      setResultRecalibrationAttemptCount(nextAttemptCount);
       applyResultSourceState(
         readResultSourceState({
           currentResultProvider: response.provider,
@@ -1457,12 +1485,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
 
     setTopProducts(finalTopProducts);
     setBackupProducts(localBackupProducts);
-    setSavedCandidateIds((ids) => {
-      const nextCandidateIds = new Set(
-        [...finalTopProducts, ...localBackupProducts].map((product) => product.id),
-      );
-      return ids.filter((id) => nextCandidateIds.has(id));
-    });
     setRecommendationTips(localResult.recommendationTips);
     setShoppingGuidance(
       buildLocalShoppingGuidance({
@@ -1471,6 +1493,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
         backupCandidates: localBackupProducts,
       }),
     );
+    setResultRecalibrationAttemptCount(0);
     applyResultSourceState(clearResultSourceState());
   }
 
@@ -1482,18 +1505,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     setResultRecalibrationError(null);
     setIsRecalibratingResults(false);
     applyLocalResultSet(tunedAnswers, localResult);
-  }
-
-  function handleToggleSavedCandidate(productId: string) {
-    setSavedCandidateIds((ids) => {
-      if (ids.includes(productId)) {
-        return ids.filter((id) => id !== productId);
-      }
-      if (ids.length >= 3) {
-        return ids;
-      }
-      return [...ids, productId];
-    });
   }
 
   async function handleAuthSubmit(
@@ -1585,7 +1596,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
           answers,
           topProducts,
           backupProducts,
-          savedCandidateIds,
           recommendationTips,
           shoppingGuidance,
         }),
@@ -1613,7 +1623,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     setIsAiMatching(true);
     setResultRecalibrationError(null);
     setBackupProducts([]);
-    setSavedCandidateIds([]);
     setRecommendationTips(localResult.recommendationTips);
     setShoppingGuidance([]);
 
@@ -1623,7 +1632,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       );
       setTopProducts([]);
       setBackupProducts([]);
-      setSavedCandidateIds([]);
       setShoppingGuidance([]);
       setIsAiMatching(false);
       setTimeout(() => {
@@ -1775,7 +1783,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     setAnswers({ tags: [] });
     setTopProducts([]);
     setBackupProducts([]);
-    setSavedCandidateIds([]);
     setRecommendationTips([]);
     setShoppingGuidance([]);
     setResultRecalibrationError(null);
@@ -1790,7 +1797,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     setAnswers(clearedState.answers);
     setTopProducts(clearedState.topProducts);
     setBackupProducts(clearedState.backupProducts);
-    setSavedCandidateIds([]);
     setRecommendationTips(clearedState.recommendationTips);
     setShoppingGuidance(clearedState.shoppingGuidance);
     setResultRecalibrationError(null);
@@ -1924,6 +1930,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               onSelectOption={handleOptionSelect}
               onBackQuestion={handleBackQuestion}
               onBackHome={handleBackHomeFromQuiz}
+              onJumpToQuestion={handleJumpToQuizQuestion}
             />
           )}
 
@@ -1950,8 +1957,6 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               onRecalibrateResults={recalibrateCurrentResults}
               onTuneResults={handleTuneResults}
               onEditQuizCondition={handleEditQuizCondition}
-              savedCandidateIds={savedCandidateIds}
-              onToggleSavedCandidate={handleToggleSavedCandidate}
               onSaveRecommendationProfile={handleSaveRecommendationProfile}
               onOpenRecommendationProfiles={navigateToProfiles}
               onOpenKnowledgeNebula={(path) => {

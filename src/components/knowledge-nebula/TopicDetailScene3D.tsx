@@ -366,6 +366,7 @@ function DriftGroup({
   starCount,
   isFocused,
   isVisible,
+  prefersReducedMotion,
   complexityBudget,
 }: {
   topicSlug: string;
@@ -374,6 +375,7 @@ function DriftGroup({
   starCount: number;
   isFocused: boolean;
   isVisible: boolean;
+  prefersReducedMotion: boolean;
   complexityBudget: {
     emissionFilaments: number;
     spectralTubes: number;
@@ -510,6 +512,10 @@ function DriftGroup({
   }, [dustLanes]);
 
   useFrame((state) => {
+    if (!isVisible || prefersReducedMotion) {
+      return;
+    }
+
     const elapsedMs = state.clock.elapsedTime * 1000;
     const frameIntervalMs = getKnowledgeNebulaSceneFrameIntervalMs({
       isFocused,
@@ -521,9 +527,7 @@ function DriftGroup({
     }
 
     previousFrameTimeRef.current = elapsedMs;
-    if (isVisible) {
-      invalidate();
-    }
+    invalidate();
 
     const elapsed = state.clock.getElapsedTime();
 
@@ -840,6 +844,7 @@ export function TopicDetailScene3D({
           starCount={complexityBudget.starCount}
           isFocused={isFocused}
           isVisible={isVisible}
+          prefersReducedMotion={Boolean(prefersReducedMotion)}
           complexityBudget={complexityBudget}
         />
       </Canvas>

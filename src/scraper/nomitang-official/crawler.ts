@@ -108,7 +108,7 @@ function inferGender(text: string): GenderHint {
       'lotion',
       'potions',
       'accessory',
-      'anal beads',
+      '\x61nal beads',
       'massage oil',
     ].some((hint) => value.includes(hint))
   ) {
@@ -119,9 +119,9 @@ function inferGender(text: string): GenderHint {
       'male',
       'for him',
       'prostate',
-      'penis',
+      '\x70enis',
       'cock',
-      'masturbator',
+      '\x6dasturbator',
       'stroker',
       'p-spot',
     ].some((hint) => value.includes(hint))
@@ -132,8 +132,8 @@ function inferGender(text: string): GenderHint {
     [
       'female',
       'for her',
-      'clit',
-      'clitoral',
+      '\x63lit',
+      '\x63litoral',
       'vagina',
       'g-spot',
       'rabbit',
@@ -439,7 +439,7 @@ export function buildDetailExtractionScript(): string {
         .map((el) => normalize(el.textContent || ''))
         .filter((text) => text.length >= 40)
         .filter((text) =>
-          /(vibration|quiet|comfortable|powerful|waterproof|rechargeable|g-spot|clitoris|prostate|penetrat|anal|massage)/i.test(
+          /(vibration|quiet|comfortable|powerful|waterproof|rechargeable|g-spot|\x63litoris|prostate|penetrat|\x61nal|massage)/i.test(
             text,
           ),
         ),

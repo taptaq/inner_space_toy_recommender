@@ -30,13 +30,13 @@ function SecondaryEntryButton({
       : "hover:border-indigo-300/30 hover:bg-indigo-400/10 hover:text-indigo-100";
 
   return (
-    <span className="home-secondary-node group relative inline-flex">
+    <span className="home-secondary-node group relative inline-flex w-full sm:w-auto">
       <button
         type="button"
         onClick={onClick}
         aria-label={`${children}：${tooltip}`}
         className={[
-          "relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/8 bg-white/[0.035] px-4 py-2 text-xs tracking-wider text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/55 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 group-hover:-translate-y-0.5",
+          "relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-white/8 bg-white/[0.035] px-4 py-2 text-xs tracking-wider text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/55 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 group-hover:-translate-y-0.5 sm:w-auto",
           toneClass,
         ].join(" ")}
       >
@@ -69,7 +69,7 @@ function HomeAuthEntry({
 
   if (authPanel.userLabel) {
     return (
-      <div className="home-auth-entry mt-5 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/12 bg-emerald-400/[0.045] px-4 py-3 text-left">
+      <div className="home-auth-entry mt-5 flex w-full flex-col gap-3 rounded-2xl border border-emerald-300/12 bg-emerald-400/[0.045] px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-xs font-medium text-emerald-50">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-200/75" />
@@ -79,7 +79,7 @@ function HomeAuthEntry({
             {authPanel.userLabel}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             onClick={onOpenProfiles}
@@ -116,7 +116,7 @@ function HomeAuthEntry({
         <button
           type="button"
           onClick={() => setIsAuthPanelOpen(true)}
-          className="shrink-0 rounded-full border border-cyan-300/18 bg-cyan-300/9 px-4 py-2 text-xs tracking-wider text-cyan-50 transition-colors hover:border-cyan-200/34 hover:bg-cyan-300/14"
+          className="shrink-0 rounded-full border border-cyan-300/18 bg-cyan-300/9 px-4 py-2 text-xs tracking-wider text-cyan-50 transition-colors hover:border-cyan-200/34 hover:bg-cyan-300/14 sm:w-auto"
         >
           登录 / 注册
         </button>
@@ -192,16 +192,16 @@ export function HomePage({
         <div className="home-space-comet absolute left-[72%] top-[18%] h-px w-32 rotate-[-18deg]" />
       </div>
 
-      <div className="relative mb-12 flex justify-center items-center">
+      <div className="relative mb-9 flex items-center justify-center sm:mb-12">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: shouldAnimate ? 20 : 0.2, repeat, ease: "linear" }}
-          className="absolute w-32 h-32 border border-cyan-500/20 rounded-full"
+          className="absolute h-28 w-28 rounded-full border border-cyan-500/20 sm:h-32 sm:w-32"
         />
         <motion.div
           animate={{ rotate: -360 }}
           transition={{ duration: shouldAnimate ? 30 : 0.2, repeat, ease: "linear" }}
-          className="absolute w-40 h-40 border border-indigo-500/20 rounded-full border-dashed"
+          className="absolute h-36 w-36 rounded-full border border-indigo-500/20 border-dashed sm:h-40 sm:w-40"
         />
         <motion.span
           className="absolute h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_16px_rgba(125,211,252,0.85)]"
@@ -209,25 +209,25 @@ export function HomePage({
           transition={{ duration: shouldAnimate ? 7 : 0.2, repeat, ease: "linear" }}
           style={{ transformOrigin: "4.25rem 0.25rem" }}
         />
-        <div className="home-orbit-core w-20 h-20 glass-panel rounded-full flex items-center justify-center relative z-10 overflow-hidden shadow-[0_0_48px_rgba(34,211,238,0.16)]">
+        <div className="home-orbit-core relative z-10 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full glass-panel shadow-[0_0_48px_rgba(34,211,238,0.16)] sm:h-20 sm:w-20">
           <div className="absolute inset-2 rounded-full bg-cyan-300/6 blur-md" />
           <Orbit className="relative w-10 h-10 text-cyan-300 opacity-90" />
         </div>
       </div>
 
-      <div className="glass-panel relative rounded-3xl p-8 w-full text-center overflow-hidden flex flex-col items-center shadow-[0_24px_90px_rgba(2,8,23,0.42)]">
+      <div className="glass-panel relative flex w-full flex-col items-center overflow-hidden rounded-[1.75rem] p-6 text-center shadow-[0_24px_90px_rgba(2,8,23,0.42)] sm:rounded-3xl sm:p-8">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-50"></div>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.08),transparent_34%),linear-gradient(115deg,transparent,rgba(255,255,255,0.035),transparent_42%)]" />
         <div className="home-panel-scan pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-transparent via-cyan-100/8 to-transparent" />
 
-        <h1 className="relative text-3xl font-light tracking-widest mb-2 text-white">
+        <h1 className="relative mb-2 text-2xl font-light tracking-[0.22em] text-white sm:text-3xl sm:tracking-widest">
           内太空装备智能选品向导
         </h1>
-        <h2 className="relative text-xs tracking-widest text-cyan-500/80 mb-8 font-mono">
+        <h2 className="relative mb-7 font-mono text-[11px] tracking-[0.28em] text-cyan-500/80 sm:mb-8 sm:text-xs sm:tracking-widest">
           SELECTION GUIDE
         </h2>
 
-        <p className="relative text-sm text-slate-300 mb-10 leading-relaxed max-w-[300px]">
+        <p className="relative mb-8 max-w-[19rem] text-sm leading-7 text-slate-300 sm:mb-10 sm:max-w-[300px]">
           跳过复杂难懂的参数陷阱与营销词汇。只需回答几个简单的偏好问题，我们将基于严密的过滤体系，为你精准匹配出最契合自身需求的私密设备。
         </p>
 

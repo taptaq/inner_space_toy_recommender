@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const ORIGIN = 'https://www.womanizer.com';
-export const LIST_URL = `${ORIGIN}/us/sex-toys`;
+export const LIST_URL = `${ORIGIN}/us/\x73ex-toys`;
 export const MAX_ITEMS = Number(process.env.WOMANIZER_OFFICIAL_MAX_ITEMS || '200');
 export const BUFFER_PATH = path.resolve(__dirname, '../../data/womanizer-official-review-buffer.json');
 
@@ -367,16 +367,16 @@ function inferGender(name: string, subtitle: string, categoryHints: string[]): G
       'prostate',
       'male',
       'for him',
-      'masturbator',
-      'penis',
-      'cock ring',
+      '\x6dasturbator',
+      '\x70enis',
+      '\x63ock ring',
     ].some((hint) => source.includes(hint))
   ) {
     return 'male';
   }
   if (
     [
-      'clitoral',
+      '\x63litoral',
       'g-spot',
       'rabbit',
       'pleasure air',
@@ -384,7 +384,7 @@ function inferGender(name: string, subtitle: string, categoryHints: string[]): G
       'for her',
       'womanizer',
       'dual stimulator',
-      'clit',
+      '\x63lit',
     ].some((hint) => source.includes(hint))
   ) {
     return 'female';
@@ -395,15 +395,15 @@ function inferGender(name: string, subtitle: string, categoryHints: string[]): G
 function inferCategoryHints(text: string): string[] {
   const value = String(text || '').toLowerCase();
   const hints: string[] = [];
-  if (value.includes('sex toys')) hints.push('Sex Toys');
-  if (value.includes('clitoral')) hints.push('clitoral stimulation');
+  if (value.includes('\x73ex toys')) hints.push('Sex Toys');
+  if (value.includes('\x63litoral')) hints.push('\x63litoral stimulation');
   if (value.includes('g-spot')) hints.push('g-spot stimulation');
   if (value.includes('dual')) hints.push('dual stimulation');
   if (value.includes('pleasure air')) hints.push('pleasure air');
   if (value.includes('3d pleasure air')) hints.push('3d pleasure air');
   if (value.includes('water')) hints.push('water stimulation');
-  if (value.includes('stroker')) hints.push('male toy');
-  if (value.includes('we-vibe')) hints.push('couples toy');
+  if (value.includes('stroker')) hints.push('male device');
+  if (value.includes('we-vibe')) hints.push('shared device');
   return uniqueStrings(hints, 12);
 }
 

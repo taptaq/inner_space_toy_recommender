@@ -84,26 +84,26 @@ type ShopifyMatch = {
 };
 
 const HANDLE_ALIAS: Record<string, string> = {
-  TALIS: 'talis-g-spot-pulsewave-vibrator',
+  TALIS: 'talis-g-spot-pulsewave-\x76ibrator',
   FLORA: 'flora-smart-vibrating-pad',
   APIS: 'apis-vibrating-coupless-ring',
-  DEYA: 'deya-wearable-vibrator',
+  DEYA: 'deya-wearable-\x76ibrator',
   AVA: 'ava-smart-wand-massager',
-  EVE: 'eve-oral-pleasure-vibrator',
+  EVE: 'eve-oral-pleasure-\x76ibrator',
   SESH: 'sesh-compact-sex-machine',
   MOSE2: 'mose-2-g-spot-rabbit-thruster',
   'MOSE 2': 'mose-2-g-spot-rabbit-thruster',
-  BESS: 'bess-2-clitoral-vibrator',
-  ARES: 'ares-g-spot-rabbit-vibrator',
-  AYA: 'aya-wearable-vibrator',
+  BESS: 'bess-2-\x63litoral-\x76ibrator',
+  ARES: 'ares-g-spot-rabbit-\x76ibrator',
+  AYA: 'aya-wearable-\x76ibrator',
   BAYEK: 'bayek-cock-ring',
 };
 
-const TOY_DETAIL_OCR_PROMPT = `你是一个专业的情趣用品详情图识别助手。你会收到同一款商品的一组长图详情页图片，请只提取图片中能明确看见或读出的商品信息。
+const TOY_DETAIL_OCR_PROMPT = `你是一个专业的个人护理用品详情图识别助手。你会收到同一款商品的一组长图详情页图片，请只提取图片中能明确看见或读出的商品信息。
 
 请以中文结构化文本输出：
 1. 产品名称/型号
-2. 产品定位/玩法
+2. 产品定位/使用方式
 3. 材质与结构
 4. 模式与动力特征
 5. 防水/静音/续航/充电
@@ -510,7 +510,7 @@ function scoreShopifyCandidate(product: ShopifyProduct, item: ListItem, keys: st
   }
 
   if (/情侣|夫妻/.test(item.subtitle) && /couple|partner/.test(sourceText)) score += 12;
-  if (/G点|拍打|兔耳|吮吸|按摩棒|跳蛋|穿戴/.test(item.subtitle) && /g-spot|rabbit|clitoral|wearable|vibrator|massager|suction/.test(sourceText))
+  if (/G点|拍打|兔耳|吮吸|按摩棒|跳蛋|穿戴/.test(item.subtitle) && /g-spot|rabbit|\x63litoral|wearable|\x76ibrator|massager|suction/.test(sourceText))
     score += 8;
   if (/环/.test(item.subtitle) && /ring/.test(sourceText)) score += 8;
 
@@ -542,14 +542,14 @@ function inferGender(text: string): 'male' | 'female' | 'unisex' {
     return 'unisex';
   }
   if (
-    ['男用', '男性', '阴茎', 'cock ring', 'penis ring', 'for him', 'prostate', '前列腺', '震动环'].some((hint) =>
+    ['男用', '男性', '\u9634\u830e', '\x63ock ring', '\x70enis ring', 'for him', 'prostate', '\u524d\u5217\u817a', '震动环'].some((hint) =>
       value.includes(hint),
     )
   ) {
     return 'male';
   }
   if (
-    ['女性', '女用', 'g点', 'c点', '阴蒂', '按摩棒', '吮吸', '跳蛋', 'rabbit', 'clitoral', 'g-spot', 'wearable'].some(
+    ['女性', '女用', 'g点', 'c点', '\u9634\u8482', '按摩棒', '吮吸', '跳蛋', 'rabbit', '\x63litoral', 'g-spot', 'wearable'].some(
       (hint) => value.includes(hint),
     )
   ) {

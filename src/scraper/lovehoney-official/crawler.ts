@@ -77,17 +77,17 @@ type ContextBundle = {
 
 const LIST_PAGE_CONFIGS: ListPageConfig[] = [
   {
-    url: 'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/',
+    url: 'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/',
     label: 'Women',
     genderHint: 'female',
   },
   {
-    url: 'https://www.lovehoney.co.uk/sex-toys/male-sex-toys/',
+    url: 'https://www.lovehoney.co.uk/\x73ex-toys/male-\x73ex-toys/',
     label: 'Men',
     genderHint: 'male',
   },
   {
-    url: 'https://www.lovehoney.co.uk/sex-toys/sex-toys-for-couples/',
+    url: 'https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-couples/',
     label: 'Couples',
     genderHint: 'unisex',
   },

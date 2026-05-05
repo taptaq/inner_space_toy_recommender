@@ -9,17 +9,17 @@ const profile: SavedRecommendationProfile = {
   id: "profile-1",
   title: "Nebula Pick 等 2 个推荐",
   summary: "偏好：静音、入门级；推荐：Nebula Pick",
-  topProductIds: ["toy-1", "toy-2"],
+  topProductIds: ["item-1", "item-2"],
   savedAt: "2026-05-02T12:00:00.000Z",
   payload: {
     createdAt: "2026-05-02T12:00:00.000Z",
     title: "Nebula Pick 等 2 个推荐",
     summary: "偏好：静音、入门级；推荐：Nebula Pick",
-    topProductIds: ["toy-1", "toy-2"],
+    topProductIds: ["item-1", "item-2"],
     answers: { tags: ["静音", "入门级"] },
     topProducts: [
-      { id: "toy-1", name: "Nebula Pick", score: 96 },
-      { id: "toy-2", name: "Second Pick", score: 88 },
+      { id: "item-1", name: "Nebula Pick", score: 96 },
+      { id: "item-2", name: "Second Pick", score: 88 },
     ],
     backupProducts: [],
     recommendationTips: [],
@@ -155,33 +155,58 @@ test("profiles detail frames the archive as a decision snapshot with next compar
   assert.doesNotMatch(html, /score/);
 });
 
-test("profiles detail shows candidates saved for later comparison", () => {
-  const profileWithSavedCandidates: SavedRecommendationProfile = {
-    ...detailedProfile,
-    payload: {
-      ...detailedProfile.payload,
-      savedCandidateIds: ["toy-2", "toy-3"],
-      savedCandidates: [
-        { id: "toy-2", name: "Second Pick", score: 88 },
-        { id: "toy-3", name: "Budget Backup", score: 82 },
-      ],
-    },
-  };
-
+test("profiles detail no longer renders a later-comparison candidate section", () => {
   const html = renderToStaticMarkup(
     <ProfilesPage
-      profiles={[profileWithSavedCandidates]}
+      profiles={[detailedProfile]}
       isLoading={false}
       error={null}
       userLabel="taptaq"
-      initialSelectedProfile={profileWithSavedCandidates}
+      initialSelectedProfile={detailedProfile}
       onBack={() => {}}
       onReload={() => {}}
     />,
   );
 
-  assert.match(html, /稍后比较/);
-  assert.match(html, /当时特意留下来想继续看的候选/);
-  assert.match(html, /Second Pick/);
-  assert.match(html, /Budget Backup/);
+  assert.doesNotMatch(html, /稍后比较/);
+  assert.doesNotMatch(html, /当时特意留下来想继续看的候选/);
+});
+
+test("profiles page gives mobile users a calmer stacked archive layout and a wider detail sheet", () => {
+  const html = renderToStaticMarkup(
+    <ProfilesPage
+      profiles={[detailedProfile]}
+      isLoading={false}
+      error={null}
+      userLabel="taptaq"
+      initialSelectedProfile={detailedProfile}
+      onBack={() => {}}
+      onReload={() => {}}
+    />,
+  );
+
+  assert.match(html, /gap-3 sm:gap-4/);
+  assert.match(html, /max-h-\[92dvh\] w-full max-w-4xl/);
+  assert.match(html, /grid gap-3 xl:grid-cols-\[minmax\(0,1\.1fr\)_minmax\(0,0\.9fr\)\]/);
+  assert.match(html, /sticky top-0 z-10 -mx-5 -mt-5/);
+  assert.match(html, /w-full sm:w-auto/);
+});
+
+test("profiles detail keeps dense secondary sections in a separate right rail on large screens while staying single-column on mobile", () => {
+  const html = renderToStaticMarkup(
+    <ProfilesPage
+      profiles={[detailedProfile]}
+      isLoading={false}
+      error={null}
+      userLabel="taptaq"
+      initialSelectedProfile={detailedProfile}
+      onBack={() => {}}
+      onReload={() => {}}
+    />,
+  );
+
+  assert.match(html, /当时的条件/);
+  assert.match(html, /当时的偏好/);
+  assert.match(html, /推荐快照/);
+  assert.match(html, /space-y-4 xl:space-y-3/);
 });

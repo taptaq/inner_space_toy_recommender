@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 
 dotenv.config();
 
@@ -70,18 +71,18 @@ const inferExplicitGender = (text: string): 'male' | 'female' | 'unisex' | null 
     return 'unisex';
   }
   // 当标题里同时出现女性显式词和男性形态词时，优先按女性向理解，避免被营销/套餐文案带偏。
-  if (['女用', '女性', '女孩子', '阴蒂', 'g点', '跳蛋', '震动棒', '吮吸'].some((hint) => val.includes(hint))) {
+  if (['女用', '女性', '女孩子', '\u9634\u8482', 'g点', '跳蛋', '\u9707\u52a8\u68d2', '吮吸'].some((hint) => val.includes(hint))) {
     return 'female';
   }
   if (
     [
-      '飞机杯',
+      '\u98de\u673a\u676f',
       '男用',
       '男性',
       '男士',
       '龟头',
-      '阴茎',
-      '前列腺',
+      '\u9634\u830e',
+      '\u524d\u5217\u817a',
       '伸缩杯',
       '绚风杯',
       '元気弹',
@@ -133,21 +134,21 @@ const isPlaceholderProductName = (value: string): boolean => {
   ].includes(normalized);
 };
 
-const isToyLikeProduct = (text: string): boolean => {
+const isDeviceLikeProduct = (text: string): boolean => {
   const normalized = (text || '').toLowerCase();
   return [
-    '飞机杯',
+    '\u98de\u673a\u676f',
     '训练器',
     '按摩器',
     '跳蛋',
-    '震动棒',
+    '\u9707\u52a8\u68d2',
     '震动器',
     '吮吸',
-    '自慰器',
+    '\u81ea\u6170\u5668',
     '倒模',
-    '前列腺',
+    '\u524d\u5217\u817a',
     '龟头',
-    '阴茎',
+    '\u9634\u830e',
     '名器',
     '伸缩杯',
     '绚风杯',
@@ -163,7 +164,7 @@ const isToyLikeProduct = (text: string): boolean => {
 const inferDefaultMaterial = (name: string, rawDescription: string): string => {
   const nameText = `${name || ''}`.toLowerCase();
   const text = `${name || ''}\n${rawDescription || ''}`.toLowerCase();
-  if (isToyLikeProduct(nameText)) {
+  if (isDeviceLikeProduct(nameText)) {
     if (text.includes('tpe')) return 'TPE';
     if (text.includes('abs')) return 'ABS';
     if (text.includes('硅胶')) return '硅胶';
@@ -184,7 +185,7 @@ const inferDefaultMaterial = (name: string, rawDescription: string): string => {
     '网纱',
     '蕾丝',
     '透视',
-    '情趣套装',
+    '\u60c5\u8da3套装',
     '套装',
     '礼盒',
     '文胸',
@@ -206,7 +207,7 @@ const isApparelLikeProduct = (text: string): boolean => {
     '网纱',
     '蕾丝',
     '透视',
-    '情趣套装',
+    '\u60c5\u8da3套装',
     '套装',
     '礼盒',
     '文胸',
@@ -221,7 +222,7 @@ const isApparelLikeProduct = (text: string): boolean => {
 
 const isCareConsumableProduct = (text: string): boolean => {
   const normalized = (text || '').toLowerCase();
-  if (isToyLikeProduct(normalized)) return false;
+  if (isDeviceLikeProduct(normalized)) return false;
   return [
     '避孕套',
     '安全套',
@@ -359,7 +360,7 @@ const extractFeatureTagsFromLines = (text: string): string[] => {
   return tags;
 };
 
-const extractKeywordTags = (text: string, productKind: 'toy' | 'apparel' | 'care' | 'pad'): string[] => {
+const extractKeywordTags = (text: string, productKind: 'device' | 'apparel' | 'care' | 'pad'): string[] => {
   const source = String(text || '').toLowerCase();
   const rules: Array<[string, string[]]> = [
     ['远程遥控', ['远程', '异地']],
@@ -368,7 +369,7 @@ const extractKeywordTags = (text: string, productKind: 'toy' | 'apparel' | 'care
     ['防水', ['防水', 'ipx']],
   ];
 
-  if (productKind === 'toy') {
+  if (productKind === 'device') {
     rules.push(
       ['跳蛋', ['跳蛋']],
       ['震动', ['震动', '震感']],
@@ -376,13 +377,13 @@ const extractKeywordTags = (text: string, productKind: 'toy' | 'apparel' | 'care
       ['拍打', ['拍打']],
       ['穿戴', ['穿戴']],
       ['G点刺激', ['g点', '点潮']],
-      ['阴蒂刺激', ['阴蒂']],
+      ['\u9634\u8482刺激', ['\u9634\u8482']],
       ['前戏撩拨', ['前戏', '撩拨']],
       ['抑菌HPV', ['hpv', '抑菌']],
       ['加温', ['加温']],
-      ['飞机杯', ['飞机杯', '绚风杯', '伸缩杯', '元気弹']],
+      ['\u98de\u673a\u676f', ['\u98de\u673a\u676f', '绚风杯', '伸缩杯', '元気弹']],
       ['活塞伸缩', ['活塞', '伸缩']],
-      ['前列腺按摩', ['前列腺']],
+      ['\u524d\u5217\u817a按摩', ['\u524d\u5217\u817a']],
       ['龟头按摩', ['龟头']],
       ['电击刺激', ['电击']],
     );
@@ -428,14 +429,14 @@ const extractKeywordTags = (text: string, productKind: 'toy' | 'apparel' | 'care
 
 const extractFunctionTagsFromRawDescription = (
   text: string,
-  productKind: 'toy' | 'apparel' | 'care' | 'pad',
+  productKind: 'device' | 'apparel' | 'care' | 'pad',
 ): string[] =>
   dedupeTags([
     ...extractFeatureTagsFromLines(text),
     ...extractKeywordTags(text, productKind),
   ]);
 
-const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'toy' | 'apparel' | 'care' | 'pad') => {
+const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'device' | 'apparel' | 'care' | 'pad') => {
   const text = `${canonicalName}\n${item.rawDescription || ''}`;
   const explicitMaxDb = extractNoiseMaxDb(text);
   const functionTags =
@@ -449,7 +450,7 @@ const buildDefaultSpecs = (item: any, canonicalName: string, productKind: 'toy' 
   const localFeatureTags = extractFunctionTagsFromRawDescription(text, productKind);
 
   return {
-    max_db: productKind === 'toy' ? (explicitMaxDb ?? 50) : null,
+    max_db: productKind === 'device' ? (explicitMaxDb ?? 50) : null,
     waterproof: null,
     appearance: 'normal',
     physical_form: 'external',
@@ -517,7 +518,7 @@ export async function runCleaner() {
         const newBrand = await prisma.competitors.create({
             data: {
                 name: '小怪兽',
-                description: '小怪兽（Xiaoguaishou）是中国原创情趣品牌，致力于为女性提供高品质、审美感强的成人玩具。',
+                description: '小怪兽（Xiaoguaishou）是中国原创\u60c5\u8da3品牌，致力于为女性提供高品质、审美感强的\u6210\u4eba\u73a9\u5177。',
                 is_domestic: true
             }
         });
@@ -537,8 +538,8 @@ export async function runCleaner() {
       continue;
     }
     const classifierText = `${canonicalName}\n${item.rawDescription || ''}`;
-    const productKind = isToyLikeProduct(canonicalName)
-      ? 'toy'
+    const productKind = isDeviceLikeProduct(canonicalName)
+      ? 'device'
       : isCareConsumableProduct(canonicalName)
       ? 'care'
       : isCareConsumableProduct(classifierText)
@@ -547,7 +548,7 @@ export async function runCleaner() {
         ? 'pad'
       : isApparelLikeProduct(classifierText)
         ? 'apparel'
-        : 'toy';
+        : 'device';
     const defaultSpecs = buildDefaultSpecs(item, canonicalName, productKind);
     console.log(`\n[AI清洗] 正在降维萃取: ${canonicalName}`);
     
@@ -678,7 +679,7 @@ ${item.rawDescription}
       } catch (parseErr) {
         console.warn(`[AI清洗] ${canonicalName} 返回 JSON 不合法，使用本地默认规格兜底。`);
       }
-      if (productKind !== 'toy') {
+      if (productKind !== 'device') {
         parsedSpecs.max_db = null;
       } else {
         const explicitMaxDb = extractNoiseMaxDb(`${canonicalName}\n${item.rawDescription || ''}`);
@@ -729,12 +730,13 @@ ${item.rawDescription}
       }
 
       // 2. Recommender_toys 表
-      const toyPayload = {
+      const itemPayload = {
          original_id:   originalId,
          name:          canonicalName,
+         safe_display_name: buildSafeDisplayName(canonicalName),
          brand:         '小怪兽',                                          
          price:         numericPrice,
-         max_db:        productKind === 'toy' ? (parsedSpecs.max_db ?? 50) : null,
+         max_db:        productKind === 'device' ? (parsedSpecs.max_db ?? 50) : null,
          waterproof:    parsedSpecs.waterproof || null,
          appearance:    mapAppearance(parsedSpecs.appearance),
          physical_form: mapPhysicalForm(parsedSpecs.physical_form),
@@ -746,8 +748,8 @@ ${item.rawDescription}
          updated_at:    new Date(),
       };
 
-      await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
-      await prisma.recommender_toys.create({ data: toyPayload });
+      await prisma.recommender_items.deleteMany({ where: { name: canonicalName } });
+      await prisma.recommender_items.create({ data: itemPayload });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);
 

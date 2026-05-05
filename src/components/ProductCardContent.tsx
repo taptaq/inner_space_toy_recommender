@@ -1,14 +1,17 @@
 import { VolumeX, Droplets, Zap } from "lucide-react";
 import { Product } from "../data/mock.ts";
+import { getProductDisplayName } from "../lib/product-display-name.ts";
 import { ProductImage } from "./ProductImage.tsx";
 
 export function ProductCardContent({ product }: { product: Product }) {
+  const displayName = getProductDisplayName(product);
+
   return (
     <>
       <div className="aspect-[4/3] w-full overflow-hidden relative border-b border-white/5 bg-black/20">
         <ProductImage
           imageValue={product.imagePlaceholder}
-          alt={product.name}
+          alt={displayName}
           iconClassName="w-8 h-8 text-white/20"
           imageClassName="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
         />
@@ -27,7 +30,7 @@ export function ProductCardContent({ product }: { product: Product }) {
       <div className="p-5 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-1">
           <h3 className="text-lg font-medium text-white leading-tight group-hover:text-cyan-100 transition-colors">
-            {product.name}
+            {displayName}
           </h3>
           <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-400 shrink-0 ml-2">
             {product.brand}

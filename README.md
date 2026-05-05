@@ -1,4 +1,4 @@
-# Inner Space Toy Recommender
+# Inner Space Gear Navigator
 
 一个以“内太空探索”为主题的亲密装备智能推荐项目。
 
@@ -209,7 +209,7 @@ openssl rand -base64 32
 npm run lint
 npm run build
 npm run preview
-npm run db:backfill:toy-max-db
+npm run db:backfill:item-max-db
 npm run db:backfill:knowledge-embeddings
 ```
 

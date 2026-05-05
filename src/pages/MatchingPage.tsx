@@ -51,7 +51,7 @@ export function MatchingPage({
       animate="in"
       exit="out"
       className={[
-        "relative flex min-h-[calc(100vh-2rem)] w-full flex-col items-center justify-center overflow-visible px-4 py-12 sm:min-h-[calc(100vh-3rem)] md:min-h-[calc(100vh-4rem)]",
+        "relative flex min-h-[calc(100vh-1.25rem)] w-full flex-col items-center justify-center overflow-visible px-4 py-10 sm:min-h-[calc(100vh-3rem)] sm:py-12 md:min-h-[calc(100vh-4rem)]",
         shouldAnimate ? "" : "ambient-motion-paused",
       ].join(" ")}
     >
@@ -60,12 +60,12 @@ export function MatchingPage({
         variant={isLoadingMode ? "loading" : "matching"}
       />
 
-      <div className="radar-container relative z-10 mb-12">
+      <div className="radar-container relative z-10 mb-9 sm:mb-12">
         <div className="radar-sweep"></div>
         <Orbit className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-cyan-500/50" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md text-center space-y-4 min-h-[12.5rem] sm:min-h-[11rem]">
+      <div className="relative z-10 min-h-[11.25rem] w-full max-w-[19rem] space-y-3 text-center sm:min-h-[11rem] sm:max-w-md sm:space-y-4">
         <p className="text-xs font-mono text-cyan-500/70 tracking-widest">
           {statusText}
         </p>

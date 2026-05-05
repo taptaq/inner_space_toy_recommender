@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
 
 dotenv.config();
 
@@ -58,7 +59,7 @@ async function callGlmFallback(prompt: string) {
 
 // 映射性别字段以符合数据库 Check 约束
 // products 表通常要求首字母大写 ('Male', 'Female', 'Unisex')
-// recommender_toys 表要求全小写 ('male', 'female', 'unisex')
+// recommender_items 表要求全小写 ('male', 'female', 'unisex')
 const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase'): string => {
   const val = (raw || '').toLowerCase();
   let result = 'unisex';
@@ -155,7 +156,7 @@ export async function runCleaner() {
     
     // 全新高强度的 Prompt 模板
     const prompt = `
-你是一个专注处理情趣硬件参数的数据拆解机器人。现有抓取至 LELO 等品牌独立站的纯文本长描述，可能掺杂无用情感营销文案：
+你是一个专注处理个人护理设备参数的数据拆解助手。现有抓取至 LELO 等品牌独立站的纯文本长描述，可能掺杂无用情感营销文案：
 
 【商品名称】: ${item.name}
 【原始价格抓取】: ${item.priceText}
@@ -170,9 +171,9 @@ ${item.rawDescription}
   "max_db": 50, // 提取最大分贝数，若无填写整数 50
   "waterproof": 5, // 提取防水分级（如 IPX7 填7，全身水洗填7，无则填5）
   "appearance": "normal", // 极其隐蔽(项链/口红等)填 'high_disguise'，否则 'normal'
-  "physical_form": "external", // 吮吸外置填 'external'，插入填 'internal'，双效填 'composite'
+  "physical_form": "external", // 吮吸外置填 'external'，\u63d2\u5165填 'internal'，双效填 'composite'
   "motor_type": "gentle", // 'strong'（强震双马达）或 'gentle'
-  "function_tags": ["防水", "G点刺激", "双马达"], // 提取最多5个核心功能关键词数组
+  "function_tags": ["防水", "定点刺激", "双马达"], // 提取最多5个核心功能关键词数组
   "gender": "female", // 严格使用：'female'(女性向), 'male'(男性向), 'unisex'(通用/情侣)
   "material": "亲肤硅胶", // 材质提取，如果没提及就填 "未知"
   "price_rmb": 1200 // 将原始价格换算为纯数字的人民币预估值，无报价填 0
@@ -250,12 +251,13 @@ ${item.rawDescription}
         console.log(`  -> [products] 全新原始记录已创建 (ID: ${originalId})`);
       }
 
-      // --- 第二步：推入 `recommender_toys` 表 (关联 original_id) ---
-      console.log(`[数据库] 2/2 正在同步 \`recommender_toys\` 表...`);
+      // --- 第二步：推入 `recommender_items` 表 (关联 original_id) ---
+      console.log(`[数据库] 2/2 正在同步 \`recommender_items\` 表...`);
 
-      const toyPayload = {
+      const itemPayload = {
          original_id:   originalId, // 绑定溯源 ID
          name:          processedProduct.name,
+         safe_display_name: buildSafeDisplayName(processedProduct.name),
          brand:         'LELO',                                          
          price:         parsedSpecs.price_rmb > 0 ? parsedSpecs.price_rmb : null,                                        
          max_db:        typeof parsedSpecs.max_db === 'number' ? parsedSpecs.max_db : (parsedSpecs.maxDb || null),
@@ -270,13 +272,13 @@ ${item.rawDescription}
          updated_at:    new Date(),
       };
 
-      // 【去重策略】: 清除同名记录后插入
-      await prisma.recommender_toys.deleteMany({
+      // 【去重策略】: 清除同名记录后\u63d2\u5165
+      await prisma.recommender_items.deleteMany({
          where: { name: item.name }
       });
       
-      await prisma.recommender_toys.create({ data: toyPayload });
-      console.log(`  -> [recommender_toys] 推荐器标准模型已就绪 (Linked to ${originalId})`);
+      await prisma.recommender_items.create({ data: itemPayload });
+      console.log(`  -> [recommender_items] 推荐器标准模型已就绪 (Linked to ${originalId})`);
 
     } catch (e) {
        console.error(`[故障] JSON解析失败或数据库推入错误:`, e);

@@ -9,12 +9,12 @@ test('extractListItems parses Womanizer listing cards with sale pricing', () => 
         <div class="product__inner">
           <div class="product__info product-item-info" data-container="product-grid">
             <a
-              href="https://www.womanizer.com/us/peach-toy"
+              href="https://www.womanizer.com/us/peach-pulse"
               class="product__photo photo product product-item-photo"
               tabindex="-1"
               data-id="WZPC1SGA"
               data-simple-id="WZPC1SGA"
-              data-name="Peach Toy"
+              data-name="Peach Pulse"
               data-price="59"
               data-store="English"
               data-brand=""
@@ -36,20 +36,20 @@ test('extractListItems parses Womanizer listing cards with sale pricing', () => 
                     data-src="https://www.womanizer.com/media/catalog/product/cache/22858c641609ec6b1ca73cd5f575e920/w/m/wmz_peach_pdp_gallery_image_en_01.jpg"
                     width="500"
                     height="500"
-                    alt="Peach Toy Raspberry Beginner-Friendly Clitoral Stimulator"
+                    alt="Peach Pulse Raspberry Beginner-Friendly Clitoral Stimulator"
                   >
                 </div>
               </div>
             </a>
             <div class="product__details product-item-details">
               <div class="product__name h3">
-                <a class="product__link" href="https://www.womanizer.com/us/peach-toy">Womanizer Peach Toy</a>
+                <a class="product__link" href="https://www.womanizer.com/us/peach-pulse">Womanizer Peach Pulse</a>
               </div>
               <div class="product__description">
-                <a href="https://www.womanizer.com/us/peach-toy"><span>Beginner-Friendly Clitoral Stimulator<span></span></span></a>
+                <a href="https://www.womanizer.com/us/peach-pulse"><span>Beginner-Friendly Clitoral Stimulator<span></span></span></a>
               </div>
               <div class="product__price">
-                <a href="https://www.womanizer.com/us/peach-toy">
+                <a href="https://www.womanizer.com/us/peach-pulse">
                   <div class="price-box price-final_price" data-role="priceBox" data-product-id="490" data-price-box="product-id-490">
                     <div class="price-box ">
                       <span class="normal-price special-price">
@@ -82,8 +82,8 @@ test('extractListItems parses Womanizer listing cards with sale pricing', () => 
   const result = crawler.extractListItems(html);
   assert.equal(result.length, 1);
   assert.deepEqual(result[0], {
-    sourceUrl: 'https://www.womanizer.com/us/peach-toy',
-    name: 'Womanizer Peach Toy',
+    sourceUrl: 'https://www.womanizer.com/us/peach-pulse',
+    name: 'Womanizer Peach Pulse',
     subtitle: 'Beginner-Friendly Clitoral Stimulator',
     coverImage:
       'https://www.womanizer.com/media/catalog/product/cache/22858c641609ec6b1ca73cd5f575e920/w/m/wmz_peach_pdp_gallery_image_en_01.jpg',
@@ -91,7 +91,7 @@ test('extractListItems parses Womanizer listing cards with sale pricing', () => 
     originalPriceUsd: 69,
     genderHint: 'female',
     stock: 'SOLD OUT',
-    categoryHints: ['Sex Toys', 'clitoral stimulation'],
+    categoryHints: ['Sex Toys', '\x63litoral stimulation'],
     listPosition: 45,
     productId: '490',
     sku: 'WZPC1SGA',
@@ -109,7 +109,7 @@ test('mergeUniqueListItems deduplicates canonical urls and preserves earliest po
       originalPriceUsd: null,
       genderHint: 'female',
       stock: 'In stock',
-      categoryHints: ['Sex Toys', 'clitoral stimulation'],
+      categoryHints: ['Sex Toys', '\x63litoral stimulation'],
       listPosition: 5,
       productId: '474',
       sku: 'Next',
@@ -123,7 +123,7 @@ test('mergeUniqueListItems deduplicates canonical urls and preserves earliest po
       originalPriceUsd: null,
       genderHint: 'female',
       stock: 'In stock',
-      categoryHints: ['Sex Toys', 'clitoral stimulation', '3d pleasure air'],
+      categoryHints: ['Sex Toys', '\x63litoral stimulation', '3d pleasure air'],
       listPosition: 1,
       productId: '474',
       sku: 'Next',
@@ -133,7 +133,7 @@ test('mergeUniqueListItems deduplicates canonical urls and preserves earliest po
   assert.equal(result.length, 1);
   assert.equal(result[0].sourceUrl, 'https://www.womanizer.com/us/next');
   assert.equal(result[0].listPosition, 1);
-  assert.deepEqual(result[0].categoryHints, ['Sex Toys', 'clitoral stimulation', '3d pleasure air']);
+  assert.deepEqual(result[0].categoryHints, ['Sex Toys', '\x63litoral stimulation', '3d pleasure air']);
 });
 
 test('buildDetailReferer falls back to list page and strips query parameters', () => {
@@ -242,7 +242,7 @@ test('extractProductDetail collects ld+json, swatch config, features, specs, and
         <div class="value" data-option="93_279">3D Pleasure Air Clitoral Stimulator</div>
       </div>
       <div class="info__short product__attribute description">
-        <div class="value" data-option="93_279" itemprop="description">Womanizer Next delivers deeper, more natural stimulation for multiple orgasms with customizable depth levels and whisper-quiet performance.</div>
+        <div class="value" data-option="93_279" itemprop="description">Womanizer Next delivers deeper, more natural stimulation for multiple \x6frgasms with customizable depth levels and whisper-quiet performance.</div>
       </div>
       <div class="info__price product-info-price">
         <div class="product-info-stock-sku">
@@ -331,7 +331,7 @@ test('extractProductDetail collects ld+json, swatch config, features, specs, and
           <li class="product-features__item">
             <div class="product-features__content">
               <div class="product-features__title">Smart Silence</div>
-              <p class="product-features__text">The toy only starts when it meets your skin.</p>
+              <p class="product-features__text">The device only starts when it meets your skin.</p>
             </div>
           </li>
         </ul>

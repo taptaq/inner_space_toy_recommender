@@ -1,6 +1,7 @@
 import type { AnswerState } from "../data/mock.ts";
 import type { RankedProduct } from "./app-shell.ts";
 import { dedupeDisplayTags } from "./display-tags.ts";
+import { getProductDisplayName } from "./product-display-name.ts";
 import type { BackupCandidate } from "./recommendation-results.ts";
 
 type RecommendationProfileProduct = {
@@ -19,11 +20,9 @@ export type RecommendationProfilePayload = {
   title: string;
   summary: string;
   topProductIds: string[];
-  savedCandidateIds?: string[];
   answers: AnswerState;
   topProducts: RecommendationProfileProduct[];
   backupProducts: RecommendationProfileProduct[];
-  savedCandidates?: RecommendationProfileProduct[];
   recommendationTips: string[];
   shoppingGuidance: string[];
 };
@@ -44,11 +43,11 @@ async function readApiErrorMessage(response: Response, fallback: string) {
 }
 
 function pickProductSnapshot(
-  product: Pick<RankedProduct, "id" | "name" | "score">,
+  product: Pick<RankedProduct, "id" | "name" | "safeDisplayName" | "score">,
 ): RecommendationProfileProduct {
   return {
     id: product.id,
-    name: product.name,
+    name: getProductDisplayName(product),
     score: product.score,
   };
 }
@@ -57,35 +56,17 @@ export function buildRecommendationProfilePayload({
   answers,
   topProducts,
   backupProducts,
-  savedCandidateIds = [],
   recommendationTips,
   shoppingGuidance,
 }: {
   answers: AnswerState;
   topProducts: RankedProduct[];
   backupProducts: BackupCandidate[];
-  savedCandidateIds?: string[];
   recommendationTips: string[];
   shoppingGuidance: string[];
 }): RecommendationProfilePayload {
   const topProductSnapshots = topProducts.map(pickProductSnapshot);
   const backupProductSnapshots = backupProducts.map(pickProductSnapshot);
-  const candidateSnapshotById = new Map(
-    [...topProductSnapshots, ...backupProductSnapshots].map((product) => [
-      product.id,
-      product,
-    ]),
-  );
-  const normalizedSavedCandidateIds = Array.from(
-    new Set(
-      savedCandidateIds
-        .map((id) => String(id || "").trim())
-        .filter((id) => candidateSnapshotById.has(id)),
-    ),
-  );
-  const savedCandidateSnapshots = normalizedSavedCandidateIds.map(
-    (id) => candidateSnapshotById.get(id)!,
-  );
   const topProductNames = topProductSnapshots.map((product) => product.name);
   const normalizedAnswers: AnswerState = {
     ...answers,
@@ -106,11 +87,9 @@ export function buildRecommendationProfilePayload({
     title,
     summary: summaryParts.join("；") || "推荐档案",
     topProductIds: topProductSnapshots.map((product) => product.id),
-    savedCandidateIds: normalizedSavedCandidateIds,
     answers: normalizedAnswers,
     topProducts: topProductSnapshots,
     backupProducts: backupProductSnapshots,
-    savedCandidates: savedCandidateSnapshots,
     recommendationTips,
     shoppingGuidance,
   };

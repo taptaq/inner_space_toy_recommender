@@ -24,7 +24,7 @@ The current results page tells the user which 3 products are the best match, but
 The user explicitly wants:
 
 - a separate block of backup product cards outside the top 3
-- meaningful toy-selection guidance, not generic filler
+- meaningful equipment-selection guidance, not generic filler
 - mobile and desktop adaptation as a baseline requirement
 
 ## Confirmed Product Direction

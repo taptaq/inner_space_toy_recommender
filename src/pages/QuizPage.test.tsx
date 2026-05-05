@@ -21,6 +21,32 @@ const questions: Question[] = [
   } as Question,
 ];
 
+const multiStepQuestions: Question[] = [
+  questions[0],
+  {
+    id: "experience",
+    title: "你更接近哪种反馈节奏？",
+    subtitle: "先别追求最猛，先找最适合自己的进入方式。",
+    field: "experienceLevel",
+    options: [
+      { label: "温和慢热", value: "sensitive", tag: "温柔慢热" },
+      { label: "平衡进阶", value: "balanced", tag: "平衡进阶" },
+      { label: "强刺激偏好", value: "intense", tag: "强刺激偏好" },
+    ],
+  } as Question,
+  {
+    id: "noise",
+    title: "你对静音有多在意？",
+    subtitle: "这会影响系统优先筛掉哪些结果。",
+    field: "maxDb",
+    options: [
+      { label: "非常在意", value: 40, tag: "< 40dB" },
+      { label: "一般在意", value: 50, tag: "< 50dB" },
+      { label: "不太在意", value: 100, tag: "无限制分贝" },
+    ],
+  } as Question,
+];
+
 test("quiz page renders a differentiated deep-space scanning cockpit", () => {
   const html = renderToStaticMarkup(
     <QuizPage
@@ -65,4 +91,51 @@ test("quiz scan background is sized to cover the full viewport", () => {
   assert.match(appSource, /currentRoute === "\/quiz"\s*\?\s*"h-dvh min-h-dvh p-0"/);
   assert.match(pageMarkup, /flex/);
   assert.match(pageMarkup, /justify-center/);
+});
+
+test("quiz page reduces starfield drift density on small screens", () => {
+  const source = fs.readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+
+  assert.match(
+    source,
+    /@media \(max-width: 640px\) \{[\s\S]*\.quiz-starfield::before\s*\{[\s\S]*opacity:\s*0\.48;/,
+  );
+  assert.match(
+    source,
+    /@media \(max-width: 640px\) \{[\s\S]*\.quiz-starfield::before\s*\{[\s\S]*background-size:\s*240px 280px,\s*340px 360px,\s*460px 500px;/,
+  );
+});
+
+test("quiz page reassures undecided users that the system can guide them forward", () => {
+  const html = renderToStaticMarkup(
+    <QuizPage
+      pageVariants={{}}
+      step={0}
+      activeQuestions={questions}
+      onSelectOption={() => {}}
+      onBackQuestion={() => {}}
+      onBackHome={() => {}}
+    />,
+  );
+
+  assert.match(html, /拿不准也没关系/);
+  assert.match(html, /可先让系统帮你判断/);
+});
+
+test("quiz page renders earlier completed steps as direct revise targets", () => {
+  const html = renderToStaticMarkup(
+    <QuizPage
+      pageVariants={{}}
+      step={2}
+      activeQuestions={multiStepQuestions}
+      onSelectOption={() => {}}
+      onBackQuestion={() => {}}
+      onBackHome={() => {}}
+      onJumpToQuestion={() => {}}
+    />,
+  );
+
+  assert.match(html, /返回修改第 1 题/);
+  assert.match(html, /返回修改第 2 题/);
+  assert.match(html, /cursor-pointer/);
 });

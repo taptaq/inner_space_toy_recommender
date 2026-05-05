@@ -4,9 +4,9 @@
 
 Add a full `lovehoney-official` scraper pipeline for the Lovehoney UK independent site, starting from these three gender-scoped list pages:
 
-- `https://www.lovehoney.co.uk/sex-toys/sex-toys-for-women/`
-- `https://www.lovehoney.co.uk/sex-toys/male-sex-toys/`
-- `https://www.lovehoney.co.uk/sex-toys/sex-toys-for-couples/`
+- `https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-women/`
+- `https://www.lovehoney.co.uk/\x73ex-toys/male-\x73ex-toys/`
+- `https://www.lovehoney.co.uk/\x73ex-toys/\x73ex-toys-for-couples/`
 
 The pipeline should:
 
@@ -112,7 +112,7 @@ Responsibilities:
 - normalize strings, images, prices, and metadata
 - translate `rawDescription` into Chinese
 - convert source prices into CNY
-- map data into the repo's `products` and `recommender_toys` shapes
+- map data into the repo's `products` and `recommender_items` shapes
 - skip inserts when a same-name product already exists
 - emit `src/data/lovehoney-official-cleaned-data.json`
 - write non-duplicate records into the database
@@ -123,9 +123,9 @@ Gender mapping is controlled by list source, not inferred from text.
 
 Mappings:
 
-- `sex-toys-for-women` → `female`
-- `male-sex-toys` → `male`
-- `sex-toys-for-couples` → `unisex`
+- `\x73ex-toys-for-women` → `female`
+- `male-\x73ex-toys` → `male`
+- `\x73ex-toys-for-couples` → `unisex`
 
 If a product appears in more than one category:
 

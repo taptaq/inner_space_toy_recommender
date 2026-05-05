@@ -180,6 +180,13 @@ test("buildResultRecalibrationPayload requests automatic model routing without e
     rankedCandidates,
     filteredCount: 6,
     recommendationTips,
+    recalibrationContext: {
+      attemptCount: 1,
+      currentResultProvider: "dmxapi-mimo",
+      currentResultModelName: "mimo-v2.5-free",
+      previousTopProducts: [{ id: "p-1", reason: "更安静，也更适合日常使用" }],
+      previousShoppingGuidanceCount: 2,
+    },
   });
 
   assert.equal(payload.strategy, "auto");
@@ -251,6 +258,13 @@ test("buildResultRecalibrationPayload requests automatic model routing without e
     ],
     filteredCount: 6,
     recommendationTips,
+    recalibrationContext: {
+      attemptCount: 1,
+      currentResultProvider: "dmxapi-mimo",
+      currentResultModelName: "mimo-v2.5-free",
+      previousTopProducts: [{ id: "p-1", reason: "更安静，也更适合日常使用" }],
+      previousShoppingGuidanceCount: 2,
+    },
   });
   assert.equal("rawDescription" in payload.rerankPool[0], false);
   assert.equal("personaAnalysis" in payload.rerankPool[0], false);
