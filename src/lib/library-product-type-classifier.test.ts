@@ -42,6 +42,71 @@ test("classifyLibraryTypeCode recognizes unisex remote wearable products", () =>
   );
 });
 
+test("classifyLibraryTypeCode normalizes historical enum casing and whitespace", () => {
+  assert.equal(
+    classifyLibraryTypeCode({
+      gender: " Female ",
+      physicalForm: " External ",
+      name: "Womanizer Liberty",
+      rawDescription: "air pulse suction for external stimulation",
+      tags: [],
+    }),
+    "suction",
+  );
+});
+
+test("classifyLibraryTypeCode avoids broad ring false positives for male cup products", () => {
+  assert.equal(
+    classifyLibraryTypeCode({
+      gender: "male",
+      physicalForm: "internal",
+      name: "Cup Pro",
+      rawDescription: "环绕包裹通道，masturbator cup design",
+      tags: [],
+    }),
+    "masturbator",
+  );
+});
+
+test("classifyLibraryTypeCode keeps remote-only unisex toys out of wearable_remote", () => {
+  assert.equal(
+    classifyLibraryTypeCode({
+      gender: "unisex",
+      physicalForm: "external",
+      name: "情侣远控器",
+      rawDescription: "支持 app 远程控制，双人互动氛围更强",
+      tags: ["情侣"],
+    }),
+    "couples",
+  );
+});
+
+test("classifyLibraryTypeCode avoids bare app false positives for unisex products", () => {
+  assert.equal(
+    classifyLibraryTypeCode({
+      gender: "unisex",
+      physicalForm: "external",
+      name: "Starter Toy",
+      rawDescription: "applicable to beginners and easy to clean",
+      tags: [],
+    }),
+    "unknown",
+  );
+});
+
+test("classifyLibraryTypeCode avoids collapsing generic anal items into prostate", () => {
+  assert.equal(
+    classifyLibraryTypeCode({
+      gender: "male",
+      physicalForm: "internal",
+      name: "肛珠入门套装",
+      rawDescription: "Anal beads for beginners",
+      tags: [],
+    }),
+    "unknown",
+  );
+});
+
 test("classifyLibraryTypeCode falls back to unknown when signals are too weak", () => {
   assert.equal(
     classifyLibraryTypeCode({

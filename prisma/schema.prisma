@@ -705,6 +705,7 @@ model recommender_items {
   physical_form String?
   motor_type    String?
   gender        String?
+  type_code     String?
   brand         String?
   material      String?
   image_url     String?
