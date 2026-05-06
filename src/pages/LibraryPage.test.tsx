@@ -380,6 +380,46 @@ test("library page shows subtype options only after a supported top-level type i
   assert.match(html, /双头多点/);
 });
 
+test("library page shows male subtype options for masturbator products", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "m1",
+          gender: "male",
+          typeCode: "masturbator",
+          subtypeCode: "interactive_masturbator",
+          name: "Sync Cup",
+        }),
+      ]}
+      filterGender="male"
+      filterType="masturbator"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /类型细分/);
+  assert.match(html, /互动杯/);
+  assert.match(html, /震动杯/);
+});
+
 test("library page filters products by selected subtype code", () => {
   const html = renderToStaticMarkup(
     <LibraryPage
@@ -424,4 +464,50 @@ test("library page filters products by selected subtype code", () => {
 
   assert.match(html, /Rabbit Dual/);
   assert.doesNotMatch(html, /Multi Head Dual/);
+});
+
+test("library page filters unisex wearable remote products by subtype", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "u1",
+          name: "Panty One",
+          gender: "unisex",
+          typeCode: "wearable_remote",
+          subtypeCode: "panty_wearable",
+        }),
+        makeProduct({
+          id: "u2",
+          name: "Couple Link",
+          gender: "unisex",
+          typeCode: "wearable_remote",
+          subtypeCode: "dual_wearable_remote",
+        }),
+      ]}
+      filterGender="unisex"
+      filterType="wearable_remote"
+      filterSubtype="dual_wearable_remote"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /Couple Link/);
+  assert.doesNotMatch(html, /Panty One/);
 });

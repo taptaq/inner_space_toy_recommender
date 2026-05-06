@@ -10,6 +10,8 @@ import {
   sanitizeLibraryTypeSelection,
 } from "./library-product-types.ts";
 
+const getAnyLibrarySubtypeLabel = getLibrarySubtypeLabel as (subtypeCode: string) => string;
+
 test("getLibraryTypeLabel returns user-facing labels", () => {
   assert.equal(getLibraryTypeLabel("suction"), "吮吸类");
   assert.equal(getLibraryTypeLabel("masturbator"), "飞机杯");
@@ -21,6 +23,8 @@ test("getLibrarySubtypeLabel returns user-facing subtype labels", () => {
   assert.equal(getLibrarySubtypeLabel("suction_dual"), "吮吸双刺激");
   assert.equal(getLibrarySubtypeLabel("rabbit_dual"), "兔耳双刺激");
   assert.equal(getLibrarySubtypeLabel("wand_massager"), "魔杖按摩");
+  assert.equal(getAnyLibrarySubtypeLabel("interactive_masturbator"), "互动杯");
+  assert.equal(getAnyLibrarySubtypeLabel("dual_wearable_remote"), "双人远控");
 });
 
 test("getAllowedLibraryTypeCodes hides female-only categories from male selection", () => {
@@ -54,11 +58,15 @@ test("getAllowedLibrarySubtypeCodes only returns subtypes for supported parent t
     ["suction_dual", "rabbit_dual", "multi_head_dual"],
   );
   assert.deepEqual(
-    getAllowedLibrarySubtypeCodes("female", "all"),
-    [],
+    getAllowedLibrarySubtypeCodes("male", "masturbator"),
+    ["manual_masturbator", "vibrating_masturbator", "interactive_masturbator"],
   );
   assert.deepEqual(
-    getAllowedLibrarySubtypeCodes("male", "masturbator"),
+    getAllowedLibrarySubtypeCodes("unisex", "wearable_remote"),
+    ["panty_wearable", "insertable_remote", "dual_wearable_remote"],
+  );
+  assert.deepEqual(
+    getAllowedLibrarySubtypeCodes("female", "all"),
     [],
   );
 });
