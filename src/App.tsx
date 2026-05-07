@@ -49,6 +49,11 @@ import {
 } from "./lib/user-recommendation-profile";
 import { getProductDisplayName } from "./lib/product-display-name.ts";
 import {
+  sanitizeLibrarySubtypeSelection,
+  sanitizeLibraryTypeSelection,
+  type LibraryAudienceGender,
+} from "./lib/library-product-types.ts";
+import {
   getCurrentSupabaseSession,
   isSupabaseAuthConfigured,
   onSupabaseAuthStateChange,
@@ -116,6 +121,8 @@ type PersistedAppState = {
   recommendationTips?: string[];
   shoppingGuidance?: string[];
   filterGender?: string;
+  filterType?: string;
+  filterSubtype?: string;
   filterBrand?: string;
   filterOrigin?: string;
   filterMaxDb?: number;
@@ -124,6 +131,14 @@ type PersistedAppState = {
   currentResultProvider?: AppAiProvider;
   currentResultModelName?: string;
 };
+
+function normalizeLibraryAudienceGender(value: string): LibraryAudienceGender {
+  if (value === "female" || value === "male" || value === "unisex") {
+    return value;
+  }
+
+  return "all";
+}
 
 const AI_RERANK_POOL_SIZE = 10;
 const FINAL_SELECTION_COUNT = 3;
@@ -596,10 +611,27 @@ export default function App() {
   const [hasFetched, setHasFetched] = useState(cachedProducts.length > 0);
   const [productsError, setProductsError] = useState<string | null>(null);
   const productsFetchRef = useRef<Promise<Product[]> | null>(null);
+  const hasAutoRefreshedLibraryProductsRef = useRef(false);
 
   // 过滤器状态
   const [filterGender, setFilterGender] = useState<string>(
-    persistedState.filterGender ?? "all",
+    normalizeLibraryAudienceGender(persistedState.filterGender ?? "all"),
+  );
+  const [filterType, setFilterType] = useState<string>(() =>
+    sanitizeLibraryTypeSelection(
+      persistedState.filterType ?? "all",
+      normalizeLibraryAudienceGender(persistedState.filterGender ?? "all"),
+    ),
+  );
+  const [filterSubtype, setFilterSubtype] = useState<string>(() =>
+    sanitizeLibrarySubtypeSelection(
+      persistedState.filterSubtype ?? "all",
+      normalizeLibraryAudienceGender(persistedState.filterGender ?? "all"),
+      sanitizeLibraryTypeSelection(
+        persistedState.filterType ?? "all",
+        normalizeLibraryAudienceGender(persistedState.filterGender ?? "all"),
+      ),
+    ),
   );
   const [filterBrand, setFilterBrand] = useState<string>(
     persistedState.filterBrand ?? "all",
@@ -871,10 +903,33 @@ export default function App() {
   }, [currentRoute, step, activeQuestions.length]);
 
   useEffect(() => {
-    if (currentRoute === "/library" && allProducts.length === 0 && !isLoading) {
-      void fetchProducts();
+    if (currentRoute !== "/library") {
+      hasAutoRefreshedLibraryProductsRef.current = false;
+      return;
     }
-  }, [currentRoute, allProducts.length, isLoading]);
+
+    if (isLoading || hasAutoRefreshedLibraryProductsRef.current) {
+      return;
+    }
+
+    hasAutoRefreshedLibraryProductsRef.current = true;
+    void fetchProducts({
+      preferCachedResult: allProducts.length === 0,
+    });
+  }, [currentRoute, isLoading, allProducts.length]);
+
+  useEffect(() => {
+    const nextGender = normalizeLibraryAudienceGender(filterGender);
+    const nextType = sanitizeLibraryTypeSelection(filterType, nextGender);
+
+    if (nextType !== filterType) {
+      setFilterType(nextType);
+    }
+
+    setFilterSubtype((currentSubtype) =>
+      sanitizeLibrarySubtypeSelection(currentSubtype, nextGender, nextType),
+    );
+  }, [filterGender, filterType]);
 
   useEffect(() => {
     writeSessionJsonStorage(
@@ -887,6 +942,8 @@ export default function App() {
         recommendationTips,
         shoppingGuidance,
         filterGender,
+        filterType,
+        filterSubtype,
         filterBrand,
         filterOrigin,
         filterMaxDb,
@@ -904,6 +961,8 @@ export default function App() {
     recommendationTips,
     shoppingGuidance,
     filterGender,
+    filterType,
+    filterSubtype,
     filterBrand,
     filterOrigin,
     filterMaxDb,
@@ -917,15 +976,17 @@ export default function App() {
     writeProductsCache(allProducts);
   }, [allProducts]);
 
-  const fetchProducts = (options?: { force?: boolean }) => {
+  const fetchProducts = (options?: { force?: boolean; preferCachedResult?: boolean }) => {
     const force = options?.force === true;
-    if (!force && allProducts.length > 0) {
+    const preferCachedResult = options?.preferCachedResult !== false;
+
+    if (!force && preferCachedResult && allProducts.length > 0) {
       setHasFetched(true);
       return Promise.resolve(allProducts);
     }
 
     const latestCachedProducts = readProductsCache();
-    if (!force && latestCachedProducts.length > 0) {
+    if (!force && preferCachedResult && latestCachedProducts.length > 0) {
       setAllProducts(latestCachedProducts);
       setHasFetched(true);
       setProductsError(null);
@@ -1827,6 +1888,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       <LibraryPage
         allProducts={allProducts}
         filterGender={filterGender}
+        filterType={filterType}
+        filterSubtype={filterSubtype}
         filterBrand={filterBrand}
         filterOrigin={filterOrigin}
         filterMaterial={filterMaterial}
@@ -1835,7 +1898,29 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
         isLoading={isLoading}
         error={productsError}
         onReload={() => fetchProducts({ force: true })}
-        onFilterGenderChange={setFilterGender}
+        onFilterGenderChange={(value) =>
+          setFilterGender(normalizeLibraryAudienceGender(value))
+        }
+        onFilterTypeChange={(value) =>
+          setFilterType(
+            sanitizeLibraryTypeSelection(
+              value,
+              normalizeLibraryAudienceGender(filterGender),
+            ),
+          )
+        }
+        onFilterSubtypeChange={(value) =>
+          setFilterSubtype(
+            sanitizeLibrarySubtypeSelection(
+              value,
+              normalizeLibraryAudienceGender(filterGender),
+              sanitizeLibraryTypeSelection(
+                filterType,
+                normalizeLibraryAudienceGender(filterGender),
+              ),
+            ),
+          )
+        }
         onFilterBrandChange={setFilterBrand}
         onFilterOriginChange={setFilterOrigin}
         onFilterMaterialChange={setFilterMaterial}

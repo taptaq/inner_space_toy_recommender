@@ -16,6 +16,8 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
     physicalForm: "external",
     motorType: "gentle",
     gender: "female",
+    typeCode: "suction",
+    subtypeCode: "suction_pure",
     brand: "Test Brand",
     material: "硅胶",
     imagePlaceholder: "",
@@ -32,6 +34,7 @@ test("library page keeps primary filters visible and moves admin-like filters be
       allProducts={[makeProduct()]}
       filterGender="all"
       filterType="all"
+      filterSubtype="all"
       filterBrand="all"
       filterOrigin="all"
       filterMaterial="all"
@@ -41,6 +44,7 @@ test("library page keeps primary filters visible and moves admin-like filters be
       error={null}
       onReload={() => {}}
       onFilterGenderChange={() => {}}
+      onFilterSubtypeChange={() => {}}
       onFilterBrandChange={() => {}}
       onFilterOriginChange={() => {}}
       onFilterMaterialChange={() => {}}
@@ -67,6 +71,7 @@ test("library page shows only male type options when male gender is selected", (
       ]}
       filterGender="male"
       filterType="all"
+      filterSubtype="all"
       filterBrand="all"
       filterOrigin="all"
       filterMaterial="all"
@@ -77,6 +82,7 @@ test("library page shows only male type options when male gender is selected", (
       onReload={() => {}}
       onFilterGenderChange={() => {}}
       onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
       onFilterBrandChange={() => {}}
       onFilterOriginChange={() => {}}
       onFilterMaterialChange={() => {}}
@@ -89,18 +95,32 @@ test("library page shows only male type options when male gender is selected", (
   assert.match(html, /类型/);
   assert.match(html, /飞机杯/);
   assert.match(html, /前列腺探索/);
+  assert.match(html, /护理与周边/);
   assert.doesNotMatch(html, /吮吸类/);
 });
 
-test("library page filters products by selected type code", () => {
+test("library page filters care accessory products by subtype", () => {
   const html = renderToStaticMarkup(
     <LibraryPage
       allProducts={[
-        makeProduct({ id: "f1", name: "Suction One", gender: "female", typeCode: "suction" }),
-        makeProduct({ id: "f2", name: "Insertable One", gender: "female", typeCode: "insertable" }),
+        makeProduct({
+          id: "c1",
+          name: "Water-Based Lubricant 100ml",
+          gender: "male",
+          typeCode: "care_accessory",
+          subtypeCode: "lube_care",
+        }),
+        makeProduct({
+          id: "c2",
+          name: "Lace Bodysuit",
+          gender: "female",
+          typeCode: "care_accessory",
+          subtypeCode: "lingerie",
+        }),
       ]}
-      filterGender="female"
-      filterType="suction"
+      filterGender="all"
+      filterType="care_accessory"
+      filterSubtype="lube_care"
       filterBrand="all"
       filterOrigin="all"
       filterMaterial="all"
@@ -111,6 +131,57 @@ test("library page filters products by selected type code", () => {
       onReload={() => {}}
       onFilterGenderChange={() => {}}
       onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /护理与周边/);
+  assert.match(html, /润滑护理/);
+  assert.match(html, /避孕套/);
+  assert.match(html, /内衣服饰/);
+  assert.match(html, /Water-Based Lubricant 100ml/);
+  assert.doesNotMatch(html, /Lace Bodysuit/);
+});
+
+test("library page filters products by selected type code", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "f1",
+          name: "Suction One",
+          gender: "female",
+          typeCode: "suction",
+          subtypeCode: "suction_pure",
+        }),
+        makeProduct({
+          id: "f2",
+          name: "Insertable One",
+          gender: "female",
+          typeCode: "insertable",
+          subtypeCode: "gspot_insertable",
+        }),
+      ]}
+      filterGender="female"
+      filterType="suction"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
       onFilterBrandChange={() => {}}
       onFilterOriginChange={() => {}}
       onFilterMaterialChange={() => {}}
@@ -124,14 +195,31 @@ test("library page filters products by selected type code", () => {
   assert.doesNotMatch(html, /Insertable One/);
 });
 
-test("library page keeps uncategorized products visible only under all types", () => {
+test("library page filters legacy products even when typeCode is missing from in-memory data", () => {
   const html = renderToStaticMarkup(
     <LibraryPage
       allProducts={[
-        makeProduct({ id: "u1", name: "Unknown One", gender: "female", typeCode: null }),
+        makeProduct({
+          id: "legacy-1",
+          name: "Womanizer Liberty",
+          gender: "female",
+          typeCode: null,
+          rawDescription: "气脉冲吸感，外部刺激设备",
+          tags: [],
+        }),
+        makeProduct({
+          id: "legacy-2",
+          name: "Insertable One",
+          gender: "female",
+          typeCode: null,
+          physicalForm: "internal",
+          rawDescription: "入体探索，深入包裹",
+          tags: [],
+        }),
       ]}
       filterGender="female"
-      filterType="all"
+      filterType="suction"
+      filterSubtype="all"
       filterBrand="all"
       filterOrigin="all"
       filterMaterial="all"
@@ -142,6 +230,40 @@ test("library page keeps uncategorized products visible only under all types", (
       onReload={() => {}}
       onFilterGenderChange={() => {}}
       onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /Womanizer Liberty/);
+  assert.doesNotMatch(html, /Insertable One/);
+});
+
+test("library page keeps uncategorized products visible only under all types", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({ id: "u1", name: "Unknown One", gender: "female", typeCode: null }),
+      ]}
+      filterGender="female"
+      filterType="all"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
       onFilterBrandChange={() => {}}
       onFilterOriginChange={() => {}}
       onFilterMaterialChange={() => {}}
@@ -154,12 +276,22 @@ test("library page keeps uncategorized products visible only under all types", (
   assert.match(html, /Unknown One/);
 });
 
-test("library page keeps a calmer mobile-first shell and lighter filter density", () => {
-  const source = renderToStaticMarkup(
+test("library page filters uncategorized products under 其他 type", () => {
+  const html = renderToStaticMarkup(
     <LibraryPage
-      allProducts={[makeProduct()]}
-      filterGender="all"
-      filterType="all"
+      allProducts={[
+        makeProduct({ id: "u1", name: "Unknown One", gender: "female", typeCode: null }),
+        makeProduct({
+          id: "s1",
+          name: "Known One",
+          gender: "female",
+          typeCode: "suction",
+          subtypeCode: "suction_pure",
+        }),
+      ]}
+      filterGender="female"
+      filterType="unknown"
+      filterSubtype="all"
       filterBrand="all"
       filterOrigin="all"
       filterMaterial="all"
@@ -169,6 +301,39 @@ test("library page keeps a calmer mobile-first shell and lighter filter density"
       error={null}
       onReload={() => {}}
       onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /Unknown One/);
+  assert.doesNotMatch(html, /Known One/);
+  assert.match(html, /其他/);
+});
+
+test("library page keeps a calmer mobile-first shell and lighter filter density", () => {
+  const source = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[makeProduct()]}
+      filterGender="all"
+      filterType="all"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterSubtypeChange={() => {}}
       onFilterBrandChange={() => {}}
       onFilterOriginChange={() => {}}
       onFilterMaterialChange={() => {}}
@@ -199,6 +364,7 @@ test("library page product grid and back-to-top affordance stay mobile-friendly"
       allProducts={[makeProduct(), makeProduct({ id: "p2", name: "Second Product" })]}
       filterGender="all"
       filterType="all"
+      filterSubtype="all"
       filterBrand="all"
       filterOrigin="all"
       filterMaterial="all"
@@ -208,6 +374,7 @@ test("library page product grid and back-to-top affordance stay mobile-friendly"
       error={null}
       onReload={() => {}}
       onFilterGenderChange={() => {}}
+      onFilterSubtypeChange={() => {}}
       onFilterBrandChange={() => {}}
       onFilterOriginChange={() => {}}
       onFilterMaterialChange={() => {}}
@@ -222,4 +389,176 @@ test("library page product grid and back-to-top affordance stay mobile-friendly"
   assert.match(source, /glass-panel rounded-\[1\.35rem\] overflow-hidden flex flex-col group hover:border-cyan-500\/40 transition-all hover:bg-white\/5 sm:rounded-2xl/);
   assert.match(source, /fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full/);
   assert.match(source, /sm:bottom-8 sm:right-8/);
+});
+
+test("library page shows subtype options only after a supported top-level type is selected", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "d1",
+          name: "Rabbit Dual",
+          gender: "female",
+          typeCode: "dual_stimulation",
+          subtypeCode: "rabbit_dual",
+        }),
+      ]}
+      filterGender="female"
+      filterType="dual_stimulation"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /类型细分/);
+  assert.match(html, /兔耳双刺激/);
+  assert.match(html, /双头多点/);
+});
+
+test("library page shows male subtype options for masturbator products", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "m1",
+          gender: "male",
+          typeCode: "masturbator",
+          subtypeCode: "interactive_masturbator",
+          name: "Sync Cup",
+        }),
+      ]}
+      filterGender="male"
+      filterType="masturbator"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /类型细分/);
+  assert.match(html, /互动杯/);
+  assert.match(html, /震动杯/);
+});
+
+test("library page filters products by selected subtype code", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "d1",
+          name: "Rabbit Dual",
+          gender: "female",
+          typeCode: "dual_stimulation",
+          subtypeCode: "rabbit_dual",
+        }),
+        makeProduct({
+          id: "d2",
+          name: "Multi Head Dual",
+          gender: "female",
+          typeCode: "dual_stimulation",
+          subtypeCode: "multi_head_dual",
+        }),
+      ]}
+      filterGender="female"
+      filterType="dual_stimulation"
+      filterSubtype="rabbit_dual"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /Rabbit Dual/);
+  assert.doesNotMatch(html, /Multi Head Dual/);
+});
+
+test("library page filters unisex wearable remote products by subtype", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "u1",
+          name: "Panty One",
+          gender: "unisex",
+          typeCode: "wearable_remote",
+          subtypeCode: "panty_wearable",
+        }),
+        makeProduct({
+          id: "u2",
+          name: "Couple Link",
+          gender: "unisex",
+          typeCode: "wearable_remote",
+          subtypeCode: "dual_wearable_remote",
+        }),
+      ]}
+      filterGender="unisex"
+      filterType="wearable_remote"
+      filterSubtype="dual_wearable_remote"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /Couple Link/);
+  assert.doesNotMatch(html, /Panty One/);
 });

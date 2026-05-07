@@ -1,5 +1,11 @@
 import { Product } from "../data/mock";
 import { buildSafeDisplayName } from "./product-display-name.ts";
+import {
+  resolveLibraryAudienceGender,
+  resolveLibrarySubtypeCode,
+  resolveLibraryTypeCode,
+} from "./library-product-type-classifier.ts";
+import { getProductDisplayName } from "./product-display-name.ts";
 
 export type AppRoute =
   | "/"
@@ -11,7 +17,7 @@ export type AppRoute =
 
 export const APP_STATE_STORAGE_KEY = "inner-space-recommender-app-state-v1";
 export const PRODUCTS_CACHE_STORAGE_KEY =
-  "inner-space-recommender-products-cache-v1";
+  "inner-space-recommender-products-cache-v2";
 const KNOWLEDGE_NEBULA_PATH_PATTERN = /^\/knowledge(?:\/|$)/;
 
 type ProductsCachePayload = {
@@ -74,11 +80,45 @@ export function normalizeProductsPayload(payload: unknown): Product[] {
 
       const typedProduct = product as Product;
       const canonicalName = typedProduct.canonicalName || typedProduct.name;
+      const resolvedGender = resolveLibraryAudienceGender({
+        gender: typedProduct.gender,
+        physicalForm: typedProduct.physicalForm,
+        name: canonicalName,
+        rawDescription: typedProduct.rawDescription ?? null,
+        tags: typedProduct.tags ?? [],
+      });
+      const resolvedTypeCode = resolveLibraryTypeCode(typedProduct.typeCode, {
+        gender: resolvedGender,
+        physicalForm: typedProduct.physicalForm,
+        name: canonicalName,
+        rawDescription: typedProduct.rawDescription ?? null,
+        tags: typedProduct.tags ?? [],
+      });
+      const resolvedSubtypeCode = resolveLibrarySubtypeCode(
+        typedProduct.subtypeCode,
+        {
+          typeCode: resolvedTypeCode,
+          gender: resolvedGender,
+          physicalForm: typedProduct.physicalForm,
+          name: canonicalName,
+          rawDescription: typedProduct.rawDescription ?? null,
+          tags: typedProduct.tags ?? [],
+        },
+      );
+      const safeDisplayName =
+        typedProduct.safeDisplayName || buildSafeDisplayName(canonicalName);
       return {
         ...typedProduct,
         canonicalName,
-        safeDisplayName:
-          typedProduct.safeDisplayName || buildSafeDisplayName(canonicalName),
+        gender: resolvedGender,
+        displayName: getProductDisplayName({
+          name: canonicalName,
+          safeDisplayName,
+          displayName: typedProduct.displayName,
+        }),
+        typeCode: resolvedTypeCode,
+        subtypeCode: resolvedSubtypeCode,
+        safeDisplayName,
       };
     }) as Product[];
   }
