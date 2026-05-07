@@ -58,12 +58,83 @@ test("library page keeps primary filters visible and moves admin-like filters be
   assert.match(html, /价格区间/);
   assert.match(html, /静音阈值/);
   assert.match(html, /高级筛选/);
+  assert.match(html, /重置筛选/);
   assert.match(html, /library-filter-trigger/);
   assert.match(html, /library-filter-options/);
   assert.doesNotMatch(html, /<select/);
   assert.doesNotMatch(html, /品牌厂商/);
   assert.doesNotMatch(html, /出品地区/);
   assert.doesNotMatch(html, /材质偏好/);
+});
+
+test("library page keeps reset button disabled when filters are already at defaults", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[makeProduct()]}
+      filterGender="all"
+      filterType="all"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onResetFilters={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /重置筛选/);
+  assert.match(
+    html,
+    /<button[^>]*disabled=""[^>]*>\s*重置筛选\s*<\/button>/,
+  );
+});
+
+test("library page enables reset button once any filter is active", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[makeProduct()]}
+      filterGender="female"
+      filterType="all"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onResetFilters={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /重置筛选/);
+  assert.doesNotMatch(
+    html,
+    /<button[^>]*disabled=""[^>]*>\s*重置筛选\s*<\/button>/,
+  );
 });
 
 test("library page shows only male type options when male gender is selected", () => {

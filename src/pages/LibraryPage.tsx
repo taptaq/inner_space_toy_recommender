@@ -26,6 +26,7 @@ const libraryFilterOptionsClassName =
   "library-filter-options absolute left-0 right-0 top-[calc(100%+0.55rem)] z-30 origin-top rounded-2xl border border-cyan-400/18 bg-slate-950/96 p-2 shadow-[0_18px_60px_rgba(2,12,27,0.72)] backdrop-blur-xl transition-all duration-150";
 const libraryFilterOptionClassName =
   "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition-colors hover:bg-cyan-400/10 hover:text-white";
+export const DEFAULT_LIBRARY_FILTER_MAX_DB = 70;
 
 type LibraryFilterOption = {
   value: string;
@@ -159,6 +160,7 @@ export function LibraryPage({
   onFilterMaterialChange,
   onFilterPriceRangeChange,
   onFilterMaxDbChange,
+  onResetFilters = () => {},
   onBack,
 }: {
   allProducts: Product[];
@@ -181,6 +183,7 @@ export function LibraryPage({
   onFilterMaterialChange: (value: string) => void;
   onFilterPriceRangeChange: (value: string) => void;
   onFilterMaxDbChange: (value: number) => void;
+  onResetFilters?: () => void;
   onBack: () => void;
 }) {
   const products = Array.isArray(allProducts) ? allProducts : [];
@@ -205,6 +208,15 @@ export function LibraryPage({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const hasActiveFilters =
+    normalizedFilterGender !== "all" ||
+    effectiveFilterType !== "all" ||
+    effectiveFilterSubtype !== "all" ||
+    filterBrand !== "all" ||
+    filterOrigin !== "all" ||
+    filterMaterial !== "all" ||
+    filterPriceRange !== "all" ||
+    filterMaxDb !== DEFAULT_LIBRARY_FILTER_MAX_DB;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -260,6 +272,28 @@ export function LibraryPage({
         </div>
 
         <div className="glass-panel relative z-20 rounded-[1.35rem] p-4 mb-8 border border-white/5 bg-white/5 sm:rounded-2xl sm:p-6 sm:mb-10">
+          <div className="mb-4 flex flex-col gap-3 border-b border-white/8 pb-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:pb-5">
+            <div>
+              <h2 className="text-sm font-medium tracking-[0.18em] text-cyan-50">
+                装备筛选
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                快速切回默认条件，重新浏览全量装备。
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!hasActiveFilters}
+              onClick={() => {
+                setIsAdvancedFiltersOpen(false);
+                onResetFilters();
+              }}
+              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-xs tracking-[0.18em] text-slate-300 transition-all hover:border-cyan-300/30 hover:bg-cyan-400/10 hover:text-cyan-100 disabled:cursor-not-allowed disabled:border-white/6 disabled:bg-white/[0.02] disabled:text-slate-600"
+            >
+              重置筛选
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
             <div className="space-y-2">
               <label className={libraryFilterLabelClassName}>
@@ -339,7 +373,7 @@ export function LibraryPage({
               <input
                 type="range"
                 min="30"
-                max="70"
+                max={DEFAULT_LIBRARY_FILTER_MAX_DB}
                 step="5"
                 value={filterMaxDb}
                 onChange={(e) => onFilterMaxDbChange(parseInt(e.target.value))}

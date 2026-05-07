@@ -78,7 +78,10 @@ import {
   ResultsPage,
   type ResultEditableCondition,
 } from "./pages/ResultsPage";
-import { LibraryPage } from "./pages/LibraryPage";
+import {
+  DEFAULT_LIBRARY_FILTER_MAX_DB,
+  LibraryPage,
+} from "./pages/LibraryPage";
 import { KnowledgeNebulaPage } from "./pages/KnowledgeNebulaPage";
 import { ProfilesPage } from "./pages/ProfilesPage";
 import {
@@ -653,7 +656,7 @@ export default function App() {
     persistedState.filterOrigin ?? "all",
   );
   const [filterMaxDb, setFilterMaxDb] = useState<number>(
-    persistedState.filterMaxDb ?? 100,
+    persistedState.filterMaxDb ?? DEFAULT_LIBRARY_FILTER_MAX_DB,
   );
   const [filterMaterial, setFilterMaterial] = useState<string>(
     persistedState.filterMaterial ?? "all",
@@ -1936,6 +1939,16 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
         onFilterMaterialChange={setFilterMaterial}
         onFilterPriceRangeChange={setFilterPriceRange}
         onFilterMaxDbChange={setFilterMaxDb}
+        onResetFilters={() => {
+          setFilterGender("all");
+          setFilterType("all");
+          setFilterSubtype("all");
+          setFilterBrand("all");
+          setFilterOrigin("all");
+          setFilterMaterial("all");
+          setFilterPriceRange("all");
+          setFilterMaxDb(DEFAULT_LIBRARY_FILTER_MAX_DB);
+        }}
         onBack={() => navigateTo(getReturnRoute())}
       />
     );
