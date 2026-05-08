@@ -19,7 +19,16 @@ function formatWaterproof(waterproof: number | null | undefined) {
   return waterproof == null ? "缺失" : `IPX${waterproof}`;
 }
 
-function formatPhysicalForm(physicalForm: RankedProduct["physicalForm"]) {
+export function formatPhysicalFormLabel(
+  physicalForm: RankedProduct["physicalForm"],
+  audienceGender?: RankedProduct["gender"] | "unisex",
+) {
+  if (audienceGender === "male") {
+    if (physicalForm === "external") return "手动掌控";
+    if (physicalForm === "internal") return "自动包裹";
+    return "复合玩法";
+  }
+
   if (physicalForm === "external") return "外部刺激";
   if (physicalForm === "internal") return "入体体验";
   return "复合刺激";
@@ -40,6 +49,7 @@ function formatDisguise(appearance: RankedProduct["appearance"]) {
 
 export function buildResultComparisonRows(
   products: RankedProduct[],
+  audienceGender?: RankedProduct["gender"] | "unisex",
 ): ResultComparisonRow[] {
   const comparedProducts = products.slice(0, 3);
 
@@ -62,7 +72,9 @@ export function buildResultComparisonRows(
     {
       id: "physical-form",
       label: "刺激路线",
-      values: comparedProducts.map((product) => formatPhysicalForm(product.physicalForm)),
+      values: comparedProducts.map((product) =>
+        formatPhysicalFormLabel(product.physicalForm, audienceGender),
+      ),
     },
     {
       id: "beginner-fit",

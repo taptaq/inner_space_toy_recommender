@@ -380,7 +380,7 @@ export function ResultsPage({
   const resultTags = dedupeDisplayTags(answers.tags);
   const resultLeadCopy = getResultLeadCopy(answers);
   const comparisonProducts = topProducts.slice(0, 3);
-  const comparisonRows = buildResultComparisonRows(comparisonProducts);
+  const comparisonRows = buildResultComparisonRows(comparisonProducts, answers.gender);
   const comparisonTeaser = buildResultComparisonTeaser(
     comparisonRows,
     comparisonProducts.length,

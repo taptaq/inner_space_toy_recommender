@@ -5,6 +5,7 @@ import {
   getBranchShoppingGuidanceLead,
   getBranchShoppingPreferenceHints,
 } from "./quiz-branching.js";
+import { formatPhysicalFormLabel } from "./result-comparison.js";
 
 export type RecommendationAnswers = Pick<
   AnswerState,
@@ -484,7 +485,7 @@ export function buildResultRouteSummary(
   product: Pick<RecommendationRankedProduct, "physicalForm" | "motorType" | "maxDb" | "appearance">,
   answers: Pick<
     RecommendationAnswers,
-    "tags" | "appearance" | "physicalForm" | "experienceLevel" | "maxDb"
+    "tags" | "appearance" | "physicalForm" | "experienceLevel" | "maxDb" | "gender"
   >,
 ): ResultRouteSummary {
   const routeParts: string[] = [];
@@ -501,11 +502,10 @@ export function buildResultRouteSummary(
     tags.some((tag) => /收纳|隐蔽|伪装/.test(tag));
 
   routeParts.push(
-    product.physicalForm === "internal"
-      ? "入体"
-      : product.physicalForm === "composite"
-        ? "复合"
-        : "外部",
+    formatPhysicalFormLabel(product.physicalForm, answers.gender)
+      .replace("体验", "")
+      .replace("刺激", "")
+      .trim(),
   );
   routeParts.push(product.motorType === "strong" ? "强反馈" : "温和探索");
   if (isQuietSensitive) routeParts.push("低打扰");

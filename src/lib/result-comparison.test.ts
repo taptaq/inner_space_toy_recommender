@@ -45,7 +45,7 @@ test("buildResultComparisonRows summarizes the top three decision dimensions", (
       motorType: "strong",
       waterproof: 7,
     }),
-  ]);
+  ], "female");
 
   assert.deepEqual(
     rows.map((row) => row.label),
@@ -57,12 +57,25 @@ test("buildResultComparisonRows summarizes the top three decision dimensions", (
   assert.deepEqual(rows[4].values, ["更友好", "需适应", "好打理"]);
 });
 
+test("buildResultComparisonRows uses male-facing route labels for male recommendations", () => {
+  const rows = buildResultComparisonRows(
+    [
+      makeProduct({ id: "p1", gender: "male", physicalForm: "external" }),
+      makeProduct({ id: "p2", gender: "male", physicalForm: "internal" }),
+      makeProduct({ id: "p3", gender: "male", physicalForm: "composite" }),
+    ],
+    "male",
+  );
+
+  assert.deepEqual(rows[3].values, ["手动掌控", "自动包裹", "复合玩法"]);
+});
+
 test("buildResultComparisonTeaser summarizes hidden comparison dimensions", () => {
   const rows = buildResultComparisonRows([
     makeProduct({ id: "p1", price: 299 }),
     makeProduct({ id: "p2", price: 129 }),
     makeProduct({ id: "p3", price: 399 }),
-  ]);
+  ], "female");
 
   const teaser = buildResultComparisonTeaser(rows, 3);
 

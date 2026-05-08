@@ -8,6 +8,7 @@ import {
   buildBackupDirectionTeaser,
   buildBackupCandidates,
   buildResultConfidenceSummary,
+  buildResultRouteSummary,
   buildLocalBackupReason,
   buildLocalShoppingGuidance,
   buildResultAvoidanceTips,
@@ -213,6 +214,29 @@ test("buildResultConfidenceSummary explains when the quiz is using safer default
   assert.ok(
     result.caveats.some((item) => item.includes("你还有几项偏好暂未确定")),
   );
+});
+
+test("buildResultRouteSummary uses male-facing route wording for male answers", () => {
+  const result = buildResultRouteSummary(
+    makeProduct({
+      id: "p-route",
+      name: "Male Auto Pick",
+      score: 88,
+      price: 199,
+      physicalForm: "internal",
+      motorType: "strong",
+      gender: "male",
+    }),
+    {
+      gender: "male",
+      tags: ["男性向"],
+      physicalForm: "internal",
+      appearance: "normal",
+      maxDb: 55,
+    },
+  );
+
+  assert.equal(result.routeLabel, "自动包裹 / 强反馈路线");
 });
 
 test("buildResultAvoidanceTips highlights high-noise and high-intensity routes for sensitive uncertain answers", () => {

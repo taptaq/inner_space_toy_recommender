@@ -1883,7 +1883,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4 sm:p-6 md:p-8">
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 w-full max-w-md">
+        <div className="relative z-10 w-full">
           <MatchingPage
             pageVariants={pageVariants}
             mode="loading"
