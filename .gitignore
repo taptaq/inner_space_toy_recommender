@@ -8,4 +8,6 @@ coverage/
 !.env.example
 src/data/*
 !src/data/knowledge-nebula.ts
+!src/data/mock.ts
+!src/data/mock.test.ts
 .worktrees/
