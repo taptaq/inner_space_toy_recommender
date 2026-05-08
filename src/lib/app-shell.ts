@@ -1,4 +1,4 @@
-import { Product } from "../data/mock";
+import { Product } from "../data/mock.ts";
 import { buildSafeDisplayName } from "./product-display-name.ts";
 import {
   resolveLibraryAudienceGender,

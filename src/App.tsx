@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
 import type { Session } from "@supabase/supabase-js";
-import { getActiveQuestions, AnswerState, Product, Question } from "./data/mock";
+import { getActiveQuestions, AnswerState, Product, Question } from "./data/mock.ts";
 import {
   AppRoute,
   APP_STATE_STORAGE_KEY,

@@ -1,4 +1,4 @@
-import type { AnswerState, Product } from "../data/mock";
+import type { AnswerState, Product } from "../data/mock.ts";
 import {
   buildBranchFallbackReason,
   buildBranchBackupReason,

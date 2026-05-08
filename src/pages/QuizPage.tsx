@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { ArrowLeft, CircleDashed, Hexagon, Radar, Triangle } from "lucide-react";
-import type { AnswerState, Question } from "../data/mock";
+import type { AnswerState, Question } from "../data/mock.ts";
 import { usePagePerformanceState } from "../lib/page-performance.ts";
 
 export function QuizPage({
