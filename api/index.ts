@@ -1,18 +1,21 @@
 import { app, ensureServerReady } from "../src/server/app.ts";
 
-function restoreOriginalApiUrl(request: unknown) {
-  const req = request as { url?: string };
-  const currentUrl = req.url || "/api";
+export function normalizeVercelApiRequestUrl(currentUrl: string) {
   const parsedUrl = new URL(currentUrl, "http://localhost");
   const path = parsedUrl.searchParams.get("path");
 
   if (!path) {
-    return;
+    return currentUrl;
   }
 
   parsedUrl.searchParams.delete("path");
   const search = parsedUrl.searchParams.toString();
-  req.url = `/api/${path}${search ? `?${search}` : ""}`;
+  return `/api/${path}${search ? `?${search}` : ""}`;
+}
+
+function restoreOriginalApiUrl(request: unknown) {
+  const req = request as { url?: string };
+  req.url = normalizeVercelApiRequestUrl(req.url || "/api");
 }
 
 export default async function handler(req: unknown, res: unknown) {
