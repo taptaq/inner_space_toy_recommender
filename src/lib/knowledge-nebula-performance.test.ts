@@ -117,6 +117,15 @@ test("floating knowledge fragments are capped by viewport and visibility budgets
       isVisible: true,
       prefersReducedMotion: false,
     }),
+    6,
+  );
+  assert.equal(
+    getFloatingKnowledgeItemBudget({
+      variant: "matching",
+      viewport: "mobile",
+      isVisible: true,
+      prefersReducedMotion: true,
+    }),
     4,
   );
   assert.equal(

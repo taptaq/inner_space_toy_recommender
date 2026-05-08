@@ -146,6 +146,10 @@ function getProductHref(
   return product.sourceUrl || product.link || undefined;
 }
 
+function getProductBrandLabel(product: Pick<RankedProduct, "brand">) {
+  return String(product.brand || "").trim() || "探索品牌";
+}
+
 function renderClickableHint(label = "点击查看详情") {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[10px] text-cyan-100/85 transition-colors group-hover:border-cyan-300/35 group-hover:bg-cyan-300/12 group-hover:text-cyan-50">
@@ -433,7 +437,7 @@ export function ResultsPage({
       initial="initial"
       animate="in"
       exit="out"
-      className="results-report-shell relative isolate w-full space-y-6 overflow-x-hidden px-1 pb-4"
+      className="results-report-shell relative isolate w-full space-y-6 overflow-x-hidden px-3 pt-3 pb-4 sm:px-4 sm:pt-4"
     >
       <div className="pointer-events-none absolute inset-x-[-12vw] top-[-8rem] -z-10 h-[30rem] bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.12),transparent_42%),radial-gradient(circle_at_12%_48%,rgba(59,130,246,0.09),transparent_34%),radial-gradient(circle_at_88%_58%,rgba(99,102,241,0.11),transparent_36%)]" />
       <div className="results-report-grid pointer-events-none absolute inset-0 -z-10 opacity-45" />
@@ -466,9 +470,9 @@ export function ResultsPage({
       </div>
 
       {topProducts[0] && (
-        <section className="results-report-panel relative z-10 overflow-hidden rounded-[1.75rem] border border-cyan-200/14 bg-slate-950/56 p-4 shadow-[0_24px_90px_rgba(8,47,73,0.2)] sm:p-5">
+        <section className="results-report-panel relative z-10 overflow-hidden rounded-[1.75rem] border border-cyan-200/14 bg-slate-950/56 p-5 shadow-[0_24px_90px_rgba(8,47,73,0.2)] sm:p-6">
           <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/45 to-transparent" />
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch">
             <div className="relative min-h-56 overflow-hidden rounded-3xl border border-white/8 bg-black/20">
               {primaryProductHref ? (
                 <>
@@ -485,6 +489,9 @@ export function ResultsPage({
                       <span className="mb-2 inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/12 px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-cyan-100">
                         主推荐方案
                       </span>
+                      <p className="mb-1 text-[11px] text-cyan-200/72">
+                        {getProductBrandLabel(topProducts[0])}
+                      </p>
                       <h3 className="break-words text-xl font-medium leading-snug text-white transition-colors group-hover:text-cyan-50">
                         {primaryProductDisplayName}
                       </h3>
@@ -513,6 +520,9 @@ export function ResultsPage({
                       <span className="mb-2 inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/12 px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-cyan-100">
                         主推荐方案
                       </span>
+                      <p className="mb-1 text-[11px] text-cyan-200/72">
+                        {getProductBrandLabel(topProducts[0])}
+                      </p>
                       <h3 className="break-words text-xl font-medium leading-snug text-white">
                         {primaryProductDisplayName}
                       </h3>

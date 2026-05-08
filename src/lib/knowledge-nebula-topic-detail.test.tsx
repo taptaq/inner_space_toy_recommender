@@ -217,6 +217,13 @@ test("topic detail nodes render knowledge shards as cockpit screens", () => {
   assert.match(source, /high-heat/);
   assert.match(source, /widthBoost/);
   assert.match(source, /heightBoost/);
+  assert.match(source, /desktop:\s*\[/);
+  assert.match(source, /top: "22%"/);
+  assert.match(source, /top: "25%"/);
+  assert.match(source, /top: "34%"/);
+  assert.match(source, /top: "50%"/);
+  assert.match(source, /top: "49%"/);
+  assert.match(source, /top: "59%"/);
   assert.match(source, /mobile:\s*\[/);
   assert.match(source, /width: "min\(16\.8rem, 68vw\)"/);
   assert.match(source, /top: "20%"/);
@@ -234,7 +241,6 @@ test("topic detail nodes render knowledge shards as cockpit screens", () => {
   assert.doesNotMatch(source, /heatScale/);
   assert.match(source, /驾驶舱/);
   assert.doesNotMatch(source, /<span>\{anchor\.id\}<\/span>/);
-  assert.doesNotMatch(source, /top: "59%"/);
   assert.doesNotMatch(source, /读取碎片/);
   assert.doesNotMatch(source, /border-rose/);
   assert.doesNotMatch(source, /border-amber/);

@@ -29,7 +29,7 @@ const SCREEN_SLOT_STYLES = {
   desktop: [
     {
       left: "9%",
-      top: "24%",
+      top: "22%",
       width: "min(22rem, 25vw)",
       hotWidth: "min(26rem, 29vw)",
       height: "clamp(8rem, 13.8vh, 9.3rem)",
@@ -39,7 +39,7 @@ const SCREEN_SLOT_STYLES = {
     },
     {
       left: "68%",
-      top: "27%",
+      top: "25%",
       width: "min(21rem, 24vw)",
       hotWidth: "min(25rem, 28vw)",
       height: "clamp(7.9rem, 13.5vh, 9.1rem)",
@@ -49,7 +49,7 @@ const SCREEN_SLOT_STYLES = {
     },
     {
       left: "36%",
-      top: "36%",
+      top: "34%",
       width: "min(21rem, 24vw)",
       hotWidth: "min(25rem, 28vw)",
       height: "clamp(7.8rem, 13.4vh, 9rem)",
@@ -59,7 +59,7 @@ const SCREEN_SLOT_STYLES = {
     },
     {
       left: "8%",
-      top: "53%",
+      top: "50%",
       width: "min(18.5rem, 21vw)",
       hotWidth: "min(22rem, 24vw)",
       height: "clamp(7.5rem, 12.8vh, 8.6rem)",
@@ -69,7 +69,7 @@ const SCREEN_SLOT_STYLES = {
     },
     {
       left: "69%",
-      top: "52%",
+      top: "49%",
       width: "min(19rem, 21.5vw)",
       hotWidth: "min(22.5rem, 25vw)",
       height: "clamp(7.6rem, 12.8vh, 8.7rem)",
@@ -79,7 +79,7 @@ const SCREEN_SLOT_STYLES = {
     },
     {
       left: "42%",
-      top: "63%",
+      top: "59%",
       width: "min(18rem, 20vw)",
       hotWidth: "min(21.5rem, 23.5vw)",
       height: "clamp(7.2rem, 12.2vh, 8.3rem)",

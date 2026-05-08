@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { RankedProduct } from "../lib/app-shell.ts";
@@ -81,6 +83,22 @@ test("results page shows confidence, fit reasons, and caveats for the primary re
   assert.match(html, /防水表现达到 IPX7/);
 });
 
+test("results page gives the core result shell roomier horizontal and panel padding", () => {
+  const source = fs.readFileSync(
+    path.resolve(process.cwd(), "src/pages/ResultsPage.tsx"),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /results-report-shell relative isolate w-full space-y-6 overflow-x-hidden px-3 pt-3 pb-4 sm:px-4 sm:pt-4/,
+  );
+  assert.match(
+    source,
+    /results-report-panel relative z-10 overflow-hidden rounded-\[1\.75rem\] border border-cyan-200\/14 bg-slate-950\/56 p-5 shadow-\[0_24px_90px_rgba\(8,47,73,0\.2\)\] sm:p-6/,
+  );
+});
+
 test("results page exposes a detail link for the primary recommendation when a product url is available", () => {
   const html = renderToStaticMarkup(
     <ResultsPage
@@ -112,6 +130,46 @@ test("results page exposes a detail link for the primary recommendation when a p
 
   assert.match(html, /href="https:\/\/example.com\/primary-pick"/);
   assert.match(html, /点击查看详情/);
+});
+
+test("results page shows the primary recommendation brand above the product name", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[
+        makeProduct({
+          id: "p1",
+          name: "Primary Pick",
+          brand: "We-Vibe",
+        }),
+      ]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /主推荐方案/);
+  assert.match(
+    html,
+    /主推荐方案<\/span><p[^>]*>We-Vibe<\/p><h3[^>]*>Primary Pick<\/h3>/,
+  );
+  assert.match(
+    html,
+    /<p[^>]*>We-Vibe<\/p><h3[^>]*>Primary Pick<\/h3>/,
+  );
 });
 
 test("results page makes the primary image area and title share the same detail link hotspot", () => {

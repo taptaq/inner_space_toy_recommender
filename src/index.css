@@ -1026,16 +1026,24 @@ textarea:disabled {
     animation: none !important;
   }
 
+  .radar-container {
+    width: 214px;
+    height: 214px;
+    margin-inline: auto;
+  }
+
   .radar-sweep {
-    animation: none !important;
+    animation: radar-spin 3.6s linear infinite;
+    opacity: 0.78;
   }
 
   .radar-container::before {
-    display: none;
+    opacity: 0.42;
+    transform: translate(-50%, -50%) scale(0.58);
   }
 
   .tag-flash {
-    animation: none !important;
+    animation: flash 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   .quiz-starfield::before {
@@ -1054,93 +1062,99 @@ textarea:disabled {
     display: block;
   }
 
+  .floating-knowledge-field {
+    inset: 0 auto 0 50%;
+    width: min(calc(100% - 1.25rem), 25rem);
+    transform: translateX(-50%);
+  }
+
   .floating-knowledge-field-matching {
-    width: 100%;
-    transform: none;
-    left: 0;
+    width: min(calc(100% - 1.25rem), 25rem);
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .floating-knowledge-capsule {
-    max-width: min(158px, 41vw);
-    min-width: 112px;
+    max-width: min(150px, 40vw);
+    min-width: 108px;
     padding: 6px 8px;
     font-size: 10px;
-    opacity: 0.52;
+    opacity: 0.58;
   }
 
   .floating-knowledge-shard-2,
   .floating-knowledge-shard-4 {
-    min-width: 138px;
+    min-width: 132px;
   }
 
   .floating-knowledge-slot-loading-1 {
     top: 8%;
-    left: 3%;
+    left: 7%;
   }
 
   .floating-knowledge-slot-loading-2 {
-    top: 12%;
-    right: 3%;
+    top: 10%;
+    right: 7%;
   }
 
   .floating-knowledge-slot-loading-3 {
     top: 32%;
-    left: 2%;
+    left: 4%;
   }
 
   .floating-knowledge-slot-loading-4 {
-    top: 53%;
-    right: 2%;
+    top: 34%;
+    right: 4%;
   }
 
   .floating-knowledge-slot-loading-5 {
-    bottom: 10%;
-    left: 5%;
+    bottom: 15%;
+    left: 9%;
   }
 
   .floating-knowledge-slot-loading-6 {
-    right: 5%;
-    bottom: 12%;
+    right: 9%;
+    bottom: 15%;
   }
 
   .floating-knowledge-slot-matching-1 {
-    top: 6%;
-    left: 5%;
+    top: 8%;
+    left: 8%;
   }
 
   .floating-knowledge-slot-matching-2 {
-    top: 12%;
-    right: 5%;
+    top: 8%;
+    right: 8%;
   }
 
   .floating-knowledge-slot-matching-3 {
-    top: 31%;
+    top: 33%;
     left: 4%;
   }
 
   .floating-knowledge-slot-matching-4 {
-    top: 50%;
+    top: 33%;
     right: 4%;
   }
 
   .floating-knowledge-slot-matching-5 {
-    bottom: 9%;
-    left: 7%;
+    bottom: 14%;
+    left: 9%;
   }
 
   .floating-knowledge-slot-matching-6 {
-    right: 7%;
-    bottom: 11%;
+    right: 9%;
+    bottom: 14%;
   }
 
   .floating-knowledge-slot-matching-7 {
-    top: 20%;
-    left: 18.5%;
+    top: 19%;
+    left: 18%;
   }
 
   .floating-knowledge-slot-matching-8 {
-    right: 18.5%;
-    bottom: 23%;
+    right: 18%;
+    bottom: 25%;
   }
 }
 

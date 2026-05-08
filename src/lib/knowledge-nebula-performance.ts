@@ -15,7 +15,7 @@ export const KNOWLEDGE_NEBULA_PERFORMANCE_BUDGET: KnowledgeNebulaPerformanceBudg
   maxStarCountDesktop: 760,
   maxStarCountMobile: 420,
   maxFloatingKnowledgeDesktop: 14,
-  maxFloatingKnowledgeMobile: 4,
+  maxFloatingKnowledgeMobile: 6,
 };
 
 export type PerformanceViewport = "desktop" | "mobile";

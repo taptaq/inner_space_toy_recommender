@@ -39,24 +39,24 @@ test("matching page keeps the answer-driven matching state", () => {
   assert.match(html, /新手友好/);
 });
 
-test("matching page disables ornamental radar spin for small screens", () => {
+test("matching page keeps lightweight ornamental motion for small screens", () => {
   const source = fs.readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
 
   assert.match(
     source,
-    /@media \(max-width: 640px\) \{[\s\S]*\.radar-sweep\s*\{[\s\S]*animation:\s*none\s*!important;/,
+    /@media \(max-width: 640px\) \{[\s\S]*\.radar-sweep\s*\{[\s\S]*animation:\s*radar-spin\s+3\.6s\s+linear\s+infinite;/,
   );
   assert.match(
     source,
-    /@media \(max-width: 640px\) \{[\s\S]*\.radar-container::before\s*\{[\s\S]*display:\s*none;/,
+    /@media \(max-width: 640px\) \{[\s\S]*\.radar-container::before\s*\{[\s\S]*opacity:\s*0\.42;/,
   );
   assert.match(
     source,
-    /@media \(max-width: 640px\) \{[\s\S]*\.tag-flash\s*\{[\s\S]*animation:\s*none\s*!important;/,
+    /@media \(max-width: 640px\) \{[\s\S]*\.tag-flash\s*\{[\s\S]*animation:\s*flash\s+2\.6s\s+cubic-bezier\(0\.4,\s*0,\s*0\.6,\s*1\)\s+infinite;/,
   );
 });
 
-test("matching page keeps the mobile loading shell tighter while leaving more room for fragments", () => {
+test("matching page keeps the mobile loading shell tighter while centering the fragment field", () => {
   const source = fs.readFileSync(
     path.resolve(process.cwd(), "src/pages/MatchingPage.tsx"),
     "utf8",
@@ -75,8 +75,14 @@ test("matching page keeps the mobile loading shell tighter while leaving more ro
   assert.match(source, /sm:min-h-\[11rem\] sm:max-w-md sm:space-y-4/);
   assert.match(
     cssSource,
-    /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-capsule\s*\{[\s\S]*max-width:\s*min\(158px,\s*41vw\);[\s\S]*min-width:\s*112px;[\s\S]*padding:\s*6px 8px;[\s\S]*opacity:\s*0\.52;/,
+    /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-field\s*\{[\s\S]*inset:\s*0 auto 0 50%;[\s\S]*width:\s*min\(calc\(100% - 1\.25rem\),\s*25rem\);[\s\S]*transform:\s*translateX\(-50%\);/,
   );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-capsule\s*\{[\s\S]*max-width:\s*min\(150px,\s*40vw\);[\s\S]*min-width:\s*108px;[\s\S]*padding:\s*6px 8px;[\s\S]*opacity:\s*0\.58;/,
+  );
+  assert.match(cssSource, /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-slot-matching-5\s*\{/);
+  assert.match(cssSource, /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-slot-matching-6\s*\{/);
   assert.match(cssSource, /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-slot-matching-7\s*\{/);
   assert.match(cssSource, /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-slot-matching-8\s*\{/);
 });
