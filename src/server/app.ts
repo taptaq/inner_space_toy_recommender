@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import pg from "pg";
+import type { RequestHandler } from "express";
 
 import { buildSafeDisplayName } from "../lib/product-display-name.ts";
 import {
@@ -22,6 +23,10 @@ import {
   ensureKnowledgeNebulaSchema,
 } from "./knowledge-nebula-store.ts";
 import { ensureRecommenderItemsSchema } from "./recommender-items-schema.ts";
+import {
+  createLazyRouteInitializer,
+  getRequiredServerEnv,
+} from "./server-runtime.ts";
 import { createSupabaseAccessTokenVerifier } from "./user-auth.ts";
 import { createSaveUserFeedbackHandler } from "./user-feedback-route.ts";
 import {
@@ -70,7 +75,7 @@ const supabaseAccessTokenVerifier = createSupabaseAccessTokenVerifier({
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 });
 
-let initializationPromise: Promise<void> | null = null;
+const ensureRouteInitialized = createLazyRouteInitializer();
 
 app.use(express.json({ limit: "1mb" }));
 
@@ -78,10 +83,58 @@ pool.on("error", (error) => {
   console.error("💥 [Server/DB] 数据库连接池发生灾难性错误:", error);
 });
 
+function ensureDatabaseConfigured() {
+  getRequiredServerEnv("DATABASE_URL");
+}
+
+function withRouteInitialization(
+  ensureReady: () => Promise<void>,
+  handler: RequestHandler,
+): RequestHandler {
+  return async (req, res, next) => {
+    try {
+      await ensureReady();
+      await handler(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+function ensureLibraryRouteReady() {
+  return ensureRouteInitialized("library", async () => {
+    ensureDatabaseConfigured();
+    await ensureRecommenderItemsSchema(pool);
+  });
+}
+
+function ensureKnowledgeRouteReady() {
+  return ensureRouteInitialized("knowledge", async () => {
+    ensureDatabaseConfigured();
+    await ensureKnowledgeNebulaSchema(pool);
+  });
+}
+
+function ensureFeedbackRouteReady() {
+  return ensureRouteInitialized("feedback", async () => {
+    ensureDatabaseConfigured();
+    await ensureUserFeedbackSchema(pool);
+  });
+}
+
+function ensureUserRecommendationRouteReady() {
+  return ensureRouteInitialized("user-recommendation", async () => {
+    ensureDatabaseConfigured();
+    await ensureUserRecommendationSchema(pool);
+  });
+}
+
 app.get("/api/recommender/toys", async (_req, res) => {
   console.log("📡 [Server] 收到全息库同步指令...");
 
   try {
+    await ensureLibraryRouteReady();
+
     const result = await pool.query(`
       SELECT
         t.id, t.name, t.safe_display_name, t.price, t.max_db, t.waterproof,
@@ -221,63 +274,84 @@ app.post(
 );
 app.get(
   "/api/knowledge/topics/:slug",
-  createKnowledgeNebulaTopicHandler({ store: knowledgeNebulaStore }),
+  withRouteInitialization(
+    ensureKnowledgeRouteReady,
+    createKnowledgeNebulaTopicHandler({ store: knowledgeNebulaStore }),
+  ),
 );
 app.post(
   "/api/knowledge/topics/:slug/cards",
-  createKnowledgeNebulaCreateCardHandler({ store: knowledgeNebulaStore }),
+  withRouteInitialization(
+    ensureKnowledgeRouteReady,
+    createKnowledgeNebulaCreateCardHandler({ store: knowledgeNebulaStore }),
+  ),
 );
 app.patch(
   "/api/knowledge/cards/:cardId",
-  createKnowledgeNebulaUpdateCardHandler({ store: knowledgeNebulaStore }),
+  withRouteInitialization(
+    ensureKnowledgeRouteReady,
+    createKnowledgeNebulaUpdateCardHandler({ store: knowledgeNebulaStore }),
+  ),
 );
 app.post(
   "/api/knowledge/cards/:cardId/view",
-  createKnowledgeNebulaRecordCardViewHandler({ store: knowledgeNebulaStore }),
+  withRouteInitialization(
+    ensureKnowledgeRouteReady,
+    createKnowledgeNebulaRecordCardViewHandler({ store: knowledgeNebulaStore }),
+  ),
 );
 app.post(
   "/api/feedback",
-  createSaveUserFeedbackHandler({
-    store: userFeedbackStore,
-  }),
+  withRouteInitialization(
+    ensureFeedbackRouteReady,
+    createSaveUserFeedbackHandler({
+      store: userFeedbackStore,
+    }),
+  ),
 );
 app.post(
   "/api/user/recommendation-profiles",
-  createSaveUserRecommendationProfileHandler({
-    encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
-    jwtSecret: process.env.JWT_SECRET,
-    authVerifier: supabaseAccessTokenVerifier,
-    store: userRecommendationStore,
-  }),
+  withRouteInitialization(
+    ensureUserRecommendationRouteReady,
+    createSaveUserRecommendationProfileHandler({
+      encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
+      jwtSecret: process.env.JWT_SECRET,
+      authVerifier: supabaseAccessTokenVerifier,
+      store: userRecommendationStore,
+    }),
+  ),
 );
 app.get(
   "/api/user/recommendation-profiles",
-  createListUserRecommendationProfilesHandler({
-    encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
-    jwtSecret: process.env.JWT_SECRET,
-    authVerifier: supabaseAccessTokenVerifier,
-    store: userRecommendationStore,
-  }),
+  withRouteInitialization(
+    ensureUserRecommendationRouteReady,
+    createListUserRecommendationProfilesHandler({
+      encryptionKey: process.env.PRIVATE_DATA_ENCRYPTION_KEY,
+      jwtSecret: process.env.JWT_SECRET,
+      authVerifier: supabaseAccessTokenVerifier,
+      store: userRecommendationStore,
+    }),
+  ),
 );
 
 export function ensureServerReady() {
-  if (!initializationPromise) {
-    initializationPromise = Promise.all([
-      ensureRecommenderItemsSchema(pool),
-      ensureKnowledgeNebulaSchema(pool),
-      ensureUserFeedbackSchema(pool),
-      ensureUserRecommendationSchema(pool),
-    ])
-      .then(() => {
-        console.log("🪐 [Server] 后端初始化完成");
-      })
-      .catch((error) => {
-        initializationPromise = null;
-        throw error;
-      });
+  return Promise.resolve().then(() => {
+    ensureDatabaseConfigured();
+    console.log("🪐 [Server] 后端运行时配置已就绪");
+  });
+}
+
+app.use(((error, _req, res, _next) => {
+  console.error("💥 [Server] 路由初始化或处理中断:", error);
+
+  if (res.headersSent) {
+    return;
   }
 
-  return initializationPromise;
-}
+  res.status(500).json({
+    error: "Server request failed",
+    details: error instanceof Error ? error.message : String(error),
+  });
+}) as RequestHandler);
 
 export { app, pool };
