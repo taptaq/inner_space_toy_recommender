@@ -1,10 +1,10 @@
-import type { AnswerState, Product } from "../data/mock.ts";
+import type { AnswerState, Product } from "../data/mock.js";
 import {
   buildBranchFallbackReason,
   buildBranchBackupReason,
   getBranchShoppingGuidanceLead,
   getBranchShoppingPreferenceHints,
-} from "./quiz-branching.ts";
+} from "./quiz-branching.js";
 
 export type RecommendationAnswers = Pick<
   AnswerState,

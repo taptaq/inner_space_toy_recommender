@@ -2,13 +2,13 @@ import type {
   BackupCandidate,
   RecommendationAnswers,
   RecommendationRankedProduct,
-} from "./recommendation-results.ts";
-import type { AppAiProvider } from "./app-ai-chain.ts";
+} from "./recommendation-results.js";
+import type { AppAiProvider } from "./app-ai-chain.js";
 import {
   buildBackupCandidates,
   buildLocalBackupReason,
-} from "./recommendation-results.ts";
-import { getResultModelOption } from "./result-models.ts";
+} from "./recommendation-results.js";
+import { getResultModelOption } from "./result-models.js";
 
 export type ResultRecalibrationCandidate = Pick<
   RecommendationRankedProduct,

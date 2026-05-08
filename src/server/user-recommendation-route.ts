@@ -4,12 +4,12 @@ import {
   decryptPrivateJson,
   encryptPrivateJson,
   type EncryptedPrivateJson,
-} from "./user-recommendation-privacy.ts";
-import type { UserRecommendationStore } from "./user-recommendation-store.ts";
+} from "./user-recommendation-privacy.js";
+import type { UserRecommendationStore } from "./user-recommendation-store.js";
 import {
   resolveBearerUserId,
   type AccessTokenVerifier,
-} from "./user-auth.ts";
+} from "./user-auth.js";
 
 function normalizeString(value: unknown, fallback: string) {
   const normalized = typeof value === "string" ? value.trim() : "";

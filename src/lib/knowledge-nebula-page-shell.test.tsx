@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { KNOWLEDGE_NEBULA_TOPICS } from "../data/knowledge-nebula.ts";
+import { KNOWLEDGE_NEBULA_TOPICS } from "../data/knowledge-nebula.js";
 import { KnowledgeNebulaPage } from "../pages/KnowledgeNebulaPage.tsx";
 
 const scienceTopic = KNOWLEDGE_NEBULA_TOPICS[0];

@@ -1,8 +1,8 @@
-import type { AnswerState } from "../data/mock.ts";
-import type { RankedProduct } from "./app-shell.ts";
-import { dedupeDisplayTags } from "./display-tags.ts";
-import { getProductDisplayName } from "./product-display-name.ts";
-import type { BackupCandidate } from "./recommendation-results.ts";
+import type { AnswerState } from "../data/mock.js";
+import type { RankedProduct } from "./app-shell.js";
+import { dedupeDisplayTags } from "./display-tags.js";
+import { getProductDisplayName } from "./product-display-name.js";
+import type { BackupCandidate } from "./recommendation-results.js";
 
 type RecommendationProfileProduct = {
   id: string;

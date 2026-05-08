@@ -1,7 +1,7 @@
 import {
   APP_RECOMMENDATION_PROVIDER_ORDER,
   type AppAiProvider,
-} from "./app-ai-chain.ts";
+} from "./app-ai-chain.js";
 
 export type ResultModelOption = {
   provider: AppAiProvider;

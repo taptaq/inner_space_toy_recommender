@@ -1,8 +1,8 @@
 import {
   type KnowledgeNebulaTopicSlug,
   getKnowledgeNebulaTopicBySlug,
-} from "../data/knowledge-nebula.ts";
-import type { AppRoute } from "./app-shell.ts";
+} from "../data/knowledge-nebula.js";
+import type { AppRoute } from "./app-shell.js";
 
 export type KnowledgeNebulaRouteState = {
   route: "/knowledge";

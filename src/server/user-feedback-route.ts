@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import type {
   SaveUserFeedbackInput,
   UserFeedbackStore,
-} from "./user-feedback-store.ts";
+} from "./user-feedback-store.js";
 
 const SCREENSHOT_DATA_URL_PATTERN =
   /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;

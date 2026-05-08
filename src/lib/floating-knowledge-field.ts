@@ -1,4 +1,4 @@
-import type { LoadingFunFact } from "./loading-fun-facts.ts";
+import type { LoadingFunFact } from "./loading-fun-facts.js";
 
 export type FloatingKnowledgeVariant = "loading" | "matching";
 export type FloatingKnowledgeViewport = "desktop" | "mobile";

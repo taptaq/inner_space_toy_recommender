@@ -1,5 +1,5 @@
-import type { AnswerState, Product } from "../data/mock.ts";
-import { resolveLibraryTypeCode } from "./library-product-type-classifier.ts";
+import type { AnswerState, Product } from "../data/mock.js";
+import { resolveLibraryTypeCode } from "./library-product-type-classifier.js";
 
 export type RecommendationCandidatePool = {
   filteredProducts: Product[];

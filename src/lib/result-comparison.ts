@@ -1,4 +1,4 @@
-import type { RankedProduct } from "./app-shell.ts";
+import type { RankedProduct } from "./app-shell.js";
 
 export type ResultComparisonRow = {
   id: string;

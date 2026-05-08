@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import type {
   ResultRecalibrationRequest,
   ResultRecalibrationResponse,
-} from "../lib/result-recalibration.ts";
+} from "../lib/result-recalibration.js";
 
 type RecalibrationRouteAiService = {
   runResultRecalibration: (

@@ -1,4 +1,4 @@
-import type { KnowledgeNebulaViewport } from "./knowledge-nebula-field.ts";
+import type { KnowledgeNebulaViewport } from "./knowledge-nebula-field.js";
 
 export type StarFieldLayer = {
   id: string;

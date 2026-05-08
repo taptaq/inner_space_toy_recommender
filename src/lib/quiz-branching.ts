@@ -1,5 +1,5 @@
-import type { AnswerState, Product } from "../data/mock.ts";
-import { getDescriptionPreferenceAdjustments } from "./product-description-signals.ts";
+import type { AnswerState, Product } from "../data/mock.js";
+import { getDescriptionPreferenceAdjustments } from "./product-description-signals.js";
 
 export type ScorePresetId = "female" | "male" | "couple";
 

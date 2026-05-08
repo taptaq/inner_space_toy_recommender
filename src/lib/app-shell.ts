@@ -1,11 +1,11 @@
-import { Product } from "../data/mock.ts";
-import { buildSafeDisplayName } from "./product-display-name.ts";
+import { Product } from "../data/mock.js";
+import { buildSafeDisplayName } from "./product-display-name.js";
 import {
   resolveLibraryAudienceGender,
   resolveLibrarySubtypeCode,
   resolveLibraryTypeCode,
-} from "./library-product-type-classifier.ts";
-import { getProductDisplayName } from "./product-display-name.ts";
+} from "./library-product-type-classifier.js";
+import { getProductDisplayName } from "./product-display-name.js";
 
 export type AppRoute =
   | "/"

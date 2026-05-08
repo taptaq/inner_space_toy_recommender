@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import {
   APP_RECOMMENDATION_PROVIDER_ORDER,
   type AppAiProvider,
-} from "../lib/app-ai-chain.ts";
+} from "../lib/app-ai-chain.js";
 import {
   buildBackupCandidates,
   buildLocalBackupReason,
@@ -10,19 +10,19 @@ import {
   type BackupCandidate,
   type RecommendationAnswers,
   type RecommendationRankedProduct,
-} from "../lib/recommendation-results.ts";
+} from "../lib/recommendation-results.js";
 import {
   getResultModelOption,
   type ResultModelOption,
-} from "../lib/result-models.ts";
+} from "../lib/result-models.js";
 import type {
   ResultRecalibrationRequest,
   ResultRecalibrationResponse,
   ResultRecalibrationContext,
-} from "../lib/result-recalibration.ts";
-import { buildProductDescriptionSignalsSummary } from "../lib/product-description-signals.ts";
-import { getProductDisplayName } from "../lib/product-display-name.ts";
-import { runAppAiProviderLadder } from "./app-ai-proxy.ts";
+} from "../lib/result-recalibration.js";
+import { buildProductDescriptionSignalsSummary } from "../lib/product-description-signals.js";
+import { getProductDisplayName } from "../lib/product-display-name.js";
+import { runAppAiProviderLadder } from "./app-ai-proxy.js";
 
 const FINAL_SELECTION_COUNT = 3;
 const BACKUP_SELECTION_COUNT = 3;

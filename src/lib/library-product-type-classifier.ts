@@ -2,7 +2,7 @@ import {
   getParentLibraryTypeCodeForSubtype,
   type LibrarySubtypeCode,
   type LibraryTypeCode,
-} from "./library-product-types.ts";
+} from "./library-product-types.js";
 
 export type LibraryTypeClassifierInput = {
   gender?: string | null;

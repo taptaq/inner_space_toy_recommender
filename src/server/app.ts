@@ -3,46 +3,46 @@ import dotenv from "dotenv";
 import pg from "pg";
 import type { RequestHandler } from "express";
 
-import { buildSafeDisplayName } from "../lib/product-display-name.ts";
+import { buildSafeDisplayName } from "../lib/product-display-name.js";
 import {
   resolveLibraryAudienceGender,
   resolveLibrarySubtypeCode,
   resolveLibraryTypeCode,
-} from "../lib/library-product-type-classifier.ts";
-import { createRecalibrateResultsHandler } from "./app-ai-recalibration-route.ts";
-import { createAppAiService } from "./app-ai-service.ts";
+} from "../lib/library-product-type-classifier.js";
+import { createRecalibrateResultsHandler } from "./app-ai-recalibration-route.js";
+import { createAppAiService } from "./app-ai-service.js";
 import {
   createKnowledgeNebulaCreateCardHandler,
   createKnowledgeNebulaRecordCardViewHandler,
   createKnowledgeNebulaTopicHandler,
   createKnowledgeNebulaUpdateCardHandler,
-} from "./knowledge-nebula-route.ts";
-import { createKnowledgeEmbeddingService } from "./knowledge-embedding-service.ts";
+} from "./knowledge-nebula-route.js";
+import { createKnowledgeEmbeddingService } from "./knowledge-embedding-service.js";
 import {
   createKnowledgeNebulaStore,
   ensureKnowledgeNebulaSchema,
-} from "./knowledge-nebula-store.ts";
-import { ensureRecommenderItemsSchema } from "./recommender-items-schema.ts";
+} from "./knowledge-nebula-store.js";
+import { ensureRecommenderItemsSchema } from "./recommender-items-schema.js";
 import {
   createLazyRouteInitializer,
   getRequiredServerEnv,
-} from "./server-runtime.ts";
-import { createSupabaseAccessTokenVerifier } from "./user-auth.ts";
-import { createSaveUserFeedbackHandler } from "./user-feedback-route.ts";
+} from "./server-runtime.js";
+import { createSupabaseAccessTokenVerifier } from "./user-auth.js";
+import { createSaveUserFeedbackHandler } from "./user-feedback-route.js";
 import {
   createUserFeedbackStore,
   ensureUserFeedbackSchema,
-} from "./user-feedback-store.ts";
+} from "./user-feedback-store.js";
 import {
   createListUserRecommendationProfilesHandler,
   createSaveUserRecommendationProfileHandler,
-} from "./user-recommendation-route.ts";
+} from "./user-recommendation-route.js";
 import {
   createUserRecommendationStore,
   ensureUserRecommendationSchema,
-} from "./user-recommendation-store.ts";
-import { createUsernameRegistrationHandler } from "./user-register-route.ts";
-import { createUsernameRegistrationService } from "./user-register-service.ts";
+} from "./user-recommendation-store.js";
+import { createUsernameRegistrationHandler } from "./user-register-route.js";
+import { createUsernameRegistrationService } from "./user-register-service.js";
 
 dotenv.config();
 

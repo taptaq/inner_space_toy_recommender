@@ -5,7 +5,7 @@ import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { KnowledgeNebulaTopicSections } from "../components/KnowledgeNebulaTopicSections.tsx";
-import { KNOWLEDGE_NEBULA_TOPICS } from "../data/knowledge-nebula.ts";
+import { KNOWLEDGE_NEBULA_TOPICS } from "../data/knowledge-nebula.js";
 
 const scienceTopic = KNOWLEDGE_NEBULA_TOPICS[0];
 

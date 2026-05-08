@@ -1,4 +1,4 @@
-import type { AnswerState, Product } from "../data/mock.ts";
+import type { AnswerState, Product } from "../data/mock.js";
 
 type ScorePresetId = "female" | "male" | "couple";
 

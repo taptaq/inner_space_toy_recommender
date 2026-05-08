@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import type {
   KnowledgeNebulaCardInput,
   KnowledgeNebulaStore,
-} from "./knowledge-nebula-store.ts";
+} from "./knowledge-nebula-store.js";
 
 export function createKnowledgeNebulaTopicHandler({
   store,

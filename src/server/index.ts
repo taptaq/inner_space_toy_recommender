@@ -1,4 +1,4 @@
-import { app, ensureServerReady } from "./app.ts";
+import { app, ensureServerReady } from "./app.js";
 
 const port = Number(process.env.PORT || 3010);
 

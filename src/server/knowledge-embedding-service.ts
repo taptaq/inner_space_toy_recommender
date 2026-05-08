@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import type {
   KnowledgeEmbeddingService,
   KnowledgeNebulaCardInput,
-} from "./knowledge-nebula-store.ts";
+} from "./knowledge-nebula-store.js";
 
 type EmbeddingRunner = (request: {
   apiKey: string;

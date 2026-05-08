@@ -1,7 +1,7 @@
 import type {
   KnowledgeNebulaSection,
   KnowledgeNebulaTopic,
-} from "../data/knowledge-nebula.ts";
+} from "../data/knowledge-nebula.js";
 
 export function mergeKnowledgeNebulaTopicPayload(
   localTopic: KnowledgeNebulaTopic,

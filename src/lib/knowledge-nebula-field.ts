@@ -1,4 +1,4 @@
-import type { KnowledgeNebulaTopicSlug } from "../data/knowledge-nebula.ts";
+import type { KnowledgeNebulaTopicSlug } from "../data/knowledge-nebula.js";
 
 export type KnowledgeNebulaViewport = "desktop" | "mobile";
 export type KnowledgeNebulaClusterDepth = "near" | "mid" | "far";

@@ -1,4 +1,4 @@
-import type { Product } from "../data/mock.ts";
+import type { Product } from "../data/mock.js";
 
 const SENSITIVE_NAME_REPLACEMENTS: Array<[RegExp, string]> = [
   [/情趣用品|成人用品/gi, "个人护理用品"],

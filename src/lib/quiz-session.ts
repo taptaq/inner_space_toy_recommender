@@ -1,4 +1,4 @@
-import type { AnswerState, Question } from "../data/mock.ts";
+import type { AnswerState, Question } from "../data/mock.js";
 
 export function createClearedQuizSessionState() {
   return {

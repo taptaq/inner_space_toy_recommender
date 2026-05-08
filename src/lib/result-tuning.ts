@@ -1,4 +1,4 @@
-import type { AnswerState } from "../data/mock.ts";
+import type { AnswerState } from "../data/mock.js";
 
 export type ResultTuningMode = "quieter" | "cheaper" | "beginner";
 

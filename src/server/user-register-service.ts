@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-import { buildInternalAuthEmailFromUsername } from "../lib/supabase-auth.ts";
+import { buildInternalAuthEmailFromUsername } from "../lib/supabase-auth.js";
 
 export function createUsernameRegistrationService({
   supabaseUrl,

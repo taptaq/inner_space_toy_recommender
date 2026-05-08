@@ -6,7 +6,7 @@ import {
   type KnowledgeNebulaSection,
   type KnowledgeNebulaTopic,
   type KnowledgeNebulaTopicSlug,
-} from "../data/knowledge-nebula.ts";
+} from "../data/knowledge-nebula.js";
 
 export type KnowledgeNebulaCardInput = {
   title: string;

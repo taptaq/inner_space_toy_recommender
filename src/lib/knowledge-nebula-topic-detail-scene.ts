@@ -1,7 +1,7 @@
 import type {
   KnowledgeNebulaTopic,
   KnowledgeNebulaSection,
-} from "../data/knowledge-nebula.ts";
+} from "../data/knowledge-nebula.js";
 
 export type TopicDetailViewport = "desktop" | "mobile";
 export type TopicDetailNodeKind = "primary" | "secondary" | "tertiary";

@@ -1,4 +1,4 @@
-import * as serverAppModule from "../src/server/app.ts";
+import * as serverAppModule from "../src/server/app.js";
 
 export function normalizeVercelApiRequestUrl(currentUrl: string) {
   const parsedUrl = new URL(currentUrl, "http://localhost");
