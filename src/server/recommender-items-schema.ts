@@ -30,4 +30,9 @@ export async function ensureRecommenderItemsSchema(pool: Queryable) {
     ALTER TABLE public.recommender_toys
     ADD COLUMN IF NOT EXISTS safe_display_name TEXT
   `);
+
+  await pool.query(`
+    ALTER TABLE public.recommender_toys
+    ADD COLUMN IF NOT EXISTS subtype_code TEXT
+  `);
 }

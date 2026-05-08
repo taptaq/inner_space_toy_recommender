@@ -223,6 +223,16 @@ npm run dev
 - 后端 Express：`http://localhost:3010`
 - Vite 会把 `/api` 代理到 `http://localhost:3010`
 
+### Vercel 部署说明
+
+线上环境现在采用“前端静态产物 + 单入口 Vercel Function”：
+
+- 本地开发仍然使用 `src/server/index.ts` 启动 Express
+- 线上部署时由 `api/index.ts` 承接所有 `/api/*` 请求
+- `vercel.json` 会把 `/api/:path*` 重写到 `api/index.ts`，并在函数内还原原始 Express 路径
+
+这样前端请求地址不需要改动，开发和线上都继续使用同一套 `/api/*` 路由。
+
 也可以一条命令同时启动：
 
 ```bash
