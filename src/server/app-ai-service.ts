@@ -27,19 +27,22 @@ import { runAppAiProviderLadder } from "./app-ai-proxy.js";
 const FINAL_SELECTION_COUNT = 3;
 const BACKUP_SELECTION_COUNT = 3;
 const MAX_SHOPPING_GUIDANCE_COUNT = 5;
-const DEFAULT_AI_MAX_TOKENS = 24576;
+const DEFAULT_AI_MAX_TOKENS = 4096;
+const RERANK_AI_MAX_TOKENS = 1200;
+const ENHANCEMENT_AI_MAX_TOKENS = 1800;
+const RERANK_PROVIDER_TIMEOUT_MS = 12_000;
+const ENHANCEMENT_PROVIDER_TIMEOUT_MS = 10_000;
 
 const PROVIDER_LABELS: Record<AppAiProvider, string> = {
   "dmxapi-mimo": "DMXAPI Mimo",
   "dmxapi-minimax": "DMXAPI MiniMax",
   "dmxapi-qwen": "DMXAPI Qwen",
   "dmxapi-glm": "DMXAPI GLM",
-  "dmxapi-kimi": "DMXAPI Kimi",
+  kimi: "Kimi 官方",
   "dmxapi-claude": "DMXAPI Claude",
   "dmxapi-gemini": "DMXAPI Gemini",
   "dmxapi-grok": "DMXAPI Grok",
   "dmxapi-gpt": "DMXAPI GPT",
-  "dmxapi-kimi-k2": "DMXAPI Kimi K2.6",
   deepseek: "DeepSeek",
   qwen: "Qwen",
   glm: "GLM",
@@ -73,10 +76,9 @@ const PROVIDER_RUNTIME_CONFIG: Record<
     baseURL: "https://www.dmxapi.cn/v1",
     topP: 1,
   },
-  "dmxapi-kimi": {
-    apiKeyEnv: "DMXAPI_API_KEY",
-    baseURL: "https://www.dmxapi.cn/v1",
-    topP: 1,
+  kimi: {
+    apiKeyEnv: "MOONSHOT_API_KEY",
+    baseURL: "https://api.moonshot.cn/v1",
   },
   "dmxapi-claude": {
     apiKeyEnv: "DMXAPI_API_KEY",
@@ -98,11 +100,6 @@ const PROVIDER_RUNTIME_CONFIG: Record<
     baseURL: "https://www.dmxapi.cn/v1",
     topP: 1,
   },
-  "dmxapi-kimi-k2": {
-    apiKeyEnv: "DMXAPI_API_KEY",
-    baseURL: "https://www.dmxapi.cn/v1",
-    topP: 1,
-  },
   deepseek: {
     apiKeyEnv: "DEEPSEEK_API_KEY",
     baseURL: "https://api.deepseek.com/v1",
@@ -118,16 +115,15 @@ const PROVIDER_RUNTIME_CONFIG: Record<
 };
 
 const PROXY_PROVIDER_MODELS: Record<AppAiProvider, string> = {
-  "dmxapi-mimo": "mimo-v2.5-free",
+  "dmxapi-mimo": "mimo-v2.5-pro",
   "dmxapi-minimax": "MiniMax-M2.7-free",
   "dmxapi-qwen": "qwen3.5-27b",
   "dmxapi-glm": "glm-5.1-free",
-  "dmxapi-kimi": "kimi-k2.6-free",
+  kimi: "kimi-k2.6",
   "dmxapi-claude": "claude-opus-4-7",
   "dmxapi-gemini": "gemini-3.1-pro-preview-ssvip",
   "dmxapi-grok": "grok-4.2-nothinking",
   "dmxapi-gpt": "gpt-5.4",
-  "dmxapi-kimi-k2": "kimi-k2.6",
   deepseek: "deepseek-v4-flash",
   qwen: "qwen-turbo",
   glm: "glm-4.6v",
@@ -163,12 +159,11 @@ const DEFAULT_RECALIBRATION_FALLBACK_ORDER: readonly AppAiProvider[] = Object.fr
   "dmxapi-qwen",
   "dmxapi-mimo",
   "dmxapi-glm",
-  "dmxapi-kimi",
+  "kimi",
   "dmxapi-claude",
   "dmxapi-gemini",
   "dmxapi-grok",
   "dmxapi-gpt",
-  "dmxapi-kimi-k2",
   "deepseek",
   "qwen",
   "glm",
@@ -188,6 +183,7 @@ export type ChatCompletionRequest = {
   temperature: number;
   topP?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 };
 
 type Logger = Pick<Console, "log" | "warn">;
@@ -304,7 +300,7 @@ function buildRerankPrompt(
 用户偏好标签: [${context.userPreferences.join(", ")}]
 
 候选商品列表（已按结构化分数从高到低排序，仅可从中选择）:
-${JSON.stringify(context.rankedProducts, null, 2)}
+${JSON.stringify(context.rankedProducts)}
 
 请仅返回如下格式的 JSON 数组（不要包含任何 Markdown 格式或多余文字）：
 [
@@ -362,10 +358,10 @@ Top 3 主推荐已经确定，请只补充两个结果区域：
 候选池数量: ${context.filteredCount}
 
 已确定 Top 3（仅供参考，不需要重排）:
-${JSON.stringify(context.topProducts, null, 2)}
+${JSON.stringify(context.topProducts)}
 
 备选候选（只能基于这些 id 输出说明）:
-${JSON.stringify(context.backupCandidates, null, 2)}
+${JSON.stringify(context.backupCandidates)}
 
 请仅返回如下格式的 JSON 对象（不要包含任何 Markdown 格式或多余文字）：
 {
@@ -391,11 +387,17 @@ function defaultChatCompletionRunner({
   temperature,
   topP,
   maxTokens = DEFAULT_AI_MAX_TOKENS,
+  timeoutMs,
 }: ChatCompletionRequest) {
   const openai = new OpenAI({
     apiKey,
     baseURL,
   });
+  const abortController = new AbortController();
+  const timeoutId =
+    timeoutMs && timeoutMs > 0
+      ? setTimeout(() => abortController.abort(), timeoutMs)
+      : undefined;
 
   return openai.chat.completions
     .create({
@@ -404,8 +406,15 @@ function defaultChatCompletionRunner({
       temperature,
       top_p: topP,
       max_tokens: maxTokens,
+    }, {
+      signal: abortController.signal,
     })
-    .then((response) => response.choices[0].message.content);
+    .then((response) => response.choices[0].message.content)
+    .finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
 }
 
 export function createAppAiService({
@@ -441,12 +450,16 @@ export function createAppAiService({
     emptyJson,
     logContext,
     resolveModel,
+    maxTokens = DEFAULT_AI_MAX_TOKENS,
+    timeoutMs,
   }: {
     prompt: string;
     temperature: number;
     emptyJson: string;
     logContext: string;
     resolveModel: (provider: AppAiProvider) => string;
+    maxTokens?: number;
+    timeoutMs?: number;
   }): Record<AppAiProvider, () => Promise<AiProxyEnvelope<T>>> {
     return APP_RECOMMENDATION_PROVIDER_ORDER.reduce(
       (executors, provider) => {
@@ -466,8 +479,9 @@ export function createAppAiService({
             model: modelName,
             prompt,
             temperature,
-            maxTokens: DEFAULT_AI_MAX_TOKENS,
+            maxTokens,
             ...(runtimeConfig.topP == null ? {} : { topP: runtimeConfig.topP }),
+            ...(timeoutMs == null ? {} : { timeoutMs }),
           };
 
           const data = await callAndParseJson<T>(request, emptyJson);
@@ -489,17 +503,23 @@ export function createAppAiService({
     temperature,
     emptyJson,
     logContext,
+    maxTokens,
+    timeoutMs,
   }: {
     prompt: string;
     temperature: number;
     emptyJson: string;
     logContext: string;
+    maxTokens?: number;
+    timeoutMs?: number;
   }) {
     return buildProviderExecutors<T>({
       prompt,
       temperature,
       emptyJson,
       logContext,
+      maxTokens,
+      timeoutMs,
       resolveModel(provider) {
         return getProviderModel(provider).model;
       },
@@ -512,18 +532,24 @@ export function createAppAiService({
     temperature,
     emptyJson,
     logContext,
+    maxTokens,
+    timeoutMs,
   }: {
     provider: AppAiProvider;
     prompt: string;
     temperature: number;
     emptyJson: string;
     logContext: string;
+    maxTokens?: number;
+    timeoutMs?: number;
   }) {
     return createProviderExecutors<T>({
       prompt,
       temperature,
       emptyJson,
       logContext,
+      maxTokens,
+      timeoutMs,
     })[provider]();
   }
 
@@ -533,18 +559,24 @@ export function createAppAiService({
     emptyJson,
     logContext,
     providerOrder = APP_RECOMMENDATION_PROVIDER_ORDER,
+    maxTokens = DEFAULT_AI_MAX_TOKENS,
+    providerTimeoutMs,
   }: {
     prompt: string;
     temperature: number;
     emptyJson: string;
     logContext: string;
     providerOrder?: readonly AppAiProvider[];
+    maxTokens?: number;
+    providerTimeoutMs?: number;
   }) {
     const providers = buildProviderExecutors<T>({
       prompt,
       temperature,
       emptyJson,
       logContext,
+      maxTokens,
+      timeoutMs: providerTimeoutMs,
       resolveModel(provider) {
         return PROXY_PROVIDER_MODELS[provider];
       },
@@ -553,6 +585,7 @@ export function createAppAiService({
     return runAppAiProviderLadder({
       providerOrder,
       providers,
+      providerTimeoutMs,
       onProviderError(provider, error) {
         logger.warn(
           `⚠️ [Server/AI] ${logContext}: ${PROVIDER_LABELS[provider]} 失败，继续下一个兜底...`,
@@ -602,6 +635,8 @@ export function createAppAiService({
       emptyJson: "[]",
       logContext: "结果重校准 Top3 重排",
       providerOrder: rerankProviderOrder,
+      maxTokens: RERANK_AI_MAX_TOKENS,
+      providerTimeoutMs: RERANK_PROVIDER_TIMEOUT_MS,
     });
     const reasonMap = new Map<string, string>();
     const poolById = new Map(rerankPool.map((product) => [product.id, product]));
@@ -647,6 +682,8 @@ export function createAppAiService({
       temperature: 0.3,
       emptyJson: "{}",
       logContext: "结果重校准 备选说明与选购建议",
+      maxTokens: ENHANCEMENT_AI_MAX_TOKENS,
+      providerTimeoutMs: ENHANCEMENT_PROVIDER_TIMEOUT_MS,
       providerOrder: dedupeProviderOrder([
         recalibrationPlan.enhancementProvider,
         ...recalibrationPlan.fallbackOrder,

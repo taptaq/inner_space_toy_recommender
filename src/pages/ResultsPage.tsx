@@ -314,6 +314,7 @@ type ResultsPageProps = {
   backupProducts: ResultsBackupProduct[];
   shoppingGuidance: string[];
   recommendationTips: string[];
+  isEnhancingResults?: boolean;
   isRecalibratingResults: boolean;
   resultRecalibrationError: string | null;
   onRecalibrateResults: () => void;
@@ -344,6 +345,7 @@ export function ResultsPage({
   backupProducts,
   shoppingGuidance,
   recommendationTips,
+  isEnhancingResults = false,
   isRecalibratingResults,
   resultRecalibrationError,
   onRecalibrateResults,
@@ -467,6 +469,19 @@ export function ResultsPage({
         <p className="text-sm text-slate-400">
           {resultLeadCopy}
         </p>
+        {isEnhancingResults ? (
+          <div className="mx-auto mt-4 flex max-w-xl items-start gap-3 rounded-2xl border border-cyan-300/14 bg-cyan-300/[0.055] px-4 py-3 text-left shadow-[0_14px_40px_rgba(8,47,73,0.12)]">
+            <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-cyan-200/80" />
+            <div>
+              <p className="text-xs font-medium text-cyan-50/88">
+                AI 正在润色备选说明和选购建议
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-cyan-100/55">
+                主推荐已可先查看，下面的备选说明会在分析完成后自动更新。
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {topProducts[0] && (
@@ -664,7 +679,15 @@ export function ResultsPage({
       )}
 
       {topProducts.length > 0 ? (
-        <div className="space-y-4">
+        <section className="relative z-10 rounded-2xl border border-white/8 bg-white/[0.025] p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-1.5 border-b border-white/8 pb-4">
+            <h3 className="text-sm font-medium text-white">还想换个角度？</h3>
+            <p className="text-xs leading-5 text-slate-400">
+              备选、对比和微调都放在这里；主推荐已经可以先作为默认结论。
+            </p>
+          </div>
+
+          <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {topProducts.slice(1, 3).map((product, index) => (
               getProductHref(product) ? (
@@ -933,7 +956,8 @@ export function ResultsPage({
               </div>
             </section>
           )}
-        </div>
+          </div>
+        </section>
       ) : (
         <div className="glass-panel rounded-3xl p-8 text-center">
           <p className="text-slate-300">未找到完全匹配的装备，请尝试放宽条件。</p>
@@ -1152,56 +1176,6 @@ export function ResultsPage({
                 </div>
               </div>
             )}
-
-            <div className="flex flex-col gap-2 rounded-2xl border border-cyan-400/12 bg-cyan-400/[0.045] p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-2">
-                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300/75" />
-                <div>
-                  <p className="text-sm font-medium text-cyan-50">
-                    {isSignedIn ? "已登录，可加密保存" : "登录后可加密保存"}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-cyan-100/55">
-                    {isSignedIn
-                      ? `${authPanel.userLabel} 的推荐档案会加密同步，方便多端继续比较。`
-                      : "保存问卷偏好和推荐快照，方便多端继续比较。"}
-                  </p>
-                </div>
-              </div>
-              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-                {!isSignedIn && (
-                  <button
-                    type="button"
-                    onClick={() => setIsSavePanelOpen((isOpen) => !isOpen)}
-                    className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
-                  >
-                    {isSavePanelOpen ? "收起登录" : "登录 / 注册"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void onSaveRecommendationProfile()}
-                  disabled={isSavingRecommendationProfile}
-                  className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
-                >
-                  {isSavingRecommendationProfile ? "保存中..." : "保存推荐档案"}
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenRecommendationProfiles}
-                  className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
-                >
-                  查看档案
-                </button>
-              </div>
-            </div>
-
-            {saveRecommendationProfileMessage && (
-              <p className="text-xs leading-5 text-cyan-100/65">
-                {saveRecommendationProfileMessage}
-              </p>
-            )}
-
-            {!isSignedIn && isSavePanelOpen && <AuthPanel {...authPanel} />}
           </div>
         </section>
       )}
@@ -1357,6 +1331,64 @@ export function ResultsPage({
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {topProducts.length > 0 && (
+        <section className="relative z-10 rounded-2xl border border-cyan-400/12 bg-cyan-400/[0.04] p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2">
+              <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300/75" />
+              <div>
+                <p className="text-sm font-medium text-cyan-50">
+                  {isSignedIn ? "已登录，可加密保存" : "登录后可加密保存"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-cyan-100/55">
+                  {isSignedIn
+                    ? `${authPanel.userLabel} 的推荐档案会加密同步，方便多端继续比较。`
+                    : "保存问卷偏好和推荐快照，方便多端继续比较。"}
+                </p>
+              </div>
+            </div>
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+              {!isSignedIn && (
+                <button
+                  type="button"
+                  onClick={() => setIsSavePanelOpen((isOpen) => !isOpen)}
+                  className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+                >
+                  {isSavePanelOpen ? "收起登录" : "登录 / 注册"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void onSaveRecommendationProfile()}
+                disabled={isSavingRecommendationProfile}
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/12 px-3 py-2 text-xs text-cyan-50 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/18 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isSavingRecommendationProfile ? "保存中..." : "保存推荐档案"}
+              </button>
+              <button
+                type="button"
+                onClick={onOpenRecommendationProfiles}
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/[0.07]"
+              >
+                查看档案
+              </button>
+            </div>
+          </div>
+
+          {saveRecommendationProfileMessage && (
+            <p className="mt-3 text-xs leading-5 text-cyan-100/65">
+              {saveRecommendationProfileMessage}
+            </p>
+          )}
+
+          {!isSignedIn && isSavePanelOpen && (
+            <div className="mt-4">
+              <AuthPanel {...authPanel} />
+            </div>
+          )}
         </section>
       )}
 

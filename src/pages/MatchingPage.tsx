@@ -72,6 +72,11 @@ export function MatchingPage({
         <p className="text-xs font-mono text-cyan-500/70 tracking-widest">
           {statusText}
         </p>
+        {!isLoadingMode && isAiMatching ? (
+          <p className="mx-auto max-w-[16rem] text-[10px] font-mono leading-relaxed tracking-[0.18em] text-cyan-100/48 sm:max-w-sm">
+            AI 模型分析预计需要 1-2 分钟，请保持页面开启
+          </p>
+        ) : null}
         {loadingStep === -1 && isLoadingMode ? (
           <button
             onClick={() => window.location.reload()}

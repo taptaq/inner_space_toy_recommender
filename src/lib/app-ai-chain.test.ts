@@ -5,13 +5,17 @@ import {
   getPrimaryAppAiProvider,
 } from "./app-ai-chain.ts";
 
-test("app ai provider order prefers all DMXAPI providers before self-hosted providers", () => {
+test("app ai provider order uses official Kimi instead of DMXAPI Kimi providers", () => {
   assert.deepEqual(APP_RECOMMENDATION_PROVIDER_ORDER, [
     "dmxapi-mimo",
     "dmxapi-minimax",
     "dmxapi-qwen",
     "dmxapi-glm",
-    "dmxapi-kimi",
+    "kimi",
+    "dmxapi-claude",
+    "dmxapi-gemini",
+    "dmxapi-grok",
+    "dmxapi-gpt",
     "deepseek",
     "qwen",
     "glm",

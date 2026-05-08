@@ -21,6 +21,9 @@ function createMockResponse() {
       jsonPayload = payload;
       return response;
     },
+    end() {
+      return response;
+    },
   };
 
   return {
@@ -121,4 +124,56 @@ test("createListRecommenderToysHandler caches the normalized library payload and
 
   assert.equal(queryCount, 1);
   assert.deepEqual(second.readJsonPayload(), first.readJsonPayload());
+});
+
+test("createListRecommenderToysHandler returns 304 when the cached payload etag matches", async () => {
+  const handler = createListRecommenderToysHandler({
+    ensureLibraryRouteReady: async () => {},
+    now: () => 1000,
+    cacheTtlMs: 60_000,
+    pool: {
+      query: async () => ({
+        rows: [
+          {
+            id: "toy-1",
+            name: "测试装备",
+            safe_display_name: "测试装备",
+            price: "199.00",
+            max_db: 42,
+            waterproof: 7,
+            appearance: "normal",
+            physical_form: "external",
+            motor_type: "gentle",
+            gender: "female",
+            type_code: "suction",
+            subtype_code: "suction_pure",
+            brand: "Brand",
+            material: "硅胶",
+            image_url: "https://cdn.example.com/a.jpg",
+            resolved_raw_description: "气脉冲测试",
+            link: "https://example.com/product",
+            tags: ["静音"],
+            persona_analysis: "适合新手",
+            is_domestic: true,
+          },
+        ],
+      }),
+    },
+  });
+
+  const first = createMockResponse();
+  await handler({ query: {}, headers: {} } as never, first.response as never, (() => {}) as never);
+  const etag = first.readHeader("etag");
+
+  assert.ok(etag, "first response should include an etag");
+
+  const second = createMockResponse();
+  await handler(
+    { query: {}, headers: { "if-none-match": etag } } as never,
+    second.response as never,
+    (() => {}) as never,
+  );
+
+  assert.equal(second.readStatusCode(), 304);
+  assert.equal(second.readJsonPayload(), undefined);
 });

@@ -12,6 +12,7 @@ import {
   resolveLibrarySubtypeCode,
   resolveLibraryTypeCode,
 } from "../lib/library-product-type-classifier.js";
+import { createJsonEtag, requestHasMatchingEtag } from "./http-cache.js";
 
 type QueryResultRow = {
   id: string;
@@ -43,6 +44,7 @@ type Queryable = {
 type CachedPayload = {
   expiresAt: number;
   payload: ReturnType<typeof normalizeLibraryRows>;
+  etag: string;
 };
 
 const CACHE_CONTROL_HEADER =
@@ -190,6 +192,14 @@ export function createListRecommenderToysHandler({
         cachedPayload &&
         cachedPayload.expiresAt > now()
       ) {
+        res.setHeader("ETag", cachedPayload.etag);
+        if (
+          requestHasMatchingEtag(req.headers?.["if-none-match"], cachedPayload.etag)
+        ) {
+          res.status(304).end();
+          return;
+        }
+
         res.json(cachedPayload.payload);
         return;
       }
@@ -223,12 +233,20 @@ export function createListRecommenderToysHandler({
       `);
 
       const normalized = normalizeLibraryRows(result.rows);
+      const etag = createJsonEtag(normalized);
       cachedPayload = {
         expiresAt: now() + cacheTtlMs,
         payload: normalized,
+        etag,
       };
 
       console.log(`✅ [Server] 已同步 ${normalized.length} 条晶体库数据`);
+      res.setHeader("ETag", etag);
+      if (requestHasMatchingEtag(req.headers?.["if-none-match"], etag)) {
+        res.status(304).end();
+        return;
+      }
+
       res.json(normalized);
     } catch (error) {
       console.error("❌ [Server] 数据库同步中断:", error);

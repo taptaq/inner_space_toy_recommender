@@ -183,7 +183,7 @@ test("buildResultRecalibrationPayload requests automatic model routing without e
     recalibrationContext: {
       attemptCount: 1,
       currentResultProvider: "dmxapi-mimo",
-      currentResultModelName: "mimo-v2.5-free",
+      currentResultModelName: "mimo-v2.5-pro",
       previousTopProducts: [{ id: "p-1", reason: "更安静，也更适合日常使用" }],
       previousShoppingGuidanceCount: 2,
     },
@@ -261,7 +261,7 @@ test("buildResultRecalibrationPayload requests automatic model routing without e
     recalibrationContext: {
       attemptCount: 1,
       currentResultProvider: "dmxapi-mimo",
-      currentResultModelName: "mimo-v2.5-free",
+      currentResultModelName: "mimo-v2.5-pro",
       previousTopProducts: [{ id: "p-1", reason: "更安静，也更适合日常使用" }],
       previousShoppingGuidanceCount: 2,
     },

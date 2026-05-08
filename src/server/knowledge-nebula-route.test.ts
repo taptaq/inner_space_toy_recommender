@@ -12,11 +12,13 @@ import {
 function createMockRequest({
   params = {},
   body,
+  headers = {},
 }: {
   params?: Record<string, string | undefined>;
   body?: unknown;
+  headers?: Record<string, string | undefined>;
 }) {
-  return { params, body } as Request;
+  return { params, body, headers } as Request;
 }
 
 function createMockResponse() {
@@ -35,6 +37,9 @@ function createMockResponse() {
     },
     json(payload: unknown) {
       jsonPayload = payload;
+      return response;
+    },
+    end() {
       return response;
     },
   } as unknown as Response;
@@ -74,6 +79,36 @@ test("knowledge topic handler returns the resolved topic payload", async () => {
     "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
   );
   assert.deepEqual(mockResponse.readJsonPayload(), expectedTopic);
+});
+
+test("knowledge topic handler returns 304 when the topic etag matches", async () => {
+  const expectedTopic = { slug: "science", sections: [] };
+  const handler = createKnowledgeNebulaTopicHandler({
+    store: {
+      getTopicBySlug: async () => expectedTopic as any,
+    },
+  });
+
+  const firstResponse = createMockResponse();
+  await handler(
+    createMockRequest({ params: { slug: "science" } }),
+    firstResponse.response,
+  );
+  const etag = firstResponse.readHeader("etag");
+
+  assert.ok(etag, "first response should include an etag");
+
+  const secondResponse = createMockResponse();
+  await handler(
+    createMockRequest({
+      params: { slug: "science" },
+      headers: { "if-none-match": etag },
+    }),
+    secondResponse.response,
+  );
+
+  assert.equal(secondResponse.readStatusCode(), 304);
+  assert.equal(secondResponse.readJsonPayload(), undefined);
 });
 
 test("knowledge create-card handler parses body text and returns the updated topic", async () => {

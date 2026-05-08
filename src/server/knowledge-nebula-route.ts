@@ -4,6 +4,7 @@ import type {
   KnowledgeNebulaCardInput,
   KnowledgeNebulaStore,
 } from "./knowledge-nebula-store.js";
+import { createJsonEtag, requestHasMatchingEtag } from "./http-cache.js";
 
 const KNOWLEDGE_TOPIC_CACHE_CONTROL =
   "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
@@ -25,6 +26,13 @@ export function createKnowledgeNebulaTopicHandler({
       const topic = await store.getTopicBySlug(slug);
       if (!topic) {
         res.status(404).json({ error: "Knowledge topic not found" });
+        return;
+      }
+
+      const etag = createJsonEtag(topic);
+      res.setHeader("ETag", etag);
+      if (requestHasMatchingEtag(req.headers["if-none-match"], etag)) {
+        res.status(304).end();
         return;
       }
 

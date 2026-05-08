@@ -84,7 +84,42 @@ test("createProviderExecutors exposes provider-specific executors with result-mo
     model: "qwen-max",
     prompt: "rerank prompt",
     temperature: 0.1,
-    maxTokens: 24576,
+    maxTokens: 4096,
+  });
+});
+
+test("createProviderExecutors routes Kimi through the official Moonshot API", async () => {
+  const requests: ChatCompletionRequest[] = [];
+  const service = createAppAiService({
+    env: {
+      MOONSHOT_API_KEY: "moonshot-key",
+    } as NodeJS.ProcessEnv,
+    chatCompletionRunner: async (request) => {
+      requests.push(request);
+      return '[{"id":"p-1","reason":"官方 Kimi 结果"}]';
+    },
+  });
+
+  const executors = service.createProviderExecutors({
+    prompt: "rerank prompt",
+    temperature: 0.1,
+    emptyJson: "[]",
+    logContext: "单模型重校准",
+  });
+  const result = await executors.kimi();
+
+  assert.deepEqual(result, {
+    data: [{ id: "p-1", reason: "官方 Kimi 结果" }],
+    modelName: "kimi-k2.6",
+    provider: "kimi",
+  });
+  assert.deepEqual(requests[0], {
+    apiKey: "moonshot-key",
+    baseURL: "https://api.moonshot.cn/v1",
+    model: "kimi-k2.6",
+    prompt: "rerank prompt",
+    temperature: 0.1,
+    maxTokens: 4096,
   });
 });
 
@@ -196,12 +231,12 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
       {
         model: "qwen-turbo",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        maxTokens: 24576,
+        maxTokens: 1200,
       },
       {
         model: "qwen-turbo",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        maxTokens: 24576,
+        maxTokens: 1800,
       },
     ],
   );
@@ -267,15 +302,16 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
     provider: "qwen",
   });
 
-  assert.match(requests[1]?.prompt || "", /"id": "p-3"/);
-  assert.match(requests[1]?.prompt || "", /"id": "b-2"/);
-  assert.match(requests[1]?.prompt || "", /"id": "b-3"/);
-  assert.match(requests[0]?.prompt || "", /"descriptionSignals": "低噪静音、吮吸刺激、新手友好"/);
-  assert.match(requests[0]?.prompt || "", /"descriptionSignals": "自动活塞、强刺激"/);
+  assert.match(requests[1]?.prompt || "", /"id":"p-3"/);
+  assert.match(requests[1]?.prompt || "", /"id":"b-2"/);
+  assert.match(requests[1]?.prompt || "", /"id":"b-3"/);
+  assert.match(requests[0]?.prompt || "", /"descriptionSignals":"低噪静音、吮吸刺激、新手友好"/);
+  assert.match(requests[0]?.prompt || "", /"descriptionSignals":"自动活塞、强刺激"/);
+  assert.doesNotMatch(requests[0]?.prompt || "", /\{\n\s+"rank"/);
   assert.doesNotMatch(requests[0]?.prompt || "", /低噪吮吸设计，适合新手慢热探索/);
-  assert.match(requests[1]?.prompt || "", /"descriptionSignals": "低噪静音、可穿戴"/);
-  assert.match(requests[1]?.prompt || "", /"descriptionSignals": "低噪静音"/);
-  assert.match(requests[1]?.prompt || "", /"descriptionSignals": "易清洗"/);
+  assert.match(requests[1]?.prompt || "", /"descriptionSignals":"低噪静音、可穿戴"/);
+  assert.match(requests[1]?.prompt || "", /"descriptionSignals":"低噪静音"/);
+  assert.match(requests[1]?.prompt || "", /"descriptionSignals":"易清洗"/);
 });
 
 test("resolveRecalibrationPlan starts the first manual reroll on the next rerank provider while keeping the fallback ladder", () => {
@@ -284,7 +320,7 @@ test("resolveRecalibrationPlan starts the first manual reroll on the next rerank
   const plan = service.resolveRecalibrationPlan({
     attemptCount: 1,
     currentResultProvider: "dmxapi-mimo",
-    currentResultModelName: "mimo-v2.5-free",
+    currentResultModelName: "mimo-v2.5-pro",
     previousTopProducts: [{ id: "p-1", reason: "静音更稳" }],
     previousShoppingGuidanceCount: 4,
   });
@@ -304,7 +340,7 @@ test("resolveRecalibrationPlan rotates rerank providers across repeated rerolls 
   const secondPlan = service.resolveRecalibrationPlan({
     attemptCount: 2,
     currentResultProvider: "dmxapi-mimo",
-    currentResultModelName: "mimo-v2.5-free",
+    currentResultModelName: "mimo-v2.5-pro",
     previousTopProducts: [
       { id: "p-1", reason: "适合你" },
       { id: "p-2", reason: "也适合你" },
@@ -328,7 +364,7 @@ test("resolveRecalibrationPlan rotates rerank providers across repeated rerolls 
   assert.ok(wrappedPlan.fallbackOrder.includes("dmxapi-gemini"));
   assert.ok(wrappedPlan.fallbackOrder.includes("dmxapi-grok"));
   assert.ok(wrappedPlan.fallbackOrder.includes("dmxapi-gpt"));
-  assert.ok(wrappedPlan.fallbackOrder.includes("dmxapi-kimi-k2"));
+  assert.ok(wrappedPlan.fallbackOrder.includes("kimi"));
   assert.equal(wrappedPlan.rerankProvider, "dmxapi-gpt");
 });
 
@@ -373,7 +409,7 @@ test("runResultRecalibration follows the rotated rerank provider while keeping t
     recalibrationContext: {
       attemptCount: 1,
       currentResultProvider: "dmxapi-mimo",
-      currentResultModelName: "mimo-v2.5-free",
+      currentResultModelName: "mimo-v2.5-pro",
       previousTopProducts: [{ id: "p-1", reason: "适合你" }],
       previousShoppingGuidanceCount: 1,
     },

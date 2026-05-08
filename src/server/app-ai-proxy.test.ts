@@ -29,8 +29,8 @@ test("runAppAiProviderLadder returns the first successful metadata-carrying prov
         calls.push("dmxapi-glm");
         throw new Error("should-not-run");
       },
-      "dmxapi-kimi": async () => {
-        calls.push("dmxapi-kimi");
+      kimi: async () => {
+        calls.push("kimi");
         throw new Error("should-not-run");
       },
       "dmxapi-claude": async () => {
@@ -47,10 +47,6 @@ test("runAppAiProviderLadder returns the first successful metadata-carrying prov
       },
       "dmxapi-gpt": async () => {
         calls.push("dmxapi-gpt");
-        throw new Error("should-not-run");
-      },
-      "dmxapi-kimi-k2": async () => {
-        calls.push("dmxapi-kimi-k2");
         throw new Error("should-not-run");
       },
       deepseek: async () => {
@@ -70,6 +66,71 @@ test("runAppAiProviderLadder returns the first successful metadata-carrying prov
 
   assert.deepEqual(result, {
     data: [{ id: "p-1", reason: "匹配度高" }],
+    modelName: "MiniMax-M2.7-free",
+    provider: "dmxapi-minimax",
+  });
+  assert.deepEqual(calls, ["dmxapi-mimo", "dmxapi-minimax"]);
+});
+
+test("runAppAiProviderLadder skips a provider when it exceeds the timeout", async () => {
+  const calls: string[] = [];
+
+  const result = await runAppAiProviderLadder({
+    providerOrder: ["dmxapi-mimo", "dmxapi-minimax"],
+    providerTimeoutMs: 5,
+    providers: {
+      "dmxapi-mimo": async () => {
+        calls.push("dmxapi-mimo");
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return {
+          data: [{ id: "p-1", reason: "过慢结果不应采用" }],
+          modelName: "mimo-v2.5-pro",
+          provider: "dmxapi-mimo",
+        };
+      },
+      "dmxapi-minimax": async () => {
+        calls.push("dmxapi-minimax");
+        return {
+          data: [{ id: "p-2", reason: "快速兜底结果" }],
+          modelName: "MiniMax-M2.7-free",
+          provider: "dmxapi-minimax",
+        };
+      },
+      "dmxapi-qwen": async () => {
+        throw new Error("unused");
+      },
+      "dmxapi-glm": async () => {
+        throw new Error("unused");
+      },
+      kimi: async () => {
+        throw new Error("unused");
+      },
+      "dmxapi-claude": async () => {
+        throw new Error("unused");
+      },
+      "dmxapi-gemini": async () => {
+        throw new Error("unused");
+      },
+      "dmxapi-grok": async () => {
+        throw new Error("unused");
+      },
+      "dmxapi-gpt": async () => {
+        throw new Error("unused");
+      },
+      deepseek: async () => {
+        throw new Error("unused");
+      },
+      qwen: async () => {
+        throw new Error("unused");
+      },
+      glm: async () => {
+        throw new Error("unused");
+      },
+    },
+  });
+
+  assert.deepEqual(result, {
+    data: [{ id: "p-2", reason: "快速兜底结果" }],
     modelName: "MiniMax-M2.7-free",
     provider: "dmxapi-minimax",
   });

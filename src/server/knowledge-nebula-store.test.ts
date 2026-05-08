@@ -22,6 +22,36 @@ function createKnowledgePool() {
       async query(sql: string, values?: unknown[]) {
         calls.push({ sql, values });
 
+        if (sql.includes("SELECT id, topic_slug, view_count")) {
+          return {
+            rows: [
+              {
+                id: "current",
+                topic_slug: "science",
+                view_count: 1,
+              },
+            ],
+          };
+        }
+
+        if (sql.includes("INSERT INTO public.knowledge_nebula_card_views")) {
+          return {
+            rowCount: 1,
+            rows: [{ card_id: values?.[0] }],
+          };
+        }
+
+        if (sql.includes("UPDATE public.knowledge_nebula_cards")) {
+          return {
+            rows: [
+              {
+                id: values?.[0],
+                view_count: 2,
+              },
+            ],
+          };
+        }
+
         if (sql.includes("FROM public.knowledge_nebula_topics")) {
           return {
             rows: [
@@ -110,7 +140,36 @@ test("knowledge nebula store reuses the cached topic payload for repeated slug r
     call.sql.includes("FROM public.knowledge_nebula_topics"),
   );
   const cardReads = calls.filter((call) =>
-    call.sql.includes("FROM public.knowledge_nebula_cards"),
+    call.sql.includes("FROM public.knowledge_nebula_cards") &&
+    call.sql.includes("ORDER BY sort_order"),
+  );
+
+  assert.equal(topicReads.length, 1);
+  assert.equal(cardReads.length, 1);
+});
+
+test("knowledge nebula store patches cached view counts without refetching a topic", async () => {
+  const { pool, calls } = createKnowledgePool();
+  const store = createKnowledgeNebulaStore({ pool: pool as unknown as Pick<Pool, "query"> });
+
+  await store.getTopicBySlug("science");
+  const viewResult = await store.recordCardView("current", "viewer-new");
+  const topicAfterView = await store.getTopicBySlug("science");
+  const current = topicAfterView?.sections.find((section) => section.id === "current");
+
+  assert.deepEqual(viewResult, {
+    cardId: "current",
+    viewCount: 2,
+    counted: true,
+  });
+  assert.equal(current?.viewCount, 2);
+
+  const topicReads = calls.filter((call) =>
+    call.sql.includes("FROM public.knowledge_nebula_topics"),
+  );
+  const cardReads = calls.filter((call) =>
+    call.sql.includes("FROM public.knowledge_nebula_cards") &&
+    call.sql.includes("ORDER BY sort_order"),
   );
 
   assert.equal(topicReads.length, 1);

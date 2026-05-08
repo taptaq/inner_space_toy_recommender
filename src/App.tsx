@@ -628,6 +628,7 @@ export default function App() {
   const [productsError, setProductsError] = useState<string | null>(null);
   const productsFetchRef = useRef<Promise<Product[]> | null>(null);
   const hasAutoRefreshedLibraryProductsRef = useRef(false);
+  const resultEnhancementRunRef = useRef(0);
 
   // 过滤器状态
   const [filterGender, setFilterGender] = useState<string>(
@@ -687,6 +688,7 @@ export default function App() {
     string | undefined
   >(persistedResultSourceState.currentResultModelName);
   const [isRecalibratingResults, setIsRecalibratingResults] = useState(false);
+  const [isEnhancingResults, setIsEnhancingResults] = useState(false);
   const [resultRecalibrationError, setResultRecalibrationError] = useState<
     string | null
   >(null);
@@ -816,12 +818,14 @@ export default function App() {
   };
 
   const resetResultViewState = () => {
+    resultEnhancementRunRef.current += 1;
     setTopProducts([]);
     setBackupProducts([]);
     setRecommendationTips([]);
     setShoppingGuidance([]);
     setResultRecalibrationError(null);
     setIsRecalibratingResults(false);
+    setIsEnhancingResults(false);
     setResultRecalibrationAttemptCount(0);
     applyResultSourceState(clearResultSourceState());
   };
@@ -1364,7 +1368,7 @@ export default function App() {
 用户偏好标签: [${context.userPreferences.join(", ")}]
 
 候选商品列表（已按结构化分数从高到低排序，仅可从中选择）:
-${JSON.stringify(context.rankedProducts, null, 2)}
+${JSON.stringify(context.rankedProducts)}
 
 请仅返回如下格式的 JSON 数组（不要包含任何 Markdown 格式或多余文字）：
 [
@@ -1436,10 +1440,10 @@ Top 3 主推荐已经确定，请只补充两个结果区域：
 候选池数量: ${context.filteredCount}
 
 已确定 Top 3（仅供参考，不需要重排）:
-${JSON.stringify(context.topProducts, null, 2)}
+${JSON.stringify(context.topProducts)}
 
 备选候选（只能基于这些 id 输出说明）:
-${JSON.stringify(context.backupCandidates, null, 2)}
+${JSON.stringify(context.backupCandidates)}
 
 请仅返回如下格式的 JSON 对象（不要包含任何 Markdown 格式或多余文字）：
 {
@@ -1470,6 +1474,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
   }
 
   async function recalibrateCurrentResults() {
+    resultEnhancementRunRef.current += 1;
+    setIsEnhancingResults(false);
     const localResult = buildLocalResultComputation(answers, allProducts);
 
     if (localResult.rerankPool.length === 0) {
@@ -1530,6 +1536,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     currentAnswers: AnswerState,
     localResult: LocalResultComputation,
   ) {
+    resultEnhancementRunRef.current += 1;
+    setIsEnhancingResults(false);
     const finalTopProducts = finalizeRankedProducts(
       localResult.fallbackTopProducts,
       new Map(),
@@ -1688,6 +1696,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     activeQs: Question[] = activeQuestions,
     productsData: Product[] = allProducts,
   ) => {
+    const enhancementRunId = resultEnhancementRunRef.current + 1;
+    resultEnhancementRunRef.current = enhancementRunId;
     setResultBaseAnswers(currentAnswers);
     setAppliedResultTuningModes([]);
     const localResult = buildLocalResultComputation(currentAnswers, productsData);
@@ -1697,6 +1707,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     setBackupProducts([]);
     setRecommendationTips(localResult.recommendationTips);
     setShoppingGuidance([]);
+    setIsEnhancingResults(false);
 
     if (localResult.rerankPool.length === 0) {
       applyResultSourceState(
@@ -1786,70 +1797,86 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
     });
 
     setTopProducts(finalTopProducts);
+    setBackupProducts(localBackupProducts);
+    setShoppingGuidance(localShoppingGuidance);
+    applyResultSourceState(latestResultSourceState);
+    setIsEnhancingResults(backupCandidates.length > 0);
+    setIsAiMatching(false);
+    // 先进入结果页；备选说明和选购建议在后台增强，避免阻塞主推荐展示。
+    setTimeout(() => {
+      setStep(activeQs.length + 1);
+      navigateTo("/results");
+    }, 3000);
 
-    try {
-      if (backupCandidates.length === 0) {
-        setBackupProducts([]);
-        setShoppingGuidance(localShoppingGuidance);
-      } else {
-        const enhancement = await callAiResultEnhancement(
-          currentAnswers,
-          finalTopProducts,
-          backupCandidates,
-          localResult.filteredCount,
-        );
-        const backupReasonMap = new Map<string, string>();
-        const backupPoolIds = new Set(
-          backupCandidates.map((product) => product.id),
-        );
+    if (backupCandidates.length > 0) {
+      void (async () => {
+        try {
+          const enhancement = await callAiResultEnhancement(
+            currentAnswers,
+            finalTopProducts,
+            backupCandidates,
+            localResult.filteredCount,
+          );
+          if (resultEnhancementRunRef.current !== enhancementRunId) {
+            return;
+          }
 
-        if (Array.isArray(enhancement.data.backupProducts)) {
-          enhancement.data.backupProducts.forEach((item) => {
-            if (!item?.id || !backupPoolIds.has(item.id)) return;
-            const normalizedReason = String(item.reason || "").trim();
-            if (normalizedReason) {
-              backupReasonMap.set(item.id, normalizedReason);
-            }
-          });
+          const backupReasonMap = new Map<string, string>();
+          const backupPoolIds = new Set(
+            backupCandidates.map((product) => product.id),
+          );
+
+          if (Array.isArray(enhancement.data.backupProducts)) {
+            enhancement.data.backupProducts.forEach((item) => {
+              if (!item?.id || !backupPoolIds.has(item.id)) return;
+              const normalizedReason = String(item.reason || "").trim();
+              if (normalizedReason) {
+                backupReasonMap.set(item.id, normalizedReason);
+              }
+            });
+          }
+
+          const aiShoppingGuidance = Array.isArray(
+            enhancement.data.shoppingGuidance,
+          )
+            ? enhancement.data.shoppingGuidance
+                .map((line) => String(line || "").trim())
+                .filter(Boolean)
+                .slice(0, MAX_SHOPPING_GUIDANCE_COUNT)
+            : [];
+
+          setBackupProducts(
+            finalizeBackupProducts(
+              backupCandidates,
+              backupReasonMap,
+              currentAnswers,
+            ),
+          );
+          setShoppingGuidance(
+            aiShoppingGuidance.length > 0
+              ? aiShoppingGuidance
+              : localShoppingGuidance,
+          );
+          setIsEnhancingResults(false);
+        } catch (enhancementError) {
+          console.warn(
+            "⚠️ [AI] 结果增强失败，使用本地备选说明与购物建议",
+            enhancementError,
+          );
+          if (resultEnhancementRunRef.current !== enhancementRunId) {
+            return;
+          }
+          setBackupProducts(localBackupProducts);
+          setShoppingGuidance(localShoppingGuidance);
+          setIsEnhancingResults(false);
         }
-
-        const aiShoppingGuidance = Array.isArray(
-          enhancement.data.shoppingGuidance,
-        )
-          ? enhancement.data.shoppingGuidance
-              .map((line) => String(line || "").trim())
-              .filter(Boolean)
-              .slice(0, MAX_SHOPPING_GUIDANCE_COUNT)
-          : [];
-
-        setBackupProducts(
-          finalizeBackupProducts(backupCandidates, backupReasonMap, currentAnswers),
-        );
-        setShoppingGuidance(
-          aiShoppingGuidance.length > 0
-            ? aiShoppingGuidance
-            : localShoppingGuidance,
-        );
-      }
-    } catch (enhancementError) {
-      console.warn(
-        "⚠️ [AI] 结果增强失败，使用本地备选说明与购物建议",
-        enhancementError,
-      );
-      setBackupProducts(localBackupProducts);
-      setShoppingGuidance(localShoppingGuidance);
-    } finally {
-      applyResultSourceState(latestResultSourceState);
-      setIsAiMatching(false);
-      // 延迟跳转以供展示动画
-      setTimeout(() => {
-        setStep(activeQs.length + 1);
-        navigateTo("/results");
-      }, 3000);
+      })();
     }
   };
 
   const resetQuiz = () => {
+    resultEnhancementRunRef.current += 1;
+    setIsEnhancingResults(false);
     clearResultTuningTracking();
     applyResultSourceState(clearResultSourceState());
     setStep(0);
@@ -1864,6 +1891,8 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
   };
 
   const handleBackHomeFromQuiz = () => {
+    resultEnhancementRunRef.current += 1;
+    setIsEnhancingResults(false);
     const clearedState = createClearedQuizSessionState();
     clearResultTuningTracking();
     applyResultSourceState(clearResultSourceState());
@@ -2058,6 +2087,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
               backupProducts={backupProducts}
               shoppingGuidance={shoppingGuidance}
               recommendationTips={recommendationTips}
+              isEnhancingResults={isEnhancingResults}
               isRecalibratingResults={isRecalibratingResults}
               resultRecalibrationError={resultRecalibrationError}
               onRecalibrateResults={recalibrateCurrentResults}

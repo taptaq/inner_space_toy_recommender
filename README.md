@@ -159,12 +159,11 @@
 - `dmxapi-minimax`
 - `dmxapi-qwen`
 - `dmxapi-glm`
-- `dmxapi-kimi`
+- `kimi`
 - `dmxapi-claude`
 - `dmxapi-gemini`
 - `dmxapi-grok`
 - `dmxapi-gpt`
-- `dmxapi-kimi-k2`
 - `deepseek`
 - `qwen`
 - `glm`
@@ -172,7 +171,8 @@
 其中：
 
 - `dmxapi-qwen` 当前使用 `qwen3.5-27b`
-- DMXAPI 扩展兜底中已加入 `claude-opus-4-7`、`gemini-3.1-pro-preview-ssvip`、`grok-4.2-nothinking`、`gpt-5.4`、`kimi-k2.6`
+- `kimi` 当前使用 Moonshot 官方 OpenAI-compatible API，模型为 `kimi-k2.6`
+- DMXAPI 扩展兜底中已加入 `claude-opus-4-7`、`gemini-3.1-pro-preview-ssvip`、`grok-4.2-nothinking`、`gpt-5.4`
 
 这套链路的目标不是让用户手动选模型，而是把模型切换隐藏在“重新生成推荐”这个产品动作后面。
 
@@ -257,6 +257,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY="..."
 SUPABASE_SERVICE_ROLE_KEY="..."
 PRIVATE_DATA_ENCRYPTION_KEY="..."
 DMXAPI_API_KEY="..."
+MOONSHOT_API_KEY="..."
 DEEPSEEK_API_KEY="..."
 QWEN_API_KEY="..."
 GLM_API_KEY="..."

@@ -59,7 +59,7 @@ export type ResultRouteSummary = {
 };
 
 export type ResultNextStepGroup = {
-  id: "hesitation" | "pre-purchase" | "first-receive" | "first-start";
+  id: "hesitation" | "pre-purchase" | "first-receive" | "first-start" | "purchase-focus";
   title: string;
   items: string[];
 };
@@ -604,6 +604,14 @@ export function buildResultNextStepGroups({
     title: "第一次开始时",
     items: Array.from(new Set(firstStartItems)).slice(0, 3),
   });
+
+  if (remainingGuidance.length > 0) {
+    groups.push({
+      id: "purchase-focus",
+      title: "选购时重点看",
+      items: Array.from(new Set(remainingGuidance)).slice(0, 3),
+    });
+  }
 
   return groups.filter((group) => group.items.length > 0);
 }

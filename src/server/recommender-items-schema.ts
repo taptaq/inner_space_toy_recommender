@@ -35,4 +35,20 @@ export async function ensureRecommenderItemsSchema(pool: Queryable) {
     ALTER TABLE public.recommender_toys
     ADD COLUMN IF NOT EXISTS subtype_code TEXT
   `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_recommender_toys_created_at
+    ON public.recommender_toys(created_at DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_recommender_toys_original_id
+    ON public.recommender_toys(original_id)
+    WHERE original_id IS NOT NULL
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_recommender_toys_filter_codes
+    ON public.recommender_toys(gender, type_code, subtype_code)
+  `);
 }

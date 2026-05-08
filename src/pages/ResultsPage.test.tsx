@@ -83,6 +83,39 @@ test("results page shows confidence, fit reasons, and caveats for the primary re
   assert.match(html, /防水表现达到 IPX7/);
 });
 
+test("results page shows a lightweight status while AI enhancement is still running", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[{
+        ...makeProduct({ id: "b1", name: "Backup Pick" }),
+        backupLabel: "更静音",
+        backupReason: "本地备选说明先展示",
+      }]}
+      shoppingGuidance={["先用本地建议兜底"]}
+      recommendationTips={[]}
+      isEnhancingResults
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /AI 正在润色备选说明和选购建议/);
+  assert.match(html, /主推荐已可先查看/);
+  assert.match(html, /本地备选说明先展示/);
+});
+
 test("results page gives the core result shell roomier horizontal and panel padding", () => {
   const source = fs.readFileSync(
     path.resolve(process.cwd(), "src/pages/ResultsPage.tsx"),
@@ -335,10 +368,66 @@ test("results page prioritizes the primary recommendation before secondary contr
     "primary recommendation should be rendered before save/login controls",
   );
   assert.ok(
-    html.indexOf("主推荐横向对比") < html.indexOf("快速微调结果"),
-    "comparison should follow the formal candidates before result-adjustment controls",
+    html.indexOf("还想换个角度？") < html.indexOf("快速微调结果"),
+    "assistive decision tools should be grouped after the primary recommendation",
   );
   assert.doesNotMatch(html, /算法最匹配（第 1 推荐）/);
+});
+
+test("results page groups comparison, alternatives, tuning, and regeneration into one assistive decision area", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音", "高伪装"], appearance: "high_disguise" }}
+      topProducts={[
+        makeProduct({ id: "p1", name: "Primary Pick" }),
+        makeProduct({ id: "p2", name: "Second Pick", score: 88 }),
+        makeProduct({ id: "p3", name: "Third Pick", score: 82 }),
+      ]}
+      backupProducts={[
+        {
+          ...makeProduct({ id: "b1", name: "Backup Pick", score: 80 }),
+          backupLabel: "更静音",
+          backupReason: "更适合低打扰场景。",
+        },
+      ]}
+      shoppingGuidance={["购买前优先确认是否有明确售后和材质说明。"]}
+      recommendationTips={["如果同住，先优先比较更安静的路线。"]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /还想换个角度？/);
+  assert.ok(
+    html.indexOf("还想换个角度？") < html.indexOf("换个侧重点看看"),
+    "backup alternatives should live inside the assistive decision area",
+  );
+  assert.ok(
+    html.indexOf("换个侧重点看看") < html.indexOf("主推荐横向对比"),
+    "alternatives should appear before detailed comparison",
+  );
+  assert.ok(
+    html.indexOf("主推荐横向对比") < html.indexOf("快速微调结果"),
+    "comparison should appear before tuning controls",
+  );
+  assert.ok(
+    html.indexOf("快速微调结果") < html.indexOf("对当前结果不满意？"),
+    "regeneration should be the last assistive decision option",
+  );
+  assert.ok(
+    html.indexOf("购买前最终自检") < html.indexOf("登录后可加密保存"),
+    "archive actions should come after final checks",
+  );
 });
 
 test("results page keeps comparison and backup headings in the same Chinese tone", () => {
@@ -654,6 +743,37 @@ test("results page frames shopping guidance as next-step purchase guidance", () 
   assert.match(html, /购买前优先确认是否有明确售后和材质说明/);
   assert.match(html, /收到后先完成基础清洁/);
   assert.doesNotMatch(html, /结果提示/);
+});
+
+test("results page renders general shopping guidance even when it does not match a specific next-step bucket", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[
+        "先比较主推和备选的静音差异。",
+        "预算接近时，可优先看刺激方向差异。",
+      ]}
+      recommendationTips={[]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /选购时重点看/);
+  assert.match(html, /先比较主推和备选的静音差异/);
+  assert.match(html, /预算接近时，可优先看刺激方向差异/);
 });
 
 test("results page shows a final pre-purchase checklist before the user decides", () => {

@@ -19,7 +19,7 @@ test("RESULT_MODEL_OPTIONS preserves provider order and labels", () => {
   assert.deepEqual(RESULT_MODEL_OPTIONS, [
     {
       provider: "dmxapi-mimo",
-      model: "mimo-v2.5-free",
+      model: "mimo-v2.5-pro",
       label: "Mimo（DMX）",
       description: "默认先试它，结果通常更稳妥。",
     },
@@ -42,9 +42,9 @@ test("RESULT_MODEL_OPTIONS preserves provider order and labels", () => {
       description: "想快速看一版明确建议，可以试它。",
     },
     {
-      provider: "dmxapi-kimi",
-      model: "kimi-k2.6-free",
-      label: "Kimi（DMX）",
+      provider: "kimi",
+      model: "kimi-k2.6",
+      label: "Kimi（官方）",
       description: "想看更自然顺滑的说明文字，可以试它。",
     },
     {
@@ -70,12 +70,6 @@ test("RESULT_MODEL_OPTIONS preserves provider order and labels", () => {
       model: "gpt-5.4",
       label: "GPT（DMX）",
       description: "想看更均衡稳妥的一版结果，可以试它。",
-    },
-    {
-      provider: "dmxapi-kimi-k2",
-      model: "kimi-k2.6",
-      label: "Kimi K2.6（DMX）",
-      description: "想补一层更自然顺滑的表达，可以试它。",
     },
     {
       provider: "deepseek",
@@ -110,10 +104,10 @@ test("RESULT_MODEL_OPTIONS stays aligned with APP_RECOMMENDATION_PROVIDER_ORDER"
 });
 
 test("getResultModelOption returns the matching option when provider exists", () => {
-  assert.deepEqual(getResultModelOption("dmxapi-kimi"), {
-    provider: "dmxapi-kimi",
-    model: "kimi-k2.6-free",
-    label: "Kimi（DMX）",
+  assert.deepEqual(getResultModelOption("kimi"), {
+    provider: "kimi",
+    model: "kimi-k2.6",
+    label: "Kimi（官方）",
     description: "想看更自然顺滑的说明文字，可以试它。",
   });
   assert.deepEqual(getResultModelOption("dmxapi-qwen"), {

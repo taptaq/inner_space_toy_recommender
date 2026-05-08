@@ -260,6 +260,29 @@ export function createKnowledgeNebulaStore({
     return topic;
   }
 
+  function patchCachedCardViewCount(
+    topicSlug: string,
+    cardId: string,
+    viewCount: number,
+  ) {
+    const cachedTopic = topicCache.get(topicSlug);
+    if (!cachedTopic) {
+      return;
+    }
+
+    topicCache.set(topicSlug, {
+      ...cachedTopic,
+      sections: cachedTopic.sections.map((section) =>
+        section.id === cardId
+          ? {
+              ...section,
+              viewCount,
+            }
+          : section,
+      ),
+    });
+  }
+
   return {
     async getTopicBySlug(slug) {
       const cachedTopic = topicCache.get(slug);
@@ -402,7 +425,7 @@ export function createKnowledgeNebulaStore({
         [cardId],
       );
       const row = result.rows[0] ?? cardRow;
-      topicCache.delete(cardRow.topic_slug);
+      patchCachedCardViewCount(cardRow.topic_slug, row.id, row.view_count);
 
       return {
         cardId: row.id,

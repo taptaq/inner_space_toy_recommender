@@ -9,6 +9,7 @@ import {
   buildBackupCandidates,
   buildResultConfidenceSummary,
   buildResultRouteSummary,
+  buildResultNextStepGroups,
   buildLocalBackupReason,
   buildLocalShoppingGuidance,
   buildResultAvoidanceTips,
@@ -360,6 +361,29 @@ test("buildLocalShoppingGuidance returns concise advice for narrow candidate poo
     "更静音：噪音约 40dB，适合更安静的环境",
     "更省预算：价格约 169 元，预算压力更小",
   ]);
+});
+
+test("buildResultNextStepGroups preserves unmatched shopping guidance instead of dropping it", () => {
+  const groups = buildResultNextStepGroups({
+    answers: {
+      tags: ["静音"],
+      maxDb: 50,
+    },
+    relaxationTips: [],
+    shoppingGuidanceItems: [
+      "先比较主推和备选的静音差异。",
+      "预算接近时，可优先看刺激方向差异。",
+    ],
+  });
+
+  assert.ok(
+    groups.some(
+      (group) =>
+        group.title === "选购时重点看" &&
+        group.items.includes("先比较主推和备选的静音差异。") &&
+        group.items.includes("预算接近时，可优先看刺激方向差异。"),
+    ),
+  );
 });
 
 test("buildLocalShoppingGuidance uses branch-specific guidance for male flow", () => {

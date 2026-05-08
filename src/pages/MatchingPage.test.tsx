@@ -35,6 +35,7 @@ test("matching page keeps the answer-driven matching state", () => {
 
   assert.match(html, /链路解析中/);
   assert.match(html, /AI 专家深度匹配中/);
+  assert.match(html, /AI 模型分析预计需要 1-2 分钟/);
   assert.match(html, /静音/);
   assert.match(html, /新手友好/);
 });

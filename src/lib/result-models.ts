@@ -14,7 +14,7 @@ const RESULT_MODEL_METADATA: Readonly<
   Record<AppAiProvider, Omit<ResultModelOption, "provider">>
 > = {
   "dmxapi-mimo": {
-    model: "mimo-v2.5-free",
+    model: "mimo-v2.5-pro",
     label: "Mimo（DMX）",
     description: "默认先试它，结果通常更稳妥。",
   },
@@ -33,9 +33,9 @@ const RESULT_MODEL_METADATA: Readonly<
     label: "GLM（DMX）",
     description: "想快速看一版明确建议，可以试它。",
   },
-  "dmxapi-kimi": {
-    model: "kimi-k2.6-free",
-    label: "Kimi（DMX）",
+  kimi: {
+    model: "kimi-k2.6",
+    label: "Kimi（官方）",
     description: "想看更自然顺滑的说明文字，可以试它。",
   },
   "dmxapi-claude": {
@@ -57,11 +57,6 @@ const RESULT_MODEL_METADATA: Readonly<
     model: "gpt-5.4",
     label: "GPT（DMX）",
     description: "想看更均衡稳妥的一版结果，可以试它。",
-  },
-  "dmxapi-kimi-k2": {
-    model: "kimi-k2.6",
-    label: "Kimi K2.6（DMX）",
-    description: "想补一层更自然顺滑的表达，可以试它。",
   },
   deepseek: {
     model: "deepseek-v4-flash",
