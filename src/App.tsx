@@ -49,6 +49,10 @@ import {
 } from "./lib/user-recommendation-profile";
 import { getProductDisplayName } from "./lib/product-display-name.ts";
 import {
+  sanitizeLibraryTypeSelection,
+  type LibraryAudienceGender,
+} from "./lib/library-product-types.ts";
+import {
   getCurrentSupabaseSession,
   isSupabaseAuthConfigured,
   onSupabaseAuthStateChange,
@@ -116,6 +120,7 @@ type PersistedAppState = {
   recommendationTips?: string[];
   shoppingGuidance?: string[];
   filterGender?: string;
+  filterType?: string;
   filterBrand?: string;
   filterOrigin?: string;
   filterMaxDb?: number;
@@ -124,6 +129,14 @@ type PersistedAppState = {
   currentResultProvider?: AppAiProvider;
   currentResultModelName?: string;
 };
+
+function normalizeLibraryAudienceGender(value: string): LibraryAudienceGender {
+  if (value === "female" || value === "male" || value === "unisex") {
+    return value;
+  }
+
+  return "all";
+}
 
 const AI_RERANK_POOL_SIZE = 10;
 const FINAL_SELECTION_COUNT = 3;
@@ -599,7 +612,13 @@ export default function App() {
 
   // 过滤器状态
   const [filterGender, setFilterGender] = useState<string>(
-    persistedState.filterGender ?? "all",
+    normalizeLibraryAudienceGender(persistedState.filterGender ?? "all"),
+  );
+  const [filterType, setFilterType] = useState<string>(() =>
+    sanitizeLibraryTypeSelection(
+      persistedState.filterType ?? "all",
+      normalizeLibraryAudienceGender(persistedState.filterGender ?? "all"),
+    ),
   );
   const [filterBrand, setFilterBrand] = useState<string>(
     persistedState.filterBrand ?? "all",
@@ -877,6 +896,15 @@ export default function App() {
   }, [currentRoute, allProducts.length, isLoading]);
 
   useEffect(() => {
+    setFilterType((currentType) =>
+      sanitizeLibraryTypeSelection(
+        currentType,
+        normalizeLibraryAudienceGender(filterGender),
+      ),
+    );
+  }, [filterGender]);
+
+  useEffect(() => {
     writeSessionJsonStorage(
       APP_STATE_STORAGE_KEY,
       {
@@ -887,6 +915,7 @@ export default function App() {
         recommendationTips,
         shoppingGuidance,
         filterGender,
+        filterType,
         filterBrand,
         filterOrigin,
         filterMaxDb,
@@ -904,6 +933,7 @@ export default function App() {
     recommendationTips,
     shoppingGuidance,
     filterGender,
+    filterType,
     filterBrand,
     filterOrigin,
     filterMaxDb,
@@ -1827,6 +1857,7 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
       <LibraryPage
         allProducts={allProducts}
         filterGender={filterGender}
+        filterType={filterType}
         filterBrand={filterBrand}
         filterOrigin={filterOrigin}
         filterMaterial={filterMaterial}
@@ -1835,7 +1866,17 @@ ${JSON.stringify(context.backupCandidates, null, 2)}
         isLoading={isLoading}
         error={productsError}
         onReload={() => fetchProducts({ force: true })}
-        onFilterGenderChange={setFilterGender}
+        onFilterGenderChange={(value) =>
+          setFilterGender(normalizeLibraryAudienceGender(value))
+        }
+        onFilterTypeChange={(value) =>
+          setFilterType(
+            sanitizeLibraryTypeSelection(
+              value,
+              normalizeLibraryAudienceGender(filterGender),
+            ),
+          )
+        }
         onFilterBrandChange={setFilterBrand}
         onFilterOriginChange={setFilterOrigin}
         onFilterMaterialChange={setFilterMaterial}

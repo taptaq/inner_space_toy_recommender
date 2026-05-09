@@ -125,7 +125,7 @@ test("library page filters products by selected type code", () => {
 });
 
 test("library page keeps uncategorized products visible only under all types", () => {
-  const html = renderToStaticMarkup(
+  const allTypesHtml = renderToStaticMarkup(
     <LibraryPage
       allProducts={[
         makeProduct({ id: "u1", name: "Unknown One", gender: "female", typeCode: null }),
@@ -151,7 +151,34 @@ test("library page keeps uncategorized products visible only under all types", (
     />,
   );
 
-  assert.match(html, /Unknown One/);
+  const specificTypeHtml = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({ id: "u1", name: "Unknown One", gender: "female", typeCode: null }),
+      ]}
+      filterGender="female"
+      filterType="suction"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(allTypesHtml, /Unknown One/);
+  assert.doesNotMatch(specificTypeHtml, /Unknown One/);
 });
 
 test("library page keeps a calmer mobile-first shell and lighter filter density", () => {

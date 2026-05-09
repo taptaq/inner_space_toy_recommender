@@ -67,6 +67,10 @@ async function ensureRecommenderItemsSchema(pool: any) {
     ALTER TABLE public.recommender_items
     ADD COLUMN IF NOT EXISTS safe_display_name TEXT
   `);
+  await pool.query(`
+    ALTER TABLE public.recommender_items
+    ADD COLUMN IF NOT EXISTS type_code TEXT
+  `);
 }
 
 app.get('/api/recommender/toys', async (_req, res) => {
@@ -75,7 +79,7 @@ app.get('/api/recommender/toys', async (_req, res) => {
     const result = await pool.query(`
       SELECT 
         t.id, t.name, t.safe_display_name, t.price, t.max_db, t.waterproof, 
-        t.appearance, t.physical_form, t.motor_type, t.gender, 
+        t.appearance, t.physical_form, t.motor_type, t.gender, t.type_code,
         t.brand, t.material, t.image_url, t.raw_description,
         p.link, p.tags, p.persona_\x61nalysis AS persona_analysis,
         c.is_domestic
@@ -98,6 +102,7 @@ app.get('/api/recommender/toys', async (_req, res) => {
       physicalForm: t.physical_form,
       motorType: t.motor_type,
       gender: t.gender,
+      typeCode: t.type_code || null,
       brand: t.brand || '探索品牌',
       material: t.material || '亲肤材质',
       rawDescription: t.raw_description || null,

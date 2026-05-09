@@ -48,6 +48,7 @@ async function syncProductsToMock() {
         physicalForm: row.physical_form,
         motorType: row.motor_type,
         gender: row.gender,
+        typeCode: row.type_code || null,
         imagePlaceholder: row.image_url || 'bg-gradient-to-br from-indigo-900/40 to-blue-900/40',
         link: row.link || null,
         sourceUrl: row.link || null,
@@ -66,6 +67,7 @@ async function syncProductsToMock() {
   appearance: 'high_disguise' | 'normal';
   physicalForm: 'external' | 'internal' | 'composite';
   motorType: 'gentle' | 'strong';
+  typeCode?: string | null;
   imagePlaceholder: string;
   link?: string | null;
   sourceUrl?: string | null;

@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowUp, ChevronDown } from "lucide-react";
-import { Product } from "../data/mock.ts";
+import type { Product } from "../data/mock.ts";
 import { ProductCardContent } from "../components/ProductCardContent.tsx";
 import { PRICE_RANGE_OPTIONS, matchesPriceRange } from "../lib/app-shell.ts";
 import { shouldShowLibraryBackToTop } from "../lib/library-back-to-top.ts";
+import {
+  getAllowedLibraryTypeCodes,
+  getLibraryTypeLabel,
+  sanitizeLibraryTypeSelection,
+  type LibraryAudienceGender,
+} from "../lib/library-product-types.ts";
 
 export function LibraryPage({
   allProducts,
   filterGender,
+  filterType = "all",
   filterBrand,
   filterOrigin,
   filterMaterial,
@@ -17,6 +24,7 @@ export function LibraryPage({
   error,
   onReload,
   onFilterGenderChange,
+  onFilterTypeChange = () => {},
   onFilterBrandChange,
   onFilterOriginChange,
   onFilterMaterialChange,
@@ -26,6 +34,7 @@ export function LibraryPage({
 }: {
   allProducts: Product[];
   filterGender: string;
+  filterType?: string;
   filterBrand: string;
   filterOrigin: string;
   filterMaterial: string;
@@ -35,6 +44,7 @@ export function LibraryPage({
   error: string | null;
   onReload: () => void;
   onFilterGenderChange: (value: string) => void;
+  onFilterTypeChange?: (value: string) => void;
   onFilterBrandChange: (value: string) => void;
   onFilterOriginChange: (value: string) => void;
   onFilterMaterialChange: (value: string) => void;
@@ -43,6 +53,15 @@ export function LibraryPage({
   onBack: () => void;
 }) {
   const products = Array.isArray(allProducts) ? allProducts : [];
+  const normalizedFilterGender: LibraryAudienceGender =
+    filterGender === "female" || filterGender === "male" || filterGender === "unisex"
+      ? filterGender
+      : "all";
+  const allowedTypeCodes = getAllowedLibraryTypeCodes(normalizedFilterGender);
+  const effectiveFilterType = sanitizeLibraryTypeSelection(
+    filterType,
+    normalizedFilterGender,
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
@@ -115,6 +134,24 @@ export function LibraryPage({
                 <option value="female">女性向</option>
                 <option value="male">男性向</option>
                 <option value="unisex">通用型</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                类型
+              </label>
+              <select
+                value={effectiveFilterType}
+                onChange={(e) => onFilterTypeChange(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-cyan-500/50 appearance-none"
+              >
+                <option value="all">全部类型</option>
+                {allowedTypeCodes.map((typeCode) => (
+                  <option key={typeCode} value={typeCode}>
+                    {getLibraryTypeLabel(typeCode)}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -280,6 +317,9 @@ export function LibraryPage({
             .filter((product) => {
               const matchGender =
                 filterGender === "all" || product.gender === filterGender;
+              const matchType =
+                effectiveFilterType === "all" ||
+                product.typeCode === effectiveFilterType;
               const matchBrand =
                 filterBrand === "all" || product.brand === filterBrand;
               const matchOrigin =
@@ -299,6 +339,7 @@ export function LibraryPage({
 
               return (
                 matchGender &&
+                matchType &&
                 matchBrand &&
                 matchOrigin &&
                 matchDb &&
