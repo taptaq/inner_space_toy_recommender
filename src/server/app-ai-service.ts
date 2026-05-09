@@ -21,7 +21,9 @@ import type {
   ResultRecalibrationContext,
 } from "../lib/result-recalibration.js";
 import { buildProductDescriptionSignalsSummary } from "../lib/product-description-signals.js";
+import { buildProductDisguiseSignalsSummary } from "../lib/product-disguise-signals.js";
 import { getProductDisplayName } from "../lib/product-display-name.js";
+import { buildRecommendationPreferenceSignals } from "../lib/recommendation-preference-signals.js";
 import { runAppAiProviderLadder } from "./app-ai-proxy.js";
 
 const FINAL_SELECTION_COUNT = 3;
@@ -279,6 +281,9 @@ function buildRerankPrompt(
 ) {
   const context = {
     userPreferences: answers.tags,
+    preferenceSignals: buildRecommendationPreferenceSignals(answers).map(
+      (signal) => signal.label,
+    ),
     rankedProducts: rankedProducts.map((product, index) => ({
       rank: index + 1,
       id: product.id,
@@ -293,6 +298,7 @@ function buildRerankPrompt(
       structuredScore: product.score,
       matchSummary: product.matchSummary?.join("、") || "",
       descriptionSignals: buildProductDescriptionSignalsSummary(product),
+      disguiseSignals: buildProductDisguiseSignalsSummary(product),
     })),
   };
 
@@ -301,6 +307,7 @@ function buildRerankPrompt(
 当前候选池已经由结构化规则筛到较小范围。请你在这些候选商品中，重新挑选最匹配的前 3 名，并给出每个商品的推荐理由。
 
 用户偏好标签: [${context.userPreferences.join(", ")}]
+用户结构化偏好信号: ${JSON.stringify({ preferenceSignals: context.preferenceSignals })}
 
 候选商品列表（已按结构化分数从高到低排序，仅可从中选择）:
 ${JSON.stringify(context.rankedProducts)}
@@ -316,7 +323,8 @@ ${JSON.stringify(context.rankedProducts)}
 2. 最多返回 3 个，顺序就是你最终认定的 Top1 到 Top3。
 3. 推荐理由必须体现该商品为什么适合当前偏好，避免空泛夸张。
 4. 用中文输出，简洁自然，不要重复同一句话。
-5. 请综合用户标签、结构化分数、matchSummary、descriptionSignals、价格、噪音、防水、刺激形式来判断，不要只看单一字段。`;
+5. 请综合用户标签、preferenceSignals、结构化分数、matchSummary、descriptionSignals、disguiseSignals、价格、噪音、防水、刺激形式来判断，不要只看单一字段。
+6. 高伪装偏好下，优先考虑明确非传统设备外观、日用品/装饰物造型、口红/玫瑰/香水/挂件等伪装信号；不要仅凭抽象“高伪装”标签自由发挥。`;
 }
 
 function buildResultEnhancementPrompt(
@@ -336,6 +344,7 @@ function buildResultEnhancementPrompt(
       price: product.price,
       reason: product.reason,
       descriptionSignals: buildProductDescriptionSignalsSummary(product),
+      disguiseSignals: buildProductDisguiseSignalsSummary(product),
     })),
     backupCandidates: backupCandidates.map((product, index) => ({
       rank: index + 1,
@@ -347,6 +356,7 @@ function buildResultEnhancementPrompt(
       structuredScore: product.score,
       matchSummary: product.matchSummary?.join("、") || "",
       descriptionSignals: buildProductDescriptionSignalsSummary(product),
+      disguiseSignals: buildProductDisguiseSignalsSummary(product),
       localReason: buildLocalBackupReason(product, product.backupLabel),
     })),
   };

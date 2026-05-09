@@ -20,6 +20,7 @@ export function QuizPage({
     value: AnswerState[keyof AnswerState],
     tag: string,
     answerPatch?: Partial<Omit<AnswerState, "tags">>,
+    optionLabel?: string,
   ) => void;
   onBackQuestion: () => void;
   onBackHome: () => void;
@@ -133,6 +134,7 @@ export function QuizPage({
                   option.value,
                   option.tag,
                   option.answerPatch,
+                  option.label,
                 )
               }
               className="group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/[0.035] p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200/28 hover:bg-cyan-300/[0.075] hover:shadow-[0_0_34px_rgba(34,211,238,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/65 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:p-5"

@@ -22,6 +22,7 @@ export type RecommendationAnswers = Pick<
   | "channelFeel"
   | "sessionGoal"
   | "interactionMode"
+  | "partnerComposition"
   | "fitPreference"
   | "coupleScene"
   | "sharedIntensity"

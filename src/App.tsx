@@ -56,7 +56,10 @@ import {
   sanitizeLibraryTypeSelection,
   type LibraryAudienceGender,
 } from "./lib/library-product-types.ts";
-import { buildRecommendationCandidatePool } from "./lib/recommendation-candidate-pool.ts";
+import {
+  buildLocalRecommendationRanking,
+  type StructuredRankedProduct,
+} from "./lib/recommendation-local-ranking.ts";
 import {
   getCurrentSupabaseSession,
   isSupabaseAuthConfigured,
@@ -71,10 +74,17 @@ import {
   type ThemeCosmosVariant,
 } from "./components/ThemeCosmosLayer";
 import {
-  getBranchPreferenceAdjustments,
-  selectScorePresetId,
-  type ScorePresetId,
-} from "./lib/quiz-branching";
+  buildProductDisguiseSignalsSummary,
+} from "./lib/product-disguise-signals";
+import { buildRecommendationPreferenceSignals } from "./lib/recommendation-preference-signals";
+import { submitRecommendationFeedbackEvent } from "./lib/recommendation-feedback";
+import {
+  appendQuizAnswerPathEntry,
+  createRecommendationSessionId,
+  submitRecommendationSession,
+  trimQuizAnswerPathFromStep,
+  type QuizAnswerPathEntry,
+} from "./lib/recommendation-session";
 import { HomePage } from "./pages/HomePage";
 import { QuizPage } from "./pages/QuizPage";
 import { MatchingPage } from "./pages/MatchingPage";
@@ -100,13 +110,6 @@ import {
   type AppThemeId,
 } from "./lib/app-theme";
 import type { KnowledgeNebulaTopicSlug } from "./data/knowledge-nebula";
-
-type StructuredRankedProduct = RankedProduct & {
-  matchSummary: string[];
-  hardMisses: number;
-  budgetGap: number;
-  noiseGap: number;
-};
 
 type AiReasonResult = {
   id: string;
@@ -134,6 +137,8 @@ type AppAiProxyResponse<T> = {
 type PersistedAppState = {
   step?: number;
   answers?: AnswerState;
+  answerPath?: QuizAnswerPathEntry[];
+  recommendationSessionId?: string;
   resultBaseAnswers?: AnswerState;
   appliedResultTuningModes?: ResultTuningMode[];
   topProducts?: RankedProduct[];
@@ -164,384 +169,6 @@ const AI_RERANK_POOL_SIZE = 10;
 const FINAL_SELECTION_COUNT = 3;
 const BACKUP_SELECTION_COUNT = 3;
 const MAX_SHOPPING_GUIDANCE_COUNT = 5;
-
-type ScoreWeights = {
-  genderExact: number;
-  genderUnisex: number;
-  genderMiss: number;
-  physicalFormExact: number;
-  physicalFormMiss: number;
-  motorTypeExact: number;
-  motorTypeMiss: number;
-  appearanceExact: number;
-  appearanceHighDisguiseMiss: number;
-  waterproofUnknown: number;
-  waterproofQualified: number;
-  waterproofMiss: number;
-  noiseUnknown: number;
-  noiseQualified: number;
-  noiseMissMin: number;
-  noiseMissStep: number;
-  noiseMissMax: number;
-  noiseStepDb: number;
-  budgetInRange: number;
-  budgetMidpointBonusMax: number;
-  budgetMidpointStepPrice: number;
-  budgetMissBase: number;
-  budgetMissStep: number;
-  budgetMissMax: number;
-  budgetMissStepPrice: number;
-  tagsBonusMax: number;
-};
-
-type HardMissPolicy = {
-  genderMismatch: boolean;
-  physicalFormMismatch: boolean;
-  motorTypeMismatch: boolean;
-  appearanceMismatch: boolean;
-  waterproofMismatch: boolean;
-  noiseMismatch: boolean;
-  budgetMismatch: boolean;
-};
-
-type ScorePreset = {
-  id: ScorePresetId;
-  label: string;
-  weights: ScoreWeights;
-  hardMissPolicy: HardMissPolicy;
-};
-
-// 结构化打分预设。
-// 目标不是“数学最优”，而是按当前业务场景给出更贴近真实选品思路的权重分配。
-const SCORE_PRESET_FEMALE: ScorePreset = {
-  id: "female",
-  label: "女性向场景",
-  weights: {
-    genderExact: 32,
-    genderUnisex: 14,
-    genderMiss: -36,
-
-    physicalFormExact: 38,
-    physicalFormMiss: -14,
-
-    motorTypeExact: 24,
-    motorTypeMiss: -10,
-
-    appearanceExact: 24,
-    appearanceHighDisguiseMiss: -22,
-
-    waterproofUnknown: 2,
-    waterproofQualified: 14,
-    waterproofMiss: -14,
-
-    noiseUnknown: 2,
-    noiseQualified: 20,
-    noiseMissMin: -8,
-    noiseMissStep: -4,
-    noiseMissMax: -20,
-    noiseStepDb: 5,
-
-    budgetInRange: 18,
-    budgetMidpointBonusMax: 6,
-    budgetMidpointStepPrice: 50,
-    budgetMissBase: -8,
-    budgetMissStep: -4,
-    budgetMissMax: -20,
-    budgetMissStepPrice: 50,
-
-    tagsBonusMax: 4,
-  },
-  hardMissPolicy: {
-    genderMismatch: true,
-    physicalFormMismatch: true,
-    motorTypeMismatch: false,
-    appearanceMismatch: true,
-    waterproofMismatch: true,
-    noiseMismatch: true,
-    budgetMismatch: true,
-  },
-};
-
-const SCORE_PRESET_MALE: ScorePreset = {
-  id: "male",
-  label: "男性向场景",
-  weights: {
-    genderExact: 34,
-    genderUnisex: 10,
-    genderMiss: -40,
-
-    physicalFormExact: 30,
-    physicalFormMiss: -12,
-
-    motorTypeExact: 28,
-    motorTypeMiss: -12,
-
-    appearanceExact: 8,
-    appearanceHighDisguiseMiss: -8,
-
-    waterproofUnknown: 4,
-    waterproofQualified: 10,
-    waterproofMiss: -8,
-
-    noiseUnknown: 6,
-    noiseQualified: 10,
-    noiseMissMin: -4,
-    noiseMissStep: -3,
-    noiseMissMax: -12,
-    noiseStepDb: 5,
-
-    budgetInRange: 24,
-    budgetMidpointBonusMax: 8,
-    budgetMidpointStepPrice: 60,
-    budgetMissBase: -10,
-    budgetMissStep: -4,
-    budgetMissMax: -24,
-    budgetMissStepPrice: 60,
-
-    tagsBonusMax: 5,
-  },
-  hardMissPolicy: {
-    genderMismatch: true,
-    physicalFormMismatch: true,
-    motorTypeMismatch: true,
-    appearanceMismatch: false,
-    waterproofMismatch: true,
-    noiseMismatch: false,
-    budgetMismatch: true,
-  },
-};
-
-const SCORE_PRESET_COUPLE: ScorePreset = {
-  id: "couple",
-  label: "情侣共玩场景",
-  weights: {
-    genderExact: 18,
-    genderUnisex: 32,
-    genderMiss: -36,
-
-    physicalFormExact: 28,
-    physicalFormMiss: -10,
-
-    motorTypeExact: 18,
-    motorTypeMiss: -8,
-
-    appearanceExact: 20,
-    appearanceHighDisguiseMiss: -12,
-
-    waterproofUnknown: 4,
-    waterproofQualified: 14,
-    waterproofMiss: -12,
-
-    noiseUnknown: 8,
-    noiseQualified: 22,
-    noiseMissMin: -8,
-    noiseMissStep: -4,
-    noiseMissMax: -22,
-    noiseStepDb: 5,
-
-    budgetInRange: 22,
-    budgetMidpointBonusMax: 8,
-    budgetMidpointStepPrice: 50,
-    budgetMissBase: -8,
-    budgetMissStep: -4,
-    budgetMissMax: -24,
-    budgetMissStepPrice: 50,
-
-    tagsBonusMax: 4,
-  },
-  hardMissPolicy: {
-    genderMismatch: true,
-    physicalFormMismatch: false,
-    motorTypeMismatch: false,
-    appearanceMismatch: true,
-    waterproofMismatch: true,
-    noiseMismatch: true,
-    budgetMismatch: true,
-  },
-};
-
-const SCORE_PRESETS = {
-  female: SCORE_PRESET_FEMALE,
-  male: SCORE_PRESET_MALE,
-  couple: SCORE_PRESET_COUPLE,
-} as const;
-
-function selectScorePreset(
-  answers: AnswerState,
-  products: Product[],
-): ScorePreset {
-  return SCORE_PRESETS[selectScorePresetId(answers, products)];
-}
-
-// 并列时的优先级：
-// 1. 先看总分
-// 2. 再看踩雷项 hardMisses
-// 3. 再看预算/噪音偏差
-// 4. 最后才用防水和价格做细排
-const TIEBREAKER_PRIORITY = {
-  preferHigherWaterproof: true,
-  preferLowerPrice: true,
-} as const;
-
-function getBudgetGap(price: number, budget?: [number, number]) {
-  if (!budget) return 0;
-  const [min, max] = budget;
-  if (price < min) return min - price;
-  if (price > max) return price - max;
-  return 0;
-}
-
-function scoreStructuredProduct(
-  product: Product,
-  answers: AnswerState,
-  preset: ScorePreset,
-): StructuredRankedProduct {
-  const weights = preset.weights;
-  const hardMissPolicy = preset.hardMissPolicy;
-  let score = 0;
-  let hardMisses = 0;
-  const matchSummary: string[] = [];
-  const budgetGap = getBudgetGap(product.price, answers.budget);
-  const noiseGap =
-    answers.maxDb && product.maxDb != null
-      ? Math.max(product.maxDb - answers.maxDb, 0)
-      : 0;
-
-  if (answers.gender) {
-    if (product.gender === answers.gender) {
-      score += weights.genderExact;
-      matchSummary.push("适配当前使用方向");
-    } else if (product.gender === "unisex") {
-      score += weights.genderUnisex;
-      matchSummary.push("支持通用/情侣场景");
-    } else {
-      score += weights.genderMiss;
-      if (hardMissPolicy.genderMismatch) hardMisses += 1;
-    }
-  }
-
-  if (answers.physicalForm) {
-    if (product.physicalForm === answers.physicalForm) {
-      score += weights.physicalFormExact;
-      matchSummary.push("刺激形式与偏好一致");
-    } else {
-      score += weights.physicalFormMiss;
-      if (hardMissPolicy.physicalFormMismatch) hardMisses += 1;
-    }
-  }
-
-  if (answers.motorType) {
-    if (product.motorType === answers.motorType) {
-      score += weights.motorTypeExact;
-      matchSummary.push(
-        product.motorType === "gentle" ? "力度更偏温柔稳定" : "力度更偏强劲直接",
-      );
-    } else {
-      score += weights.motorTypeMiss;
-      if (hardMissPolicy.motorTypeMismatch) hardMisses += 1;
-    }
-  }
-
-  if (answers.appearance) {
-    if (product.appearance === answers.appearance) {
-      score += weights.appearanceExact;
-      if (product.appearance === "high_disguise") {
-        matchSummary.push("外观更利于隐蔽收纳");
-      }
-    } else if (answers.appearance === "high_disguise") {
-      score += weights.appearanceHighDisguiseMiss;
-      if (hardMissPolicy.appearanceMismatch) hardMisses += 1;
-    }
-  }
-
-  if (answers.waterproof) {
-    if (product.waterproof == null) {
-      score += weights.waterproofUnknown;
-    } else if (product.waterproof >= answers.waterproof) {
-      score += weights.waterproofQualified;
-      matchSummary.push(`防水表现达到 IPX${product.waterproof}`);
-    } else {
-      score += weights.waterproofMiss;
-      if (hardMissPolicy.waterproofMismatch) hardMisses += 1;
-    }
-  }
-
-  if (answers.maxDb) {
-    if (product.maxDb == null) {
-      score += weights.noiseUnknown;
-    } else if (product.maxDb <= answers.maxDb) {
-      score += weights.noiseQualified;
-      matchSummary.push(`${product.maxDb}dB 更贴近静音需求`);
-    } else {
-      const noisePenalty = Math.max(
-        Math.abs(weights.noiseMissMin),
-        Math.ceil(noiseGap / weights.noiseStepDb) *
-          Math.abs(weights.noiseMissStep),
-      );
-      score -= Math.min(Math.abs(weights.noiseMissMax), noisePenalty);
-      if (hardMissPolicy.noiseMismatch) hardMisses += 1;
-    }
-  }
-
-  if (answers.budget) {
-    if (budgetGap === 0) {
-      const [min, max] = answers.budget;
-      const midpoint = (min + max) / 2;
-      const midpointGap = Math.abs(product.price - midpoint);
-      score += weights.budgetInRange;
-      score += Math.max(
-        0,
-        weights.budgetMidpointBonusMax -
-          Math.round(midpointGap / weights.budgetMidpointStepPrice),
-      );
-      matchSummary.push("价格落在预算区间内");
-    } else {
-      const budgetPenalty =
-        Math.abs(weights.budgetMissBase) +
-        Math.ceil(budgetGap / weights.budgetMissStepPrice) *
-          Math.abs(weights.budgetMissStep);
-      score -= Math.min(Math.abs(weights.budgetMissMax), budgetPenalty);
-      if (hardMissPolicy.budgetMismatch) hardMisses += 1;
-    }
-  }
-
-  if (Array.isArray(product.tags) && product.tags.length > 0) {
-    score += Math.min(product.tags.length, weights.tagsBonusMax);
-  }
-
-  const branchAdjustments = getBranchPreferenceAdjustments(
-    product,
-    answers,
-    preset.id,
-  );
-  score += branchAdjustments.score;
-  matchSummary.push(...branchAdjustments.summary);
-
-  return {
-    ...product,
-    score: Math.max(0, Math.round(score)),
-    matchSummary: Array.from(new Set(matchSummary)).slice(0, 4),
-    hardMisses,
-    budgetGap,
-    noiseGap,
-  };
-}
-
-function compareStructuredProducts(
-  a: StructuredRankedProduct,
-  b: StructuredRankedProduct,
-) {
-  return (
-    b.score - a.score ||
-    a.hardMisses - b.hardMisses ||
-    a.budgetGap - b.budgetGap ||
-    a.noiseGap - b.noiseGap ||
-    (TIEBREAKER_PRIORITY.preferHigherWaterproof
-      ? (b.waterproof ?? -1) - (a.waterproof ?? -1)
-      : 0) ||
-    (TIEBREAKER_PRIORITY.preferLowerPrice ? a.price - b.price : 0)
-  );
-}
 
 function finalizeRankedProducts(
   products: StructuredRankedProduct[],
@@ -626,6 +253,14 @@ export default function App() {
   const [answers, setAnswers] = useState<AnswerState>(
     persistedState.answers ?? { tags: [] },
   );
+  const [answerPath, setAnswerPath] = useState<QuizAnswerPathEntry[]>(
+    persistedState.answerPath ?? [],
+  );
+  const [recommendationSessionId, setRecommendationSessionId] =
+    useState<string>(
+      persistedState.recommendationSessionId ??
+        createRecommendationSessionId(),
+    );
   const [resultBaseAnswers, setResultBaseAnswers] = useState<AnswerState | null>(
     persistedState.resultBaseAnswers ?? null,
   );
@@ -844,6 +479,8 @@ export default function App() {
   const startFreshQuizSession = () => {
     clearResultTuningTracking();
     resetResultViewState();
+    setRecommendationSessionId(createRecommendationSessionId());
+    setAnswerPath([]);
     setAnswers({ tags: [] });
     setStep(0);
     navigateTo("/quiz");
@@ -997,6 +634,8 @@ export default function App() {
       {
         step,
         answers,
+        answerPath,
+        recommendationSessionId,
         resultBaseAnswers,
         appliedResultTuningModes,
         topProducts,
@@ -1018,6 +657,8 @@ export default function App() {
   }, [
     step,
     answers,
+    answerPath,
+    recommendationSessionId,
     resultBaseAnswers,
     appliedResultTuningModes,
     topProducts,
@@ -1111,13 +752,26 @@ export default function App() {
     value: AnswerState[keyof AnswerState],
     tag: string,
     answerPatch?: Partial<Omit<AnswerState, "tags">>,
+    optionLabel = tag,
   ) => {
+    const currentQuestion = activeQuestions[step];
+    const nextAnswerPath = currentQuestion
+      ? appendQuizAnswerPathEntry(answerPath, {
+          step,
+          question: currentQuestion,
+          optionLabel,
+          optionValue: value,
+          tag,
+          answerPatch,
+        })
+      : answerPath;
     const newAnswers = {
       ...answers,
       ...(answerPatch ?? {}),
       ...(value === undefined ? {} : { [field]: value }),
       tags: [...answers.tags, tag],
     };
+    setAnswerPath(nextAnswerPath);
     setAnswers(newAnswers);
 
     const activeQs = getActiveQuestions(newAnswers.gender);
@@ -1128,10 +782,10 @@ export default function App() {
       setStep(activeQs.length); // Loading state
       if (!hasFetched) {
         fetchProducts().then((data) =>
-          calculateResults(newAnswers, activeQs, data),
+          calculateResults(newAnswers, activeQs, data, nextAnswerPath),
         );
       } else {
-        calculateResults(newAnswers, activeQs, allProducts);
+        calculateResults(newAnswers, activeQs, allProducts, nextAnswerPath);
       }
     }
   };
@@ -1150,6 +804,7 @@ export default function App() {
         ) as (keyof Omit<AnswerState, "tags">)[],
       }),
     );
+    setAnswerPath((currentPath) => currentPath.slice(0, -1));
     setStep(step - 1);
   };
 
@@ -1176,6 +831,9 @@ export default function App() {
     const editableAnswers = resultBaseAnswers ?? answers;
 
     clearResultTuningTracking();
+    setAnswerPath((currentPath) =>
+      trimQuizAnswerPathFromStep(currentPath, questionIndex),
+    );
     setAnswers(removeQuizQuestionAnswer(editableAnswers, questionByCondition));
     resetResultViewState();
     setStep(questionIndex);
@@ -1188,6 +846,9 @@ export default function App() {
     const editableAnswers = resultBaseAnswers ?? answers;
 
     clearResultTuningTracking();
+    setAnswerPath((currentPath) =>
+      trimQuizAnswerPathFromStep(currentPath, questionIndex),
+    );
     setAnswers(
       removeQuizAnswersFromQuestionIndex(
         editableAnswers,
@@ -1214,12 +875,16 @@ export default function App() {
     currentAnswers: AnswerState,
     productsData: Product[],
   ): LocalResultComputation {
-    const recommendationPool = buildRecommendationCandidatePool(
+    const localRanking = buildLocalRecommendationRanking(
       currentAnswers,
       productsData,
+      {
+        rerankPoolSize: AI_RERANK_POOL_SIZE,
+        finalSelectionCount: FINAL_SELECTION_COUNT,
+      },
     );
-    const filtered = recommendationPool.filteredProducts;
-    const relaxedProducts = recommendationPool.relaxedProducts;
+    const filtered = localRanking.filteredProducts;
+    const relaxedProducts = localRanking.relaxedProducts;
 
     const recommendationTips: string[] = [];
 
@@ -1283,21 +948,12 @@ export default function App() {
       }
     }
 
-    const candidates = recommendationPool.rankedInputProducts;
-    const scorePreset = selectScorePreset(currentAnswers, candidates);
-    const rankedCandidates = candidates
-      .map((product) =>
-        scoreStructuredProduct(product, currentAnswers, scorePreset),
-      )
-      .sort(compareStructuredProducts);
-    const rerankPool = rankedCandidates.slice(0, AI_RERANK_POOL_SIZE);
-
     return {
       filteredCount: filtered.length,
       recommendationTips,
-      rankedCandidates,
-      rerankPool,
-      fallbackTopProducts: rerankPool.slice(0, FINAL_SELECTION_COUNT),
+      rankedCandidates: localRanking.rankedCandidates,
+      rerankPool: localRanking.rerankPool,
+      fallbackTopProducts: localRanking.fallbackTopProducts,
     };
   }
 
@@ -1361,6 +1017,9 @@ export default function App() {
   ) {
     const context = {
       userPreferences: userAnswers.tags,
+      preferenceSignals: buildRecommendationPreferenceSignals(userAnswers).map(
+        (signal) => signal.label,
+      ),
       rankedProducts: rankedProducts.map((p, index) => ({
         rank: index + 1,
         id: p.id,
@@ -1374,6 +1033,7 @@ export default function App() {
         tags: p.tags?.join(", ") || "",
         structuredScore: p.score,
         matchSummary: p.matchSummary.join("、"),
+        disguiseSignals: buildProductDisguiseSignalsSummary(p),
       })),
     };
 
@@ -1382,6 +1042,7 @@ export default function App() {
 当前候选池已经由结构化规则筛到较小范围。请你在这些候选商品中，重新挑选最匹配的前 3 名，并给出每个商品的推荐理由。
 
 用户偏好标签: [${context.userPreferences.join(", ")}]
+用户结构化偏好信号: ${JSON.stringify({ preferenceSignals: context.preferenceSignals })}
 
 候选商品列表（已按结构化分数从高到低排序，仅可从中选择）:
 ${JSON.stringify(context.rankedProducts)}
@@ -1397,7 +1058,8 @@ ${JSON.stringify(context.rankedProducts)}
 2. 最多返回 3 个，顺序就是你最终认定的 Top1 到 Top3。
 3. 推荐理由必须体现该商品为什么适合当前偏好，避免空泛夸张。
 4. 用中文输出，简洁自然，不要重复同一句话。
-5. 请综合用户标签、结构化分数、matchSummary、价格、噪音、防水、刺激形式来判断，不要只看单一字段。`;
+5. 请综合用户标签、preferenceSignals、结构化分数、matchSummary、disguiseSignals、价格、噪音、防水、刺激形式来判断，不要只看单一字段。
+6. 高伪装偏好下，优先考虑明确非传统设备外观、日用品/装饰物造型、口红/玫瑰/香水/挂件等伪装信号；不要仅凭抽象“高伪装”标签自由发挥。`;
 
     console.log("🤖 [AI] 正在通过本地后端代理执行 Top3 重排...");
     const response = await postAppAiProxy<AiReasonResult[]>(
@@ -1428,6 +1090,7 @@ ${JSON.stringify(context.rankedProducts)}
         brand: product.brand,
         price: product.price,
         reason: product.reason || "",
+        disguiseSignals: buildProductDisguiseSignalsSummary(product),
       })),
       backupCandidates: backupCandidates.map((product, index) => ({
         rank: index + 1,
@@ -1438,6 +1101,7 @@ ${JSON.stringify(context.rankedProducts)}
         backupLabel: product.backupLabel,
         structuredScore: product.score,
         matchSummary: product.matchSummary?.join("、") || "",
+        disguiseSignals: buildProductDisguiseSignalsSummary(product),
         localReason: buildLocalBackupReason(
           product,
           product.backupLabel,
@@ -1502,6 +1166,19 @@ ${JSON.stringify(context.backupCandidates)}
     setIsRecalibratingResults(true);
     setResultRecalibrationError(null);
     const nextAttemptCount = resultRecalibrationAttemptCount + 1;
+    void submitRecommendationFeedbackEvent({
+      eventType: "reroll_recommendation",
+      sessionId: recommendationSessionId,
+      answers: answers as unknown as Record<string, unknown>,
+      answerPath,
+      topProducts: serializeRecommendationTopProducts(topProducts),
+      rerollAttempt: nextAttemptCount,
+      resultProvider: currentResultProvider,
+      resultModelName: currentResultModelName,
+      pageRoute: window.location.pathname || "/results",
+    }).catch((error) => {
+      console.warn("⚠️ [Feedback] 推荐重生成反馈记录失败", error);
+    });
 
     try {
       const response = await postAppAiProxy<ResultRecalibrationResponse>(
@@ -1548,6 +1225,42 @@ ${JSON.stringify(context.backupCandidates)}
     }
   }
 
+  function serializeRecommendationTopProducts(products: RankedProduct[]) {
+    return products.slice(0, FINAL_SELECTION_COUNT).map((product) => ({
+      id: product.id,
+      name: getProductDisplayName(product),
+      gender: product.gender,
+      typeCode: product.typeCode ?? null,
+      subtypeCode: product.subtypeCode ?? null,
+      score: product.score,
+      reason: String(product.reason || "").trim(),
+    }));
+  }
+
+  function saveCompletedRecommendationSession({
+    currentAnswers,
+    currentAnswerPath,
+    finalTopProducts,
+    resultSourceState,
+  }: {
+    currentAnswers: AnswerState;
+    currentAnswerPath: QuizAnswerPathEntry[];
+    finalTopProducts: RankedProduct[];
+    resultSourceState: ReturnType<typeof readResultSourceState>;
+  }) {
+    void submitRecommendationSession({
+      sessionId: recommendationSessionId,
+      answers: currentAnswers as unknown as Record<string, unknown>,
+      answerPath: currentAnswerPath,
+      topProducts: serializeRecommendationTopProducts(finalTopProducts),
+      resultProvider: resultSourceState.currentResultProvider,
+      resultModelName: resultSourceState.currentResultModelName,
+      pageRoute: "/results",
+    }).catch((error) => {
+      console.warn("⚠️ [Feedback] 推荐会话保存失败", error);
+    });
+  }
+
   function applyLocalResultSet(
     currentAnswers: AnswerState,
     localResult: LocalResultComputation,
@@ -1583,6 +1296,12 @@ ${JSON.stringify(context.backupCandidates)}
     );
     setResultRecalibrationAttemptCount(0);
     applyResultSourceState(clearResultSourceState());
+    saveCompletedRecommendationSession({
+      currentAnswers,
+      currentAnswerPath: answerPath,
+      finalTopProducts,
+      resultSourceState: clearResultSourceState(),
+    });
   }
 
   function handleTuneResults(mode: ResultTuningMode) {
@@ -1711,6 +1430,7 @@ ${JSON.stringify(context.backupCandidates)}
     currentAnswers: AnswerState = answers,
     activeQs: Question[] = activeQuestions,
     productsData: Product[] = allProducts,
+    currentAnswerPath: QuizAnswerPathEntry[] = answerPath,
   ) => {
     const enhancementRunId = resultEnhancementRunRef.current + 1;
     resultEnhancementRunRef.current = enhancementRunId;
@@ -1816,6 +1536,12 @@ ${JSON.stringify(context.backupCandidates)}
     setBackupProducts(localBackupProducts);
     setShoppingGuidance(localShoppingGuidance);
     applyResultSourceState(latestResultSourceState);
+    saveCompletedRecommendationSession({
+      currentAnswers,
+      currentAnswerPath,
+      finalTopProducts,
+      resultSourceState: latestResultSourceState,
+    });
     setIsEnhancingResults(backupCandidates.length > 0);
     setIsAiMatching(false);
     // 先进入结果页；备选说明和选购建议在后台增强，避免阻塞主推荐展示。
@@ -1895,6 +1621,8 @@ ${JSON.stringify(context.backupCandidates)}
     setIsEnhancingResults(false);
     clearResultTuningTracking();
     applyResultSourceState(clearResultSourceState());
+    setRecommendationSessionId(createRecommendationSessionId());
+    setAnswerPath([]);
     setStep(0);
     setAnswers({ tags: [] });
     setTopProducts([]);
@@ -1912,6 +1640,8 @@ ${JSON.stringify(context.backupCandidates)}
     const clearedState = createClearedQuizSessionState();
     clearResultTuningTracking();
     applyResultSourceState(clearResultSourceState());
+    setRecommendationSessionId(createRecommendationSessionId());
+    setAnswerPath([]);
     setStep(clearedState.step);
     setAnswers(clearedState.answers);
     setTopProducts(clearedState.topProducts);

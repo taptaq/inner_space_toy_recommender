@@ -381,7 +381,7 @@ export function ResultsPage({
     );
   const hasGuidance =
     relaxationTips.length > 0 || shoppingGuidanceItems.length > 0;
-  const recalibrationButtonLabel = "重新生成推荐";
+  const recalibrationButtonLabel = "这组不太对，换一组更适合的推荐";
   const canShowRecalibrationModule = topProducts.length > 0;
   const resultTags = dedupeDisplayTags(answers.tags);
   const resultLeadCopy = getResultLeadCopy(answers);
@@ -1184,8 +1184,9 @@ export function ResultsPage({
         <motion.section
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5"
+          className="relative overflow-hidden rounded-[1.75rem] border border-cyan-300/18 bg-cyan-400/[0.055] p-4 shadow-[0_18px_70px_rgba(8,145,178,0.12)] sm:p-5"
         >
+          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/35 to-transparent" />
           <div className="relative space-y-4">
             <button
               type="button"
@@ -1195,15 +1196,15 @@ export function ResultsPage({
             >
               <div className="min-w-0">
                 <h3 className="text-sm font-medium text-white">
-                  对当前结果不满意？
+                  对当前结果不满意？可以直接换一组
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-slate-400">
-                  我们会基于当前问卷和候选池，再重新生成一版更适合你的推荐结果。
+                  这会被记录成一次轻量反馈，帮助后续校准“哪些结果不够贴合”。
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="rounded-full border border-cyan-400/18 bg-cyan-400/10 px-2.5 py-1 text-[11px] text-cyan-100/82">
-                  重新生成推荐
+                <span className="rounded-full border border-cyan-300/28 bg-cyan-300/14 px-2.5 py-1 text-[11px] text-cyan-50">
+                  {recalibrationButtonLabel}
                 </span>
                 <ChevronDown
                   className={[
@@ -1221,7 +1222,7 @@ export function ResultsPage({
                     重新生成时会保留当前问卷和候选范围，只重新整理推荐顺序、说明理由和选购建议。
                   </p>
                   <p className="mt-2 text-[11px] leading-5 text-slate-500">
-                    如果你觉得当前结果不够贴合，这里更适合先试一次重新生成，而不是重新答题。
+                    如果你觉得当前结果不够贴合，这里更适合先试一次重新生成，而不是重新答题；这次点击也会帮助我们识别当前结果可能不够满意。
                   </p>
                 </div>
 
@@ -1234,7 +1235,7 @@ export function ResultsPage({
                       "inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition-all sm:w-auto sm:self-start",
                       isRecalibratingResults
                         ? "cursor-wait border border-cyan-300/20 bg-cyan-300/10 text-cyan-100/80"
-                        : "border border-cyan-400/30 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/20",
+                        : "border border-cyan-300/35 bg-cyan-300/18 text-cyan-50 hover:border-cyan-200/45 hover:bg-cyan-300/24",
                     ].join(" ")}
                   >
                     {isRecalibratingResults ? (

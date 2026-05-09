@@ -365,6 +365,78 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
   assert.match(requests[1]?.prompt || "", /"descriptionSignals":"易清洗"/);
 });
 
+test("runResultRecalibration passes explicit disguise signals to the rerank prompt", async () => {
+  const requests: ChatCompletionRequest[] = [];
+  const service = createAppAiService({
+    env: {
+      QWEN_API_KEY: "qwen-key",
+    } as NodeJS.ProcessEnv,
+    chatCompletionRunner: async (request) => {
+      requests.push(request);
+      return requests.length === 1
+        ? JSON.stringify([{ id: "p-1", reason: "口红造型更适合隐蔽收纳" }])
+        : JSON.stringify({ backupProducts: [], shoppingGuidance: [] });
+    },
+  });
+
+  await service.runResultRecalibration({
+    answers: {
+      tags: ["高伪装"],
+      gender: "female",
+      appearance: "high_disguise",
+    },
+    strategy: "auto",
+    rerankPool: [
+      createRankedProduct("p-1", {
+        name: "口红造型随身款",
+        tags: ["隐形收纳"],
+        rawDescription: "不是常规款式，日用品造型，低存在感。",
+      }),
+      createRankedProduct("p-2", {
+        name: "经典手持款",
+        rawDescription: "外观简洁，适合日常使用。",
+      }),
+    ],
+    rankedCandidates: [
+      createRankedProduct("p-1", {
+        name: "口红造型随身款",
+        tags: ["隐形收纳"],
+        rawDescription: "不是常规款式，日用品造型，低存在感。",
+      }),
+      createRankedProduct("p-2", {
+        name: "经典手持款",
+        rawDescription: "外观简洁，适合日常使用。",
+      }),
+      createRankedProduct("p-3", {
+        name: "玫瑰摆件款",
+        tags: ["玫瑰款"],
+      }),
+    ],
+    filteredCount: 3,
+    recommendationTips: [],
+    recalibrationContext: {
+      attemptCount: 1,
+      currentResultProvider: "qwen",
+      currentResultModelName: "qwen-turbo",
+      previousTopProducts: [],
+      previousShoppingGuidanceCount: 0,
+    },
+  });
+
+  assert.match(
+    requests[0]?.prompt || "",
+    /"disguiseSignals":"口红造型、日用品伪装、低存在感"/,
+  );
+  assert.match(
+    requests[0]?.prompt || "",
+    /"preferenceSignals":\["高伪装","女性向"\]/,
+  );
+  assert.match(
+    requests[0]?.prompt || "",
+    /高伪装偏好下，优先考虑明确非传统设备外观/,
+  );
+});
+
 test("AI recommendation provider timeouts allow slower models to answer before fallback", () => {
   assert.equal(RERANK_PROVIDER_TIMEOUT_MS, 45_000);
   assert.equal(ENHANCEMENT_PROVIDER_TIMEOUT_MS, 60_000);

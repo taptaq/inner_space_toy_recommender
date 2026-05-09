@@ -30,6 +30,24 @@ function matchesRecommendationHardConstraints(
     return false;
   }
 
+  if (answers.gender === "unisex") {
+    if (
+      answers.partnerComposition === "male_male" &&
+      product.gender === "female"
+    ) {
+      return false;
+    }
+
+    if (
+      answers.partnerComposition === "female_female" &&
+      product.gender === "male"
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
   if (
     answers.gender &&
     product.gender !== "unisex" &&

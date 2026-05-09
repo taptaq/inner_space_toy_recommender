@@ -137,3 +137,44 @@ test("recommendation eligibility excludes care accessory products even when thei
   assert.equal(isRecommendationEligibleProduct(careLikeProduct), false);
   assert.equal(isRecommendationEligibleProduct(toyLikeProduct), true);
 });
+
+test("couple partner composition keeps compatible gendered toys in the candidate pool", () => {
+  const products = [
+    makeProduct({
+      id: "male-prostate",
+      gender: "male",
+      typeCode: "prostate",
+      subtypeCode: "prostate_massager",
+    }),
+    makeProduct({
+      id: "female-dual",
+      gender: "female",
+      typeCode: "dual_stimulation",
+      subtypeCode: "dual_wearable_remote",
+    }),
+    makeProduct({
+      id: "unisex-ring",
+      gender: "unisex",
+      typeCode: "cock_ring",
+      subtypeCode: "vibrating_cock_ring",
+    }),
+  ];
+
+  const maleMalePool = buildRecommendationCandidatePool(
+    { gender: "unisex", partnerComposition: "male_male", tags: [] },
+    products,
+  );
+  const femaleFemalePool = buildRecommendationCandidatePool(
+    { gender: "unisex", partnerComposition: "female_female", tags: [] },
+    products,
+  );
+
+  assert.deepEqual(
+    maleMalePool.relaxedProducts.map((product) => product.id),
+    ["male-prostate", "unisex-ring"],
+  );
+  assert.deepEqual(
+    femaleFemalePool.relaxedProducts.map((product) => product.id),
+    ["female-dual", "unisex-ring"],
+  );
+});

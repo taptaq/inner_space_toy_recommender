@@ -1043,7 +1043,8 @@ test("results page hides model selection details and only exposes a regenerate r
   );
 
   assert.match(html, /对当前结果不满意？/);
-  assert.match(html, /重新生成推荐/);
+  assert.match(html, /这组不太对，换一组更适合的推荐/);
+  assert.match(html, /一次轻量反馈/);
   assert.doesNotMatch(html, /换个模型再试/);
   assert.doesNotMatch(html, /当前模型/);
   assert.doesNotMatch(html, /Mimo（DMX）/);

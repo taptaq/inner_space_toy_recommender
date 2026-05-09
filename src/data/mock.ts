@@ -38,6 +38,7 @@ export type InteractionMode = "sync" | "guided" | "remote";
 export type FitPreference = "wearable" | "handheld";
 export type CoupleScene = "quiet" | "bedroom" | "playful";
 export type SharedIntensity = "gentle" | "balanced" | "strong";
+export type PartnerComposition = "mixed" | "male_male" | "female_female" | "open";
 
 export type AnswerState = {
   gender?: AudienceGender;
@@ -55,6 +56,7 @@ export type AnswerState = {
   fitPreference?: FitPreference;
   coupleScene?: CoupleScene;
   sharedIntensity?: SharedIntensity;
+  partnerComposition?: PartnerComposition;
   tags: string[];
 };
 
@@ -396,6 +398,34 @@ const MALE_QUESTIONS: Question[] = [
 ];
 
 const COUPLE_QUESTIONS: Question[] = [
+  {
+    id: "couple-partner-composition",
+    title: "互动对象",
+    subtitle: "这次共玩更接近哪种设备适配关系？这只用于筛选更合适的装备。",
+    field: "partnerComposition",
+    options: [
+      {
+        label: "异性搭配（更需要兼顾双方结构）",
+        value: "mixed",
+        tag: "异性搭配",
+      },
+      {
+        label: "男男搭配（更偏男性向共玩结构）",
+        value: "male_male",
+        tag: "男男搭配",
+      },
+      {
+        label: "女女搭配（更偏女性向共玩结构）",
+        value: "female_female",
+        tag: "女女搭配",
+      },
+      {
+        label: "先不限定（先看通用共玩适配）",
+        value: "open",
+        tag: "对象不限定",
+      },
+    ],
+  },
   {
     id: "couple-interaction",
     title: "互动方式",

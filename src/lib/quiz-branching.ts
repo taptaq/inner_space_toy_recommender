@@ -1,5 +1,6 @@
 import type { AnswerState, Product } from "../data/mock.js";
 import { getDescriptionPreferenceAdjustments } from "./product-description-signals.js";
+import { getPreferenceSignalAdjustment } from "./recommendation-preference-signals.js";
 
 export type ScorePresetId = "female" | "male" | "couple";
 
@@ -396,17 +397,23 @@ export function getBranchPreferenceAdjustments(
     answers,
     presetId,
   );
+  const preferenceSignalAdjustment = getPreferenceSignalAdjustment(
+    product,
+    answers,
+  );
 
   return {
     score:
       branchAdjustment.score +
       descriptionAdjustment.score +
-      uncertainAdjustment.score,
+      uncertainAdjustment.score +
+      preferenceSignalAdjustment.score,
     summary: Array.from(
       new Set([
         ...branchAdjustment.summary,
         ...uncertainAdjustment.summary,
         ...descriptionAdjustment.summary,
+        ...preferenceSignalAdjustment.summary,
       ]),
     ).slice(0, 4),
   };

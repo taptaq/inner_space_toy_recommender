@@ -185,6 +185,177 @@ test("getBranchPreferenceAdjustments treats uncertain couple answers as a lower-
   );
 });
 
+test("getBranchPreferenceAdjustments applies the shared option influence contract to balanced male answers", async () => {
+  const branching = await import("./quiz-branching.ts").catch(() => null);
+  assert.ok(branching, "quiz-branching.ts should exist");
+
+  const answers: AnswerState = {
+    gender: "male",
+    channelFeel: "balanced",
+    tags: ["平衡真实"],
+  };
+
+  const stableProduct = makeProduct({
+    id: "stable",
+    gender: "male",
+    typeCode: "masturbator",
+    subtypeCode: "manual_masturbator",
+    price: 229,
+    maxDb: 48,
+    waterproof: 7,
+    rawDescription: "平衡真实，刺激稳定，适合日常耐玩。",
+    tags: ["平衡", "耐玩"],
+  });
+  const extremeProduct = makeProduct({
+    id: "extreme",
+    gender: "male",
+    typeCode: "masturbator",
+    subtypeCode: "vibrating_masturbator",
+    price: 499,
+    maxDb: 65,
+    waterproof: 4,
+    motorType: "strong",
+    rawDescription: "强刺激爆发路线。",
+    tags: ["强刺激"],
+  });
+
+  const stableResult = branching?.getBranchPreferenceAdjustments(
+    stableProduct,
+    answers,
+    "male",
+  );
+  const extremeResult = branching?.getBranchPreferenceAdjustments(
+    extremeProduct,
+    answers,
+    "male",
+  );
+
+  assert.ok(stableResult);
+  assert.ok(extremeResult);
+  assert.ok(
+    (stableResult?.score ?? 0) > (extremeResult?.score ?? 0),
+    "balanced channel choice should actively prefer stable middle-ground products",
+  );
+  assert.ok(stableResult?.summary.some((line) => /平衡|稳定|耐玩/.test(line)));
+});
+
+test("getBranchPreferenceAdjustments makes sync, guided, and playful couple options affect scoring", async () => {
+  const branching = await import("./quiz-branching.ts").catch(() => null);
+  assert.ok(branching, "quiz-branching.ts should exist");
+
+  const syncResult = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      rawDescription: "双人同步共振，适合双方同时进入状态。",
+      tags: ["同步", "共振", "双人"],
+    }),
+    { gender: "unisex", interactionMode: "sync", tags: ["同步共振"] },
+    "couple",
+  );
+  const guidedResult = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      physicalForm: "composite",
+      rawDescription: "手持切换位置，一方主导引导互动。",
+      tags: ["主导", "引导", "手持"],
+    }),
+    {
+      gender: "unisex",
+      interactionMode: "guided",
+      fitPreference: "handheld",
+      tags: ["主导互动", "手持灵活"],
+    },
+    "couple",
+  );
+  const playfulResult = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      rawDescription: "APP 远控氛围玩法，互动趣味和新鲜感更明显。",
+      tags: ["远控", "趣味", "氛围"],
+    }),
+    {
+      gender: "unisex",
+      interactionMode: "remote",
+      coupleScene: "playful",
+      tags: ["远控氛围", "氛围尝鲜"],
+    },
+    "couple",
+  );
+
+  assert.ok(syncResult && syncResult.score > 0);
+  assert.ok(guidedResult && guidedResult.score > 0);
+  assert.ok(playfulResult && playfulResult.score > 0);
+  assert.ok(syncResult.summary.some((line) => /同步|共振/.test(line)));
+  assert.ok(guidedResult.summary.some((line) => /主导|引导|手持/.test(line)));
+  assert.ok(playfulResult.summary.some((line) => /趣味|远控|新鲜/.test(line)));
+});
+
+test("getBranchPreferenceAdjustments uses partner composition to favor compatible couple products", async () => {
+  const branching = await import("./quiz-branching.ts").catch(() => null);
+  assert.ok(branching, "quiz-branching.ts should exist");
+
+  const maleCompatible = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      id: "male-compatible",
+      gender: "male",
+      typeCode: "prostate",
+      subtypeCode: "prostate_massager",
+      rawDescription: "男性前列腺按摩，适合遥控互动和男男共玩。",
+      tags: ["男用", "遥控", "共玩"],
+    }),
+    { gender: "unisex", partnerComposition: "male_male", tags: ["男男搭配"] },
+    "couple",
+  );
+  const femaleOnly = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      id: "female-only",
+      gender: "female",
+      typeCode: "suction",
+      subtypeCode: "clitoral_suction",
+      rawDescription: "女性吮吸刺激器，偏女性单人外部反馈。",
+      tags: ["女性", "吮吸"],
+    }),
+    { gender: "unisex", partnerComposition: "male_male", tags: ["男男搭配"] },
+    "couple",
+  );
+  const femaleCompatible = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      id: "female-compatible",
+      gender: "female",
+      typeCode: "dual_stimulation",
+      subtypeCode: "dual_wearable_remote",
+      rawDescription: "女性复合刺激，可远控共玩，适合女女互动。",
+      tags: ["女性", "复合", "远控", "共玩"],
+    }),
+    { gender: "unisex", partnerComposition: "female_female", tags: ["女女搭配"] },
+    "couple",
+  );
+  const maleOnly = branching?.getBranchPreferenceAdjustments(
+    makeProduct({
+      id: "male-only",
+      gender: "male",
+      typeCode: "masturbator",
+      subtypeCode: "manual_masturbator",
+      rawDescription: "男性飞机杯，偏男性单人通道刺激。",
+      tags: ["男用", "飞机杯"],
+    }),
+    { gender: "unisex", partnerComposition: "female_female", tags: ["女女搭配"] },
+    "couple",
+  );
+
+  assert.ok(maleCompatible);
+  assert.ok(femaleOnly);
+  assert.ok(femaleCompatible);
+  assert.ok(maleOnly);
+  assert.ok(
+    maleCompatible.score > femaleOnly.score,
+    "male-male composition should prefer male-compatible co-play over female-only products",
+  );
+  assert.ok(
+    femaleCompatible.score > maleOnly.score,
+    "female-female composition should prefer female-compatible co-play over male-only products",
+  );
+  assert.ok(maleCompatible.summary.some((line) => /男男|男性向共玩|前列腺|环/.test(line)));
+  assert.ok(femaleCompatible.summary.some((line) => /女女|女性向共玩|外部|复合|远控/.test(line)));
+});
+
 test("getResultLeadCopy returns branch-specific result intros", async () => {
   const branching = await import("./quiz-branching.ts").catch(() => null);
   assert.ok(branching, "quiz-branching.ts should exist");

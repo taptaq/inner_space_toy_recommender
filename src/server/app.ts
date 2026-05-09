@@ -33,6 +33,16 @@ import {
   createUserFeedbackStore,
   ensureUserFeedbackSchema,
 } from "./user-feedback-store.js";
+import { createSaveRecommendationFeedbackEventHandler } from "./recommendation-feedback-route.js";
+import {
+  createRecommendationFeedbackStore,
+  ensureRecommendationFeedbackSchema,
+} from "./recommendation-feedback-store.js";
+import { createSaveRecommendationSessionHandler } from "./recommendation-session-route.js";
+import {
+  createRecommendationSessionStore,
+  ensureRecommendationSessionSchema,
+} from "./recommendation-session-store.js";
 import {
   createListUserRecommendationProfilesHandler,
   createSaveUserRecommendationProfileHandler,
@@ -91,6 +101,12 @@ const getUserRecommendationStore = createLazyValue(() =>
 const getUserFeedbackStore = createLazyValue(() =>
   createUserFeedbackStore({ pool }),
 );
+const getRecommendationFeedbackStore = createLazyValue(() =>
+  createRecommendationFeedbackStore({ pool }),
+);
+const getRecommendationSessionStore = createLazyValue(() =>
+  createRecommendationSessionStore({ pool }),
+);
 const getUsernameRegistrationService = createLazyValue(() =>
   createUsernameRegistrationService({
     supabaseUrl: process.env.VITE_SUPABASE_URL,
@@ -111,6 +127,16 @@ const getRegisterUsernameHandler = createLazyValue(() =>
 const getSaveUserFeedbackHandler = createLazyValue(() =>
   createSaveUserFeedbackHandler({
     store: getUserFeedbackStore(),
+  }),
+);
+const getSaveRecommendationFeedbackEventHandler = createLazyValue(() =>
+  createSaveRecommendationFeedbackEventHandler({
+    store: getRecommendationFeedbackStore(),
+  }),
+);
+const getSaveRecommendationSessionHandler = createLazyValue(() =>
+  createSaveRecommendationSessionHandler({
+    store: getRecommendationSessionStore(),
   }),
 );
 const getSaveRecommendationProfileHandler = createLazyValue(() =>
@@ -181,6 +207,20 @@ function ensureFeedbackRouteReady() {
   return ensureRouteInitialized("feedback", async () => {
     ensureDatabaseConfigured();
     await ensureUserFeedbackSchema(pool);
+  });
+}
+
+function ensureRecommendationFeedbackRouteReady() {
+  return ensureRouteInitialized("recommendation-feedback", async () => {
+    ensureDatabaseConfigured();
+    await ensureRecommendationFeedbackSchema(pool);
+  });
+}
+
+function ensureRecommendationSessionRouteReady() {
+  return ensureRouteInitialized("recommendation-session", async () => {
+    ensureDatabaseConfigured();
+    await ensureRecommendationSessionSchema(pool);
   });
 }
 
@@ -288,6 +328,20 @@ app.post(
   withLazyRouteHandler(
     ensureFeedbackRouteReady,
     getSaveUserFeedbackHandler,
+  ),
+);
+app.post(
+  "/api/recommendation-feedback/events",
+  withLazyRouteHandler(
+    ensureRecommendationFeedbackRouteReady,
+    getSaveRecommendationFeedbackEventHandler,
+  ),
+);
+app.post(
+  "/api/recommendation-sessions",
+  withLazyRouteHandler(
+    ensureRecommendationSessionRouteReady,
+    getSaveRecommendationSessionHandler,
   ),
 );
 app.post(
