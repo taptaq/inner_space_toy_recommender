@@ -13,6 +13,10 @@ import {
   sanitizeLibraryTypeSelection,
   type LibraryAudienceGender,
 } from "../lib/library-product-types.ts";
+import {
+  resolveLibrarySubtypeCode,
+  resolveLibraryTypeCode,
+} from "../lib/library-product-type-classifier.ts";
 
 const libraryFilterLabelClassName =
   "text-[10px] uppercase tracking-[0.24em] text-slate-500/90 font-mono";
@@ -28,6 +32,27 @@ type LibraryFilterOption = {
   value: string;
   label: string;
 };
+
+function resolveProductLibraryTypeCode(product: Product) {
+  return resolveLibraryTypeCode(product.typeCode, {
+    gender: product.gender,
+    physicalForm: product.physicalForm,
+    name: product.canonicalName || product.name,
+    rawDescription: product.rawDescription ?? null,
+    tags: product.tags ?? [],
+  });
+}
+
+function resolveProductLibrarySubtypeCode(product: Product, typeCode: string) {
+  return resolveLibrarySubtypeCode(product.subtypeCode, {
+    typeCode,
+    gender: product.gender,
+    physicalForm: product.physicalForm,
+    name: product.canonicalName || product.name,
+    rawDescription: product.rawDescription ?? null,
+    tags: product.tags ?? [],
+  });
+}
 
 function LibraryFilterSelect({
   value,
@@ -498,14 +523,19 @@ export function LibraryPage({
           <div className="relative z-0 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {products
             .filter((product) => {
+              const resolvedProductTypeCode = resolveProductLibraryTypeCode(product);
+              const resolvedProductSubtypeCode = resolveProductLibrarySubtypeCode(
+                product,
+                resolvedProductTypeCode,
+              );
               const matchGender =
                 filterGender === "all" || product.gender === filterGender;
               const matchType =
                 effectiveFilterType === "all" ||
-                product.typeCode === effectiveFilterType;
+                resolvedProductTypeCode === effectiveFilterType;
               const matchSubtype =
                 effectiveFilterSubtype === "all" ||
-                product.subtypeCode === effectiveFilterSubtype;
+                resolvedProductSubtypeCode === effectiveFilterSubtype;
               const matchBrand =
                 filterBrand === "all" || product.brand === filterBrand;
               const matchOrigin =

@@ -40,7 +40,7 @@ const NEBULA_CORE_SPARKLES = [
   "radial-gradient(circle at 34% 50%, rgba(255,255,255,0.88) 0 1.25px, transparent 1.8px)",
   "radial-gradient(circle at 47% 44%, rgba(255,255,255,0.74) 0 1.05px, transparent 1.65px)",
   "radial-gradient(circle at 58% 55%, rgba(186,230,253,0.76) 0 1.05px, transparent 1.75px)",
-  "radial-gradient(circle at 66% 47%, rgba(245,208,254,0.68) 0 1.1px, transparent 1.85px)",
+  "radial-gradient(circle at 66% 47%, rgba(245,208,254,0.78) 0 1.1px, transparent 1.85px)",
 ] as const;
 
 const TEXTURE_VARIANTS: readonly NebulaTextureVariant[] = [

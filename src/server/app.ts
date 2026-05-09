@@ -4,7 +4,11 @@ import pg from "pg";
 import type { RequestHandler } from "express";
 
 import { createRecalibrateResultsHandler } from "./app-ai-recalibration-route.js";
-import { createAppAiService } from "./app-ai-service.js";
+import {
+  ENHANCEMENT_PROVIDER_TIMEOUT_MS,
+  RERANK_PROVIDER_TIMEOUT_MS,
+  createAppAiService,
+} from "./app-ai-service.js";
 import {
   createKnowledgeNebulaCreateCardHandler,
   createKnowledgeNebulaRecordCardViewHandler,
@@ -46,8 +50,6 @@ const { Pool } = pg;
 const app = express();
 const AI_RERANK_MAX_TOKENS = 1200;
 const AI_ENHANCEMENT_MAX_TOKENS = 1800;
-const AI_RERANK_PROVIDER_TIMEOUT_MS = 12_000;
-const AI_ENHANCEMENT_PROVIDER_TIMEOUT_MS = 10_000;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -211,7 +213,7 @@ app.post("/api/ai/rerank", async (req, res) => {
       emptyJson: "[]",
       logContext: "Top3 重排",
       maxTokens: AI_RERANK_MAX_TOKENS,
-      providerTimeoutMs: AI_RERANK_PROVIDER_TIMEOUT_MS,
+      providerTimeoutMs: RERANK_PROVIDER_TIMEOUT_MS,
     });
     res.json(result);
   } catch (error) {
@@ -234,7 +236,7 @@ app.post("/api/ai/result-enhancement", async (req, res) => {
       emptyJson: "{}",
       logContext: "结果增强",
       maxTokens: AI_ENHANCEMENT_MAX_TOKENS,
-      providerTimeoutMs: AI_ENHANCEMENT_PROVIDER_TIMEOUT_MS,
+      providerTimeoutMs: ENHANCEMENT_PROVIDER_TIMEOUT_MS,
     });
     res.json(result);
   } catch (error) {

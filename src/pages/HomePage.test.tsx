@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { APP_THEME_OPTIONS } from "../lib/app-theme.ts";
 
 import {
   HomeAuthOverlay,
@@ -28,6 +31,8 @@ function renderHomePage() {
       onBrowseLibrary={() => {}}
       onOpenKnowledgeNebula={() => {}}
       onOpenProfiles={() => {}}
+      themeId="inner-space"
+      onThemeChange={() => {}}
       authPanel={authPanel}
     />,
   );
@@ -180,6 +185,31 @@ test("home page renders an animated inner-space entry atmosphere", () => {
   assert.doesNotMatch(html, /overflow-hidden rounded-\[2rem\]/);
 });
 
+test("home page background orbits render as refined trace lines instead of heavy plates", () => {
+  const html = renderHomePage();
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(html, /home-space-orbit-a/);
+  assert.match(html, /home-space-orbit-b/);
+  assert.match(cssSource, /\.home-space-orbit::before/);
+  assert.match(cssSource, /mask-image: linear-gradient/);
+  assert.doesNotMatch(cssSource, /inset 0 34px 80px var\(--theme-glow\)/);
+});
+
+test("home page secondary entry buttons do not render oversized hover halos", () => {
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(cssSource, /\.home-secondary-node::after/);
+  assert.doesNotMatch(cssSource, /\.home-secondary-node:hover::after/);
+  assert.doesNotMatch(cssSource, /\.home-secondary-node:focus-within::after/);
+});
+
 test("home page keeps ambient layers grouped behind stable semantic anchor nodes", () => {
   const html = renderHomePage();
 
@@ -212,6 +242,8 @@ test("home page keeps secondary entry navigation and auth actions structurally d
       onBrowseLibrary={() => {}}
       onOpenKnowledgeNebula={() => {}}
       onOpenProfiles={() => {}}
+      themeId="inner-space"
+      onThemeChange={() => {}}
       authPanel={{ ...authPanel, userLabel: "taptaq" }}
     />,
   );
@@ -227,6 +259,16 @@ test("home page keeps secondary entry navigation and auth actions structurally d
   assert.match(signedInHtml, /匹配档案/);
   assert.match(signedInHtml, />退出</);
   assert.match(signedInHtml, /taptaq/);
+});
+
+test("home page exposes four audience-aware theme options and marks the active one", () => {
+  const html = renderHomePage();
+
+  assert.match(html, /主题风格/);
+  for (const option of APP_THEME_OPTIONS) {
+    assert.match(html, new RegExp(option.label));
+  }
+  assert.match(html, /aria-pressed="true"[^>]*>[\s\S]*深空/);
 });
 
 test("home page feedback screenshot planning respects reserved capacity and reports validation issues", () => {

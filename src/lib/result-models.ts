@@ -29,7 +29,7 @@ const RESULT_MODEL_METADATA: Readonly<
     description: "想要更干脆清晰的结果，可以试它。",
   },
   "dmxapi-glm": {
-    model: "glm-5.1-free",
+    model: "glm-5",
     label: "GLM（DMX）",
     description: "想快速看一版明确建议，可以试它。",
   },

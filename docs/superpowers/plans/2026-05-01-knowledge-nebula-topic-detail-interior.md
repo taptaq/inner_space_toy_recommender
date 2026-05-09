@@ -542,7 +542,7 @@ export function TopicDetailNodeLayer({
             onFocus={() => onHoverSection(anchor.id)}
             onBlur={() => onHoverSection(null)}
             onClick={() => onOpenSection(anchor.id)}
-            className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(8,14,30,0.58),rgba(8,14,30,0.32))] px-4 py-4 text-left shadow-[0_10px_50px_rgba(13,22,44,0.28)] backdrop-blur-md transition-colors hover:border-cyan-200/24 hover:bg-[linear-gradient(180deg,rgba(9,18,38,0.68),rgba(8,14,30,0.42))]"
+            className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(8,14,30,0.58),rgba(8,14,30,0.32))] px-4 py-4 text-left shadow-[0_10px_50px_rgba(13,22,44,0.28)] backdrop-blur-md transition-colors hover:border-cyan-200/24 hover:bg-[linear-gradient(180deg,rgba(9,18,38,0.78),rgba(8,14,30,0.42))]"
             style={{
               left: `${anchor.xPercent}%`,
               top: `${anchor.yPercent}%`,

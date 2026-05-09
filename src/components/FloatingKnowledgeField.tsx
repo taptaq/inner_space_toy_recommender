@@ -34,14 +34,14 @@ export function FloatingKnowledgeField({
   const buildBudgetedItems = (viewport: FloatingKnowledgeViewport) =>
     buildFloatingKnowledgeItems(facts, {
       variant,
+      viewport,
+      maxItems: getFloatingKnowledgeItemBudget({
+        variant,
         viewport,
-        maxItems: getFloatingKnowledgeItemBudget({
-          variant,
-          viewport,
-          isVisible,
-          prefersReducedMotion,
-        }),
-      });
+        isVisible,
+        prefersReducedMotion,
+      }),
+    });
   const mobileItems = buildBudgetedItems("mobile");
   const budgetedDesktopItems = buildBudgetedItems("desktop");
 
@@ -97,11 +97,11 @@ export function FloatingKnowledgeField({
           variant === "matching"
             ? item.slot.depth === "near"
               ? isMobileLayer
-                ? 0.62
-                : 0.72
+                ? 0.74
+                : 0.86
               : isMobileLayer
-                ? 0.46
-                : 0.52
+                ? 0.62
+                : 0.7
             : item.slot.depth === "near"
               ? isMobileLayer
                 ? 0.7

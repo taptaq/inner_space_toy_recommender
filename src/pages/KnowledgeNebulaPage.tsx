@@ -116,7 +116,7 @@ export function KnowledgeNebulaPage({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-200 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/15 hover:text-white"
+          className="knowledge-detail-back-button inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors hover:text-white"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>返回上一层</span>
@@ -124,9 +124,9 @@ export function KnowledgeNebulaPage({
       </div>
 
       {isDetailPage ? (
-        <section className="relative isolate h-[100dvh] overflow-hidden bg-[#030612]">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,rgba(125,211,252,0.08),transparent_40%),radial-gradient(ellipse_at_18%_72%,rgba(129,140,248,0.08),transparent_35%),linear-gradient(180deg,rgba(4,7,18,0.88),rgba(1,3,12,0.98))]" />
-            <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_10%_18%,rgba(255,255,255,0.44)_0_1px,transparent_1.5px),radial-gradient(circle_at_76%_10%,rgba(125,211,252,0.38)_0_1px,transparent_1.5px),radial-gradient(circle_at_88%_72%,rgba(255,255,255,0.24)_0_1px,transparent_1.5px),radial-gradient(circle_at_42%_84%,rgba(103,232,249,0.26)_0_1px,transparent_1.5px)] [background-size:170px_170px,230px_230px,190px_190px,260px_260px]" />
+        <section className="knowledge-detail-stage relative isolate h-[100dvh] overflow-hidden">
+            <div className="knowledge-detail-stage-glow pointer-events-none absolute inset-0" />
+            <div className="knowledge-detail-stage-stars pointer-events-none absolute inset-0 opacity-40 [background-size:170px_170px,230px_230px,190px_190px,260px_260px]" />
             <div className="cockpit-cruise-field pointer-events-none absolute inset-0 overflow-hidden">
               <div className="cockpit-cruise-stars cockpit-cruise-stars-a absolute inset-[-12%]" />
               <div className="cockpit-cruise-stars cockpit-cruise-stars-b absolute inset-[-18%]" />

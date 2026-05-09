@@ -574,7 +574,7 @@ export function KnowledgeNebulaField({
             stage === "aggregate"
               ? reducedMotionPreference
                 ? { opacity: 0.45, scale: 1 }
-                : { opacity: [0.68, 0.92, 0.26], scale: [0.72, 1.18, 1.7] }
+                : { opacity: [0.78, 0.92, 0.26], scale: [0.72, 1.18, 1.7] }
               : { opacity: 0, scale: 1.9 }
           }
           transition={{

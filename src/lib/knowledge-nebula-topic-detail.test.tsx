@@ -249,6 +249,83 @@ test("topic detail nodes render knowledge shards as cockpit screens", () => {
   assert.doesNotMatch(source, /slot\.text/);
 });
 
+test("knowledge detail cockpit surfaces consume global theme tokens", () => {
+  const pageSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/pages/KnowledgeNebulaPage.tsx"),
+    "utf8",
+  );
+  const sectionsSource = fs.readFileSync(
+    path.resolve(
+      process.cwd(),
+      "src/components/KnowledgeNebulaTopicSections.tsx",
+    ),
+    "utf8",
+  );
+  const nodeLayerSource = fs.readFileSync(
+    path.resolve(
+      process.cwd(),
+      "src/components/knowledge-nebula/TopicDetailNodeLayer.tsx",
+    ),
+    "utf8",
+  );
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(pageSource, /knowledge-detail-back-button/);
+  assert.match(pageSource, /knowledge-detail-stage/);
+  assert.doesNotMatch(pageSource, /bg-\[#030612\]/);
+  assert.match(sectionsSource, /knowledge-detail-console/);
+  assert.match(sectionsSource, /knowledge-detail-nav-pill/);
+  assert.match(sectionsSource, /knowledge-detail-main-screen/);
+  assert.match(nodeLayerSource, /knowledge-detail-cockpit-screen/);
+  assert.match(nodeLayerSource, /knowledge-detail-screen-divider/);
+  assert.match(cssSource, /--knowledge-detail-bg/);
+  assert.match(cssSource, /rgb\(var\(--theme-accent\)/);
+  assert.match(cssSource, /\.knowledge-detail-stage/);
+  assert.match(cssSource, /\.knowledge-detail-cockpit-screen/);
+});
+
+test("topic detail expanded dialog stabilizes animated layers to prevent flicker", () => {
+  const sectionsSource = fs.readFileSync(
+    path.resolve(
+      process.cwd(),
+      "src/components/KnowledgeNebulaTopicSections.tsx",
+    ),
+    "utf8",
+  );
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(sectionsSource, /knowledge-detail-dialog-open/);
+  assert.match(sectionsSource, /knowledge-detail-node-field/);
+  assert.doesNotMatch(sectionsSource, /backdrop-blur-2xl/);
+  assert.match(
+    cssSource,
+    /\.knowledge-detail-dialog-open \.knowledge-detail-node-field/,
+  );
+  assert.match(cssSource, /animation-play-state: paused !important/);
+  assert.match(cssSource, /\.knowledge-detail-main-screen[\s\S]*backdrop-filter: none/);
+});
+
+test("topic detail dialog keeps related cards reachable on mobile", () => {
+  const sectionsSource = fs.readFileSync(
+    path.resolve(
+      process.cwd(),
+      "src/components/KnowledgeNebulaTopicSections.tsx",
+    ),
+    "utf8",
+  );
+
+  assert.match(sectionsSource, /knowledge-detail-mobile-related-panel/);
+  assert.match(sectionsSource, /lg:hidden/);
+  assert.match(sectionsSource, /hidden min-h-0 border-l border-white\/8 pl-4 lg:block/);
+  assert.match(sectionsSource, /继续校准相关参数/);
+});
+
 test("topic detail sections record cockpit parameter views", () => {
   const sectionsSource = fs.readFileSync(
     path.resolve(

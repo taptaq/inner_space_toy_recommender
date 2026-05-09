@@ -67,6 +67,10 @@ import {
 } from "./lib/supabase-auth";
 import type { AuthPanelMode } from "./components/AuthPanel";
 import {
+  ThemeCosmosLayer,
+  type ThemeCosmosVariant,
+} from "./components/ThemeCosmosLayer";
+import {
   getBranchPreferenceAdjustments,
   selectScorePresetId,
   type ScorePresetId,
@@ -89,6 +93,12 @@ import {
   parseKnowledgeNebulaPath,
   resolveKnowledgeBackNavigation,
 } from "./lib/knowledge-nebula-route";
+import {
+  applyAppTheme,
+  readStoredAppTheme,
+  writeStoredAppTheme,
+  type AppThemeId,
+} from "./lib/app-theme";
 import type { KnowledgeNebulaTopicSlug } from "./data/knowledge-nebula";
 
 type StructuredRankedProduct = RankedProduct & {
@@ -710,6 +720,7 @@ export default function App() {
     useState(false);
   const [recommendationProfilesError, setRecommendationProfilesError] =
     useState<string | null>(null);
+  const [themeId, setThemeId] = useState<AppThemeId>(() => readStoredAppTheme());
 
   const activeQuestions: Question[] = getActiveQuestions(answers.gender);
 
@@ -843,6 +854,11 @@ export default function App() {
       navigateToKnowledgeNebula(undefined, undefined, true);
     }
   }, [currentRoute]);
+
+  useEffect(() => {
+    applyAppTheme(themeId);
+    writeStoredAppTheme(themeId);
+  }, [themeId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1909,9 +1925,8 @@ ${JSON.stringify(context.backupCandidates)}
 
   if (isLoading && currentRoute !== "/library") {
     return (
-      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4 sm:p-6 md:p-8">
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="theme-synced-page relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-4 sm:p-6 md:p-8">
+        <ThemeCosmosLayer variant="matching" />
         <div className="relative z-10 w-full">
           <MatchingPage
             pageVariants={pageVariants}
@@ -1927,59 +1942,64 @@ ${JSON.stringify(context.backupCandidates)}
 
   if (currentRoute === "/library") {
     return (
-      <LibraryPage
-        allProducts={allProducts}
-        filterGender={filterGender}
-        filterType={filterType}
-        filterSubtype={filterSubtype}
-        filterBrand={filterBrand}
-        filterOrigin={filterOrigin}
-        filterMaterial={filterMaterial}
-        filterPriceRange={filterPriceRange}
-        filterMaxDb={filterMaxDb}
-        isLoading={isLoading}
-        error={productsError}
-        onReload={() => fetchProducts({ force: true })}
-        onFilterGenderChange={(value) =>
-          setFilterGender(normalizeLibraryAudienceGender(value))
-        }
-        onFilterTypeChange={(value) =>
-          setFilterType(
-            sanitizeLibraryTypeSelection(
-              value,
-              normalizeLibraryAudienceGender(filterGender),
-            ),
-          )
-        }
-        onFilterSubtypeChange={(value) =>
-          setFilterSubtype(
-            sanitizeLibrarySubtypeSelection(
-              value,
-              normalizeLibraryAudienceGender(filterGender),
-              sanitizeLibraryTypeSelection(
-                filterType,
-                normalizeLibraryAudienceGender(filterGender),
-              ),
-            ),
-          )
-        }
-        onFilterBrandChange={setFilterBrand}
-        onFilterOriginChange={setFilterOrigin}
-        onFilterMaterialChange={setFilterMaterial}
-        onFilterPriceRangeChange={setFilterPriceRange}
-        onFilterMaxDbChange={setFilterMaxDb}
-        onResetFilters={() => {
-          setFilterGender("all");
-          setFilterType("all");
-          setFilterSubtype("all");
-          setFilterBrand("all");
-          setFilterOrigin("all");
-          setFilterMaterial("all");
-          setFilterPriceRange("all");
-          setFilterMaxDb(DEFAULT_LIBRARY_FILTER_MAX_DB);
-        }}
-        onBack={() => navigateTo(getReturnRoute())}
-      />
+      <div className="theme-synced-page relative min-h-screen overflow-hidden">
+        <ThemeCosmosLayer variant="library" />
+        <div className="relative z-10">
+          <LibraryPage
+            allProducts={allProducts}
+            filterGender={filterGender}
+            filterType={filterType}
+            filterSubtype={filterSubtype}
+            filterBrand={filterBrand}
+            filterOrigin={filterOrigin}
+            filterMaterial={filterMaterial}
+            filterPriceRange={filterPriceRange}
+            filterMaxDb={filterMaxDb}
+            isLoading={isLoading}
+            error={productsError}
+            onReload={() => fetchProducts({ force: true })}
+            onFilterGenderChange={(value) =>
+              setFilterGender(normalizeLibraryAudienceGender(value))
+            }
+            onFilterTypeChange={(value) =>
+              setFilterType(
+                sanitizeLibraryTypeSelection(
+                  value,
+                  normalizeLibraryAudienceGender(filterGender),
+                ),
+              )
+            }
+            onFilterSubtypeChange={(value) =>
+              setFilterSubtype(
+                sanitizeLibrarySubtypeSelection(
+                  value,
+                  normalizeLibraryAudienceGender(filterGender),
+                  sanitizeLibraryTypeSelection(
+                    filterType,
+                    normalizeLibraryAudienceGender(filterGender),
+                  ),
+                ),
+              )
+            }
+            onFilterBrandChange={setFilterBrand}
+            onFilterOriginChange={setFilterOrigin}
+            onFilterMaterialChange={setFilterMaterial}
+            onFilterPriceRangeChange={setFilterPriceRange}
+            onFilterMaxDbChange={setFilterMaxDb}
+            onResetFilters={() => {
+              setFilterGender("all");
+              setFilterType("all");
+              setFilterSubtype("all");
+              setFilterBrand("all");
+              setFilterOrigin("all");
+              setFilterMaterial("all");
+              setFilterPriceRange("all");
+              setFilterMaxDb(DEFAULT_LIBRARY_FILTER_MAX_DB);
+            }}
+            onBack={() => navigateTo(getReturnRoute())}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -2026,14 +2046,28 @@ ${JSON.stringify(context.backupCandidates)}
     : currentRoute === "/quiz"
       ? "h-dvh min-h-dvh p-0"
     : "min-h-screen p-4 sm:p-6 md:p-8";
+  const themeCosmosVariant: ThemeCosmosVariant =
+    currentRoute === "/"
+      ? "home"
+      : currentRoute === "/quiz" && step === activeQuestions.length
+        ? "matching"
+      : currentRoute === "/quiz"
+        ? "quiz"
+      : currentRoute === "/results"
+        ? "results"
+      : currentRoute === "/profiles"
+        ? "profiles"
+      : currentRoute === "/knowledge" && selectedKnowledgeTopicSlug != null
+        ? "knowledge-detail"
+      : currentRoute === "/knowledge"
+        ? "knowledge-hub"
+      : "home";
 
   return (
     <div
-      className={`relative flex flex-col items-center justify-center ${shellViewportClassName} ${shellOverflowClassName}`}
+      className={`theme-synced-page relative flex flex-col items-center justify-center ${shellViewportClassName} ${shellOverflowClassName}`}
     >
-      {/* Background ambient elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-cyan-900/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl pointer-events-none"></div>
+      <ThemeCosmosLayer variant={themeCosmosVariant} />
 
       <div className={`relative z-10 w-full ${shellContainerClassName}`}>
         <AnimatePresence mode="wait">
@@ -2049,6 +2083,8 @@ ${JSON.stringify(context.backupCandidates)}
                 navigateToKnowledgeNebula();
               }}
               onOpenProfiles={navigateToProfiles}
+              themeId={themeId}
+              onThemeChange={setThemeId}
               authPanel={authPanel}
             />
           )}

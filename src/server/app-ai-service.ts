@@ -30,8 +30,8 @@ const MAX_SHOPPING_GUIDANCE_COUNT = 5;
 const DEFAULT_AI_MAX_TOKENS = 4096;
 const RERANK_AI_MAX_TOKENS = 1200;
 const ENHANCEMENT_AI_MAX_TOKENS = 1800;
-const RERANK_PROVIDER_TIMEOUT_MS = 12_000;
-const ENHANCEMENT_PROVIDER_TIMEOUT_MS = 10_000;
+export const RERANK_PROVIDER_TIMEOUT_MS = 45_000;
+export const ENHANCEMENT_PROVIDER_TIMEOUT_MS = 60_000;
 
 const PROVIDER_LABELS: Record<AppAiProvider, string> = {
   "dmxapi-mimo": "DMXAPI Mimo",
@@ -53,6 +53,7 @@ const PROVIDER_RUNTIME_CONFIG: Record<
   {
     apiKeyEnv: string;
     baseURL: string;
+    temperature?: number;
     topP?: number;
   }
 > = {
@@ -79,6 +80,7 @@ const PROVIDER_RUNTIME_CONFIG: Record<
   kimi: {
     apiKeyEnv: "MOONSHOT_API_KEY",
     baseURL: "https://api.moonshot.cn/v1",
+    temperature: 1,
   },
   "dmxapi-claude": {
     apiKeyEnv: "DMXAPI_API_KEY",
@@ -118,7 +120,7 @@ const PROXY_PROVIDER_MODELS: Record<AppAiProvider, string> = {
   "dmxapi-mimo": "mimo-v2.5-pro",
   "dmxapi-minimax": "MiniMax-M2.7-free",
   "dmxapi-qwen": "qwen3.5-27b",
-  "dmxapi-glm": "glm-5.1-free",
+  "dmxapi-glm": "glm-5",
   kimi: "kimi-k2.5",
   "dmxapi-claude": "claude-opus-4-7",
   "dmxapi-gemini": "gemini-3.1-pro-preview-ssvip",
@@ -196,6 +198,7 @@ function normalizeJsonResponse(content: string | null | undefined) {
   return String(content || "")
     .replace(/```json/g, "")
     .replace(/```/g, "")
+    .replace(/,\s*([}\]])/g, "$1")
     .trim();
 }
 
@@ -478,7 +481,7 @@ export function createAppAiService({
             baseURL: runtimeConfig.baseURL,
             model: modelName,
             prompt,
-            temperature,
+            temperature: runtimeConfig.temperature ?? temperature,
             maxTokens,
             ...(runtimeConfig.topP == null ? {} : { topP: runtimeConfig.topP }),
             ...(timeoutMs == null ? {} : { timeoutMs }),

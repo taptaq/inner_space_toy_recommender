@@ -37,7 +37,7 @@ test("RESULT_MODEL_OPTIONS preserves provider order and labels", () => {
     },
     {
       provider: "dmxapi-glm",
-      model: "glm-5.1-free",
+      model: "glm-5",
       label: "GLM（DMX）",
       description: "想快速看一版明确建议，可以试它。",
     },

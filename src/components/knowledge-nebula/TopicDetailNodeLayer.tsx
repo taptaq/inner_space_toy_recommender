@@ -19,7 +19,7 @@ type TopicDetailNodeLayerProps = {
 
 const COCKPIT_SCREEN_VISUAL_STYLE = {
   tone:
-    "border-cyan-200/18 bg-[linear-gradient(145deg,rgba(5,24,38,0.72),rgba(2,9,20,0.91))] shadow-[0_0_48px_rgba(34,211,238,0.12)]",
+    "bg-[linear-gradient(145deg,rgba(5,24,38,0.72),rgba(2,9,20,0.91))] shadow-[0_0_48px_rgba(34,211,238,0.12)]",
   line: "from-cyan-200/46 via-cyan-100/14 to-transparent",
   text: "text-cyan-50",
   summary: "text-cyan-100/66",
@@ -195,10 +195,9 @@ export function TopicDetailNodeLayer({
             key={anchor.id}
             type="button"
             className={[
-              "cockpit-screen group pointer-events-auto absolute cursor-pointer overflow-hidden rounded-[1.1rem] border px-4 py-3.5 text-left backdrop-blur-xl transition-[border-color,filter,box-shadow,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:rounded-[1.35rem] sm:px-5",
+              "cockpit-screen knowledge-detail-cockpit-screen group pointer-events-auto absolute cursor-pointer overflow-hidden rounded-[1.1rem] border px-4 py-3.5 text-left backdrop-blur-xl transition-[border-color,filter,box-shadow,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:rounded-[1.35rem] sm:px-5",
               COCKPIT_SCREEN_VISUAL_STYLE.tone,
               isHottest ? "high-heat shadow-[0_0_76px_rgba(125,211,252,0.22)]" : "",
-              isHighHeat ? "border-cyan-100/30" : "",
               isActive ? "brightness-125" : "brightness-95 hover:brightness-110",
             ].join(" ")}
             style={{
@@ -238,17 +237,17 @@ export function TopicDetailNodeLayer({
             aria-label={`打开屏幕 ${anchor.title}`}
             aria-pressed={isOpen}
           >
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),transparent_34%),repeating-linear-gradient(180deg,rgba(125,211,252,0.055)_0_1px,transparent_1px_6px)] opacity-70" />
+            <div className="knowledge-detail-cockpit-screen-scan pointer-events-none absolute inset-0 opacity-70" />
             <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-              <div className="absolute -right-8 top-2 h-20 w-20 rounded-full bg-cyan-200/10 blur-2xl" />
+              <div className="knowledge-detail-cockpit-screen-hover-glow absolute -right-8 top-2 h-20 w-20 rounded-full blur-2xl" />
             </div>
             <div
               className={[
-                "pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r",
+                "knowledge-detail-screen-topline pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r",
                 COCKPIT_SCREEN_VISUAL_STYLE.line,
               ].join(" ")}
             />
-            <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-cyan-200/8 blur-2xl" />
+            <div className="knowledge-detail-cockpit-screen-corner-glow pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl" />
             <div className="relative z-10 flex h-full flex-col">
               <div className="flex items-center justify-between gap-4 text-[10px] tracking-[0.2em] text-white/38">
                 <span>PARAM {String(index + 1).padStart(2, "0")}</span>
@@ -262,7 +261,7 @@ export function TopicDetailNodeLayer({
               >
                 {anchor.title}
               </h3>
-              <div className="cockpit-title-divider my-2.5 h-px w-full bg-gradient-to-r from-cyan-100/42 via-cyan-100/18 to-transparent opacity-80" />
+              <div className="cockpit-title-divider my-2.5 h-px w-full bg-gradient-to-r from-cyan-100/42 via-cyan-100/18 to-transparent opacity-80 knowledge-detail-screen-divider" />
               <p
                 className={[
                   "min-h-[1.45rem] text-xs leading-[1.65] sm:text-sm sm:leading-[1.6]",

@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  ENHANCEMENT_PROVIDER_TIMEOUT_MS,
+  RERANK_PROVIDER_TIMEOUT_MS,
   createAppAiService,
   type ChatCompletionRequest,
 } from "./app-ai-service.ts";
@@ -118,9 +120,55 @@ test("createProviderExecutors routes Kimi through the official Moonshot API", as
     baseURL: "https://api.moonshot.cn/v1",
     model: "kimi-k2.5",
     prompt: "rerank prompt",
-    temperature: 0.1,
+    temperature: 1,
     maxTokens: 4096,
   });
+});
+
+test("runServerAiProxy uses the currently available DMX GLM model", async () => {
+  const requests: ChatCompletionRequest[] = [];
+  const service = createAppAiService({
+    env: {
+      DMXAPI_API_KEY: "dmx-key",
+    } as NodeJS.ProcessEnv,
+    chatCompletionRunner: async (request) => {
+      requests.push(request);
+      return '[{"id":"p-1","reason":"GLM 兜底结果"}]';
+    },
+  });
+
+  const result = await service.runServerAiProxy<{ id: string; reason: string }[]>({
+    prompt: "rerank prompt",
+    temperature: 0.1,
+    emptyJson: "[]",
+    logContext: "Top3 重排",
+    providerOrder: ["dmxapi-glm"],
+  });
+
+  assert.equal(result.modelName, "glm-5");
+  assert.equal(result.provider, "dmxapi-glm");
+  assert.equal(requests[0]?.model, "glm-5");
+});
+
+test("runServerAiProxy tolerates model JSON with trailing commas", async () => {
+  const service = createAppAiService({
+    env: {
+      DMXAPI_API_KEY: "dmx-key",
+    } as NodeJS.ProcessEnv,
+    chatCompletionRunner: async () => `[
+      { "id": "p-1", "reason": "Gemini 兜底结果", },
+    ]`,
+  });
+
+  const result = await service.runServerAiProxy<{ id: string; reason: string }[]>({
+    prompt: "rerank prompt",
+    temperature: 0.1,
+    emptyJson: "[]",
+    logContext: "Top3 重排",
+    providerOrder: ["dmxapi-gemini"],
+  });
+
+  assert.deepEqual(result.data, [{ id: "p-1", reason: "Gemini 兜底结果" }]);
 });
 
 test("runResultRecalibration uses the automatic provider ladder and recomputes canonical backup products from the recalibrated Top3", async () => {
@@ -226,17 +274,20 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
       model: request.model,
       baseURL: request.baseURL,
       maxTokens: request.maxTokens,
+      timeoutMs: request.timeoutMs,
     })),
     [
       {
         model: "qwen-turbo",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
         maxTokens: 1200,
+        timeoutMs: RERANK_PROVIDER_TIMEOUT_MS,
       },
       {
         model: "qwen-turbo",
         baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
         maxTokens: 1800,
+        timeoutMs: ENHANCEMENT_PROVIDER_TIMEOUT_MS,
       },
     ],
   );
@@ -312,6 +363,11 @@ test("runResultRecalibration uses the automatic provider ladder and recomputes c
   assert.match(requests[1]?.prompt || "", /"descriptionSignals":"低噪静音、可穿戴"/);
   assert.match(requests[1]?.prompt || "", /"descriptionSignals":"低噪静音"/);
   assert.match(requests[1]?.prompt || "", /"descriptionSignals":"易清洗"/);
+});
+
+test("AI recommendation provider timeouts allow slower models to answer before fallback", () => {
+  assert.equal(RERANK_PROVIDER_TIMEOUT_MS, 45_000);
+  assert.equal(ENHANCEMENT_PROVIDER_TIMEOUT_MS, 60_000);
 });
 
 test("resolveRecalibrationPlan starts the first manual reroll on the next rerank provider while keeping the fallback ladder", () => {

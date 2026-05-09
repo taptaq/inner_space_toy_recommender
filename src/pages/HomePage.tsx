@@ -14,10 +14,15 @@ import {
   ShieldCheck,
   Boxes,
   LogOut,
+  Palette,
   Sparkles,
 } from "lucide-react";
 import { AuthPanel, type AuthPanelMode } from "../components/AuthPanel.tsx";
 import { HomeFeedbackModal } from "../components/HomeFeedbackModal.tsx";
+import {
+  APP_THEME_OPTIONS,
+  type AppThemeId,
+} from "../lib/app-theme.ts";
 import { submitHomeFeedback } from "../lib/home-feedback.ts";
 import { usePagePerformanceState } from "../lib/page-performance.ts";
 
@@ -377,12 +382,55 @@ function HomeAuthEntry({
   );
 }
 
+function HomeThemeSwitcher({
+  themeId,
+  onThemeChange,
+}: {
+  themeId: AppThemeId;
+  onThemeChange: (themeId: AppThemeId) => void;
+}) {
+  return (
+    <div className="home-theme-switcher mb-5 w-full rounded-2xl border border-white/8 bg-white/[0.03] p-2.5 text-left sm:mb-6">
+      <div className="mb-2 flex items-center gap-2 px-1 text-[10px] tracking-[0.24em] text-slate-400">
+        <Palette className="h-3.5 w-3.5 text-cyan-200/60" />
+        <span>主题风格</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {APP_THEME_OPTIONS.map((option) => {
+          const isActive = option.id === themeId;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onThemeChange(option.id)}
+              className={[
+                "home-theme-option rounded-xl border px-2.5 py-2 text-left text-xs transition-colors",
+                isActive
+                  ? "home-theme-option-active border-cyan-300/32 bg-cyan-300/12 text-cyan-50"
+                  : "border-white/8 bg-white/[0.025] text-slate-300 hover:border-cyan-300/22 hover:bg-cyan-300/[0.07] hover:text-white",
+              ].join(" ")}
+            >
+              <span className="block truncate font-medium">{option.shortLabel}</span>
+              <span className="mt-0.5 block truncate text-[10px] opacity-70">
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function HomePage({
   pageVariants,
   onStart,
   onBrowseLibrary,
   onOpenKnowledgeNebula,
   onOpenProfiles,
+  themeId,
+  onThemeChange,
   authPanel,
 }: {
   pageVariants: any;
@@ -390,6 +438,8 @@ export function HomePage({
   onBrowseLibrary: () => void;
   onOpenKnowledgeNebula: () => void;
   onOpenProfiles: () => void;
+  themeId: AppThemeId;
+  onThemeChange: (themeId: AppThemeId) => void;
   authPanel: {
     isConfigured: boolean;
     userLabel: string | null;
@@ -566,11 +616,11 @@ export function HomePage({
         ].join(" ")}
       >
         <div className="home-space-depth pointer-events-none absolute left-1/2 top-[-16%] -z-10 h-[120%] w-[100vw] -translate-x-1/2 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_8%,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_28%_68%,rgba(99,102,241,0.08),transparent_32%)]" />
+          <div className="home-space-aurora absolute inset-0" />
           <div className="home-space-stars home-space-stars-a absolute inset-0" />
           <div className="home-space-stars home-space-stars-b absolute inset-0" />
-          <div className="home-space-orbit absolute left-1/2 top-[16%] h-[38rem] w-[72rem] -translate-x-1/2 rounded-[50%] border border-cyan-100/8" />
-          <div className="home-space-orbit home-space-orbit-offset absolute left-1/2 top-[21%] h-[32rem] w-[58rem] -translate-x-1/2 rounded-[50%] border border-indigo-100/7" />
+          <div className="home-space-orbit home-space-orbit-a absolute left-[42%] top-[18%] h-[34rem] w-[64rem] -translate-x-1/2 rounded-[50%] border border-cyan-100/8" />
+          <div className="home-space-orbit home-space-orbit-b home-space-orbit-offset absolute left-[38%] top-[25%] h-[27rem] w-[54rem] -translate-x-1/2 rounded-[50%] border border-indigo-100/7" />
           <div className="home-space-comet absolute left-[72%] top-[18%] h-px w-32 rotate-[-18deg]" />
         </div>
 
@@ -610,8 +660,13 @@ export function HomePage({
           </h2>
 
           <p className="relative mb-8 max-w-[19rem] text-sm leading-7 text-slate-300 sm:mb-10 sm:max-w-[300px]">
-            跳过复杂难懂的参数陷阱与营销词汇。只需回答几个简单的偏好问题，我们将基于严密的过滤体系，为你精准匹配出最契合自身需求的私密设备。
+            跳过复杂难懂的参数陷阱与营销词汇。只需回答几个简单的偏好问题，我们将基于过滤体系，为你精准匹配出最契合自身需求的私密设备。
           </p>
+
+          <HomeThemeSwitcher
+            themeId={themeId}
+            onThemeChange={onThemeChange}
+          />
 
           <button
             onClick={onStart}

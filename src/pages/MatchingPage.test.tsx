@@ -57,6 +57,25 @@ test("matching page keeps lightweight ornamental motion for small screens", () =
   );
 });
 
+test("matching page knowledge fragments stay readable over the loading backdrop", () => {
+  const fieldSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/components/FloatingKnowledgeField.tsx"),
+    "utf8",
+  );
+  const cssSource = fs.readFileSync(path.resolve(process.cwd(), "src/index.css"), "utf8");
+
+  assert.match(fieldSource, /isMobileLayer\s*\?\s*0\.74\s*:\s*0\.86/);
+  assert.match(fieldSource, /isMobileLayer\s*\?\s*0\.62\s*:\s*0\.7/);
+  assert.match(
+    cssSource,
+    /\.floating-knowledge-field-matching \.floating-knowledge-capsule\s*\{[\s\S]*color:\s*rgba\(248,\s*250,\s*252,\s*0\.86\);/,
+  );
+  assert.match(
+    cssSource,
+    /\.floating-knowledge-field-matching \.floating-knowledge-capsule::before\s*\{[\s\S]*rgba\(15,\s*23,\s*42,\s*0\.46\)/,
+  );
+});
+
 test("matching page keeps the mobile loading shell tighter while centering the fragment field", () => {
   const source = fs.readFileSync(
     path.resolve(process.cwd(), "src/pages/MatchingPage.tsx"),
@@ -80,7 +99,7 @@ test("matching page keeps the mobile loading shell tighter while centering the f
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-capsule\s*\{[\s\S]*max-width:\s*min\(150px,\s*40vw\);[\s\S]*min-width:\s*108px;[\s\S]*padding:\s*6px 8px;[\s\S]*opacity:\s*0\.58;/,
+    /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-capsule\s*\{[\s\S]*max-width:\s*min\(150px,\s*40vw\);[\s\S]*min-width:\s*108px;[\s\S]*padding:\s*6px 8px;[\s\S]*opacity:\s*0\.68;/,
   );
   assert.match(cssSource, /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-slot-matching-5\s*\{/);
   assert.match(cssSource, /@media \(max-width: 640px\) \{[\s\S]*\.floating-knowledge-slot-matching-6\s*\{/);

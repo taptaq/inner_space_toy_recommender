@@ -445,27 +445,32 @@ export function KnowledgeNebulaTopicSections({
 
   return (
     <>
-      <div className="relative h-full min-h-0 overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[28dvh] bg-[linear-gradient(180deg,rgba(0,8,18,0.58),transparent)]" />
-        <div className="pointer-events-none absolute left-1/2 top-[13dvh] z-10 h-[38dvh] w-[86vw] -translate-x-1/2 rounded-[50%] border-t border-cyan-100/12 shadow-[inset_0_34px_90px_rgba(8,47,73,0.12)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[32dvh] bg-[linear-gradient(180deg,transparent,rgba(1,6,16,0.72)_28%,rgba(1,4,12,0.98))]" />
-        <div className="pointer-events-none absolute bottom-0 left-1/2 z-30 h-[30dvh] w-[112vw] -translate-x-1/2 rounded-t-[52%] border-t border-cyan-100/12 bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.13),transparent_42%),linear-gradient(180deg,rgba(4,13,25,0.5),rgba(1,4,12,0.94))] shadow-[0_-28px_90px_rgba(8,47,73,0.22)]" />
-        <div className="pointer-events-none absolute bottom-[11dvh] left-[7vw] z-30 h-px w-[24vw] rotate-[-13deg] bg-gradient-to-r from-transparent via-cyan-100/24 to-transparent" />
-        <div className="pointer-events-none absolute bottom-[11dvh] right-[7vw] z-30 h-px w-[24vw] rotate-[13deg] bg-gradient-to-l from-transparent via-cyan-100/24 to-transparent" />
+      <div
+        className={[
+          "relative h-full min-h-0 overflow-hidden",
+          openSection ? "knowledge-detail-dialog-open" : "",
+        ].join(" ")}
+      >
+        <div className="knowledge-detail-top-vignette pointer-events-none absolute inset-x-0 top-0 z-10 h-[28dvh]" />
+        <div className="knowledge-detail-orbit-ring pointer-events-none absolute left-1/2 top-[13dvh] z-10 h-[38dvh] w-[86vw] -translate-x-1/2 rounded-[50%] border-t" />
+        <div className="knowledge-detail-bottom-vignette pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[32dvh]" />
+        <div className="knowledge-detail-horizon pointer-events-none absolute bottom-0 left-1/2 z-30 h-[30dvh] w-[112vw] -translate-x-1/2 rounded-t-[52%] border-t" />
+        <div className="knowledge-detail-horizon-line pointer-events-none absolute bottom-[11dvh] left-[7vw] z-30 h-px w-[24vw] rotate-[-13deg] bg-gradient-to-r from-transparent to-transparent" />
+        <div className="knowledge-detail-horizon-line pointer-events-none absolute bottom-[11dvh] right-[7vw] z-30 h-px w-[24vw] rotate-[13deg] bg-gradient-to-l from-transparent to-transparent" />
 
         <div className="pointer-events-none absolute left-1/2 top-[5.2%] z-20 w-[min(58rem,90vw)] -translate-x-1/2 text-center sm:top-[8%]">
           <div className="flex items-center justify-center gap-4">
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-100/18 to-cyan-100/34" />
-            <span className="relative inline-flex items-center gap-2 rounded-full border border-cyan-200/18 bg-slate-950/34 px-4 py-1.5 text-[10px] tracking-[0.28em] text-cyan-50/78 shadow-[0_0_34px_rgba(34,211,238,0.08)] backdrop-blur-md">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-200/72 shadow-[0_0_12px_rgba(125,211,252,0.72)]" />
+            <span className="knowledge-detail-nav-line h-px flex-1 bg-gradient-to-r from-transparent" />
+            <span className="knowledge-detail-nav-pill relative inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-[10px] tracking-[0.28em] backdrop-blur-md">
+              <span className="knowledge-detail-nav-dot h-1.5 w-1.5 rounded-full" />
               <span>驾驶舱导航</span>
             </span>
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent via-cyan-100/18 to-cyan-100/34" />
+            <span className="knowledge-detail-nav-line h-px flex-1 bg-gradient-to-l from-transparent" />
           </div>
           <p className="mt-2 text-[10px] tracking-[0.32em] text-slate-400/70 sm:text-xs">
             模拟巡航 · 知识屏同步中
           </p>
-          <div className="mx-auto mt-3 h-px w-[min(18rem,52vw)] bg-gradient-to-r from-transparent via-cyan-100/18 to-transparent" />
+          <div className="knowledge-detail-nav-underbar mx-auto mt-3 h-px w-[min(18rem,52vw)] bg-gradient-to-r from-transparent to-transparent" />
           {topicSyncError ? (
             <p className="mt-3 text-xs tracking-normal text-amber-200/80">
               {topicSyncError}
@@ -499,7 +504,7 @@ export function KnowledgeNebulaTopicSections({
 
         <div
           className={[
-            "transition-opacity duration-300",
+            "knowledge-detail-node-field transition-opacity duration-300",
             openSection ? "pointer-events-none opacity-18" : "opacity-100",
           ].join(" ")}
         >
@@ -521,7 +526,7 @@ export function KnowledgeNebulaTopicSections({
               aria-modal="true"
               aria-labelledby={`${openSection.id}-dialog-title`}
               className={[
-                "expanded-cockpit-main-screen relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.8rem] border bg-[linear-gradient(180deg,rgba(5,19,35,0.94),rgba(1,7,18,0.97))] p-4 shadow-[0_0_120px_rgba(34,211,238,0.13)] backdrop-blur-2xl sm:rounded-[2.4rem] sm:p-6",
+                "expanded-cockpit-main-screen knowledge-detail-main-screen relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.8rem] border p-4 sm:rounded-[2.4rem] sm:p-6",
                 accent.dialogBorder,
               ].join(" ")}
               initial={{ opacity: 0, scale: 0.84, y: 34, filter: "brightness(1.5)" }}
@@ -529,9 +534,9 @@ export function KnowledgeNebulaTopicSections({
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.065),transparent_24%),repeating-linear-gradient(180deg,rgba(125,211,252,0.052)_0_1px,transparent_1px_7px),radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.1),transparent_44%)]" />
-              <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/50 to-transparent" />
-              <div className="pointer-events-none absolute -left-20 top-1/3 h-44 w-44 rounded-full bg-cyan-300/8 blur-3xl" />
+              <div className="knowledge-detail-main-screen-scan pointer-events-none absolute inset-0" />
+              <div className="knowledge-detail-main-screen-topline pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent to-transparent" />
+              <div className="knowledge-detail-main-screen-glow pointer-events-none absolute -left-20 top-1/3 h-44 w-44 rounded-full blur-3xl" />
               <div className="relative z-10 flex items-start justify-between gap-4 border-b border-white/8 pb-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-[0.2em] text-cyan-100/62">
@@ -577,6 +582,33 @@ export function KnowledgeNebulaTopicSections({
                       </p>
                     ))}
                   </div>
+
+                  <section className="knowledge-detail-mobile-related-panel mt-6 border-t border-white/8 pt-4 lg:hidden">
+                    <p className="text-[10px] tracking-[0.2em] text-slate-500">
+                      可能关联的参数卡片
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {relatedSections.map((section) => (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => openParameterScreen(section.id)}
+                          className="group block w-full rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors hover:border-cyan-200/24 hover:bg-cyan-300/8"
+                        >
+                          <span className="block text-xs text-slate-200 transition-colors group-hover:text-white">
+                            {section.title}
+                          </span>
+                          <span className="mt-1.5 line-clamp-2 block text-[11px] leading-5 text-slate-500 transition-colors group-hover:text-cyan-100/62">
+                            {section.summary}
+                          </span>
+                          <span className="mt-2 inline-flex items-center gap-1 text-[10px] tracking-[0.14em] text-cyan-100/42 transition-colors group-hover:text-cyan-100/70">
+                            <span className="h-px w-5 bg-current/50" />
+                            继续校准相关参数
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
                 </div>
 
                 <aside className="hidden min-h-0 border-l border-white/8 pl-4 lg:block">
@@ -621,8 +653,8 @@ export function KnowledgeNebulaTopicSections({
         ) : null}
 
         <div className="absolute inset-x-2.5 bottom-2 z-40 mx-auto max-w-5xl sm:inset-x-4 sm:bottom-7">
-          <div className="relative overflow-hidden rounded-[1.45rem] border border-cyan-100/12 bg-[linear-gradient(180deg,rgba(5,20,36,0.72),rgba(1,6,16,0.9))] px-3 py-2.5 shadow-[0_0_80px_rgba(14,165,233,0.12)] backdrop-blur-xl sm:rounded-[1.75rem] sm:px-5 sm:py-4">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(125,211,252,0.08),transparent)]" />
+          <div className="knowledge-detail-console relative overflow-hidden rounded-[1.45rem] border px-3 py-2.5 backdrop-blur-xl sm:rounded-[1.75rem] sm:px-5 sm:py-4">
+            <div className="knowledge-detail-console-sheen pointer-events-none absolute inset-0" />
             <div className="relative z-10 flex flex-col gap-2.5 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
                 <p className="text-[10px] tracking-[0.28em] text-cyan-100/58">
