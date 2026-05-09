@@ -199,6 +199,68 @@ test("home page background orbits render as refined trace lines instead of heavy
   assert.doesNotMatch(cssSource, /inset 0 34px 80px var\(--theme-glow\)/);
 });
 
+test("home page background now uses a real-space photo layer instead of only synthetic haze", () => {
+  const html = renderHomePage();
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(html, /home-space-photo/);
+  assert.match(html, /home-space-photo-veil/);
+  assert.match(cssSource, /\.home-space-photo/);
+  assert.match(cssSource, /\/assets\/home-cosmos\/inner-space-spiral\.jpg/);
+  assert.match(cssSource, /\/assets\/home-cosmos\/soft-signal-rosette\.jpg/);
+  assert.match(cssSource, /\/assets\/home-cosmos\/vector-pulse-cats-eye\.png/);
+  assert.match(cssSource, /\/assets\/home-cosmos\/sync-field-arp273\.jpg/);
+});
+
+test("home page mobile layout keeps the photo atmosphere visible by scaling and lifting it upward", () => {
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(cssSource, /@media \(max-width: 640px\)/);
+  assert.match(cssSource, /\.home-space-photo \{/);
+  assert.match(cssSource, /scale\(0\.78\)/);
+  assert.match(cssSource, /translate3d\(-8%, -12%, 0\)/);
+});
+
+test("home page ambient photo layers use layered motion instead of a static still background", () => {
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(cssSource, /\.home-space-photo\s*\{[\s\S]*animation: home-space-photo-float/);
+  assert.match(cssSource, /\.home-space-photo-veil\s*\{[\s\S]*animation: home-space-veil-breathe/);
+  assert.match(cssSource, /\.home-space-stars-a\s*\{[\s\S]*animation: home-space-drift-a[\s\S]*home-space-star-pulse/);
+  assert.match(cssSource, /@keyframes home-space-veil-breathe/);
+  assert.match(cssSource, /@keyframes home-space-star-pulse/);
+});
+
+test("home page theme atmospheres stay visible while each theme keeps its own motion cadence", () => {
+  const cssSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/index.css"),
+    "utf8",
+  );
+
+  assert.match(cssSource, /:root\[data-theme="inner-space"\] \.home-space-depth \{[\s\S]*--home-space-photo-opacity: 0\.36;/);
+  assert.match(cssSource, /:root\[data-theme="soft-signal"\] \.home-space-depth \{[\s\S]*--home-space-photo-opacity: 0\.31;/);
+  assert.match(cssSource, /:root\[data-theme="vector-pulse"\] \.home-space-depth \{[\s\S]*--home-space-photo-opacity: 0\.32;[\s\S]*--home-space-photo-size: contain;/);
+  assert.match(cssSource, /:root\[data-theme="sync-field"\] \.home-space-depth \{[\s\S]*--home-space-photo-opacity: 0\.31;[\s\S]*--home-space-photo-size: contain;/);
+  assert.match(cssSource, /:root\[data-theme="inner-space"\] \.home-space-depth \{[\s\S]*--home-space-photo-float-duration: 24s;[\s\S]*--home-space-veil-duration: 19s;[\s\S]*--home-space-star-pulse-duration: 10\.5s;/);
+  assert.match(cssSource, /:root\[data-theme="soft-signal"\] \.home-space-depth \{[\s\S]*--home-space-photo-float-duration: 29s;[\s\S]*--home-space-veil-duration: 23s;[\s\S]*--home-space-star-pulse-duration: 12\.5s;/);
+  assert.match(cssSource, /:root\[data-theme="vector-pulse"\] \.home-space-depth \{[\s\S]*--home-space-photo-float-duration: 18s;[\s\S]*--home-space-veil-duration: 15\.5s;[\s\S]*--home-space-star-pulse-duration: 8\.2s;/);
+  assert.match(cssSource, /:root\[data-theme="sync-field"\] \.home-space-depth \{[\s\S]*--home-space-photo-float-duration: 21s;[\s\S]*--home-space-veil-duration: 17\.5s;[\s\S]*--home-space-star-pulse-duration: 9\.4s;/);
+  assert.match(cssSource, /\.home-space-depth \{[\s\S]*rgba\(2, 6, 23, 0\.42\)\);/);
+  assert.match(cssSource, /\.home-space-photo \{[\s\S]*width: min\(70rem, 66vw\);[\s\S]*background-size: var\(--home-space-photo-size\);[\s\S]*mix-blend-mode: screen;/);
+  assert.match(cssSource, /\.home-space-photo\s*\{[\s\S]*animation: home-space-photo-float var\(--home-space-photo-float-duration\)/);
+  assert.match(cssSource, /\.home-space-photo-veil\s*\{[\s\S]*animation: home-space-veil-breathe var\(--home-space-veil-duration\)/);
+  assert.match(cssSource, /\.home-space-stars-a\s*\{[\s\S]*home-space-star-pulse var\(--home-space-star-pulse-duration\)/);
+});
+
 test("home page secondary entry buttons do not render oversized hover halos", () => {
   const cssSource = fs.readFileSync(
     path.resolve(process.cwd(), "src/index.css"),
@@ -215,6 +277,7 @@ test("home page keeps ambient layers grouped behind stable semantic anchor nodes
 
   assert.equal(countMatches(html, /home-space-stars-a/g), 1);
   assert.equal(countMatches(html, /home-space-stars-b/g), 1);
+  assert.equal(countMatches(html, /class="home-space-photo"/g), 1);
   assert.equal(countMatches(html, /home-space-orbit-offset/g), 1);
   assert.equal(countMatches(html, /home-space-comet/g), 1);
   assert.equal(countMatches(html, /home-panel-scan/g), 1);

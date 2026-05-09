@@ -616,6 +616,8 @@ export function HomePage({
         ].join(" ")}
       >
         <div className="home-space-depth pointer-events-none absolute left-1/2 top-[-16%] -z-10 h-[120%] w-[100vw] -translate-x-1/2 overflow-hidden">
+          <div className="home-space-photo" />
+          <div className="home-space-photo-veil" />
           <div className="home-space-aurora absolute inset-0" />
           <div className="home-space-stars home-space-stars-a absolute inset-0" />
           <div className="home-space-stars home-space-stars-b absolute inset-0" />
