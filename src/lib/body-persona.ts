@@ -37,7 +37,7 @@ export const BODY_PERSONA_QUESTIONS = [
         value: "high",
         label: "最好低调到一眼看不出来",
         weights: { starlit_guard: 3 },
-        hidden: { route: "daily_object", power: 2 },
+        hidden: { route: "daily_object", power: 5 },
       },
       {
         value: "medium",
@@ -187,7 +187,7 @@ export function resolveBodyPersonaResult({
     Object.entries(hiddenRouteScore).sort((a, b) => b[1] - a[1])[0]?.[0] ??
     "pocket_ready";
   const hiddenPowerGrade =
-    hiddenPower >= 2 ? "S" : hiddenPower >= 1 ? "A" : "B";
+    hiddenPower >= 5 ? "S" : hiddenPower >= 3 ? "A" : "B";
   const title =
     PERSONA_TITLES[primaryPersonaCode as keyof typeof PERSONA_TITLES] ??
     PERSONA_TITLES.soft_glow;
@@ -198,7 +198,7 @@ export function resolveBodyPersonaResult({
     hiddenRouteCode,
     hiddenPowerGrade,
     coLivingComfortGrade:
-      hiddenPower >= 2 ? "high" : hiddenPower >= 1 ? "medium" : "low",
+      hiddenPower >= 5 ? "high" : hiddenPower >= 3 ? "medium" : "low",
     freeSummary: {
       title,
       blurb:
