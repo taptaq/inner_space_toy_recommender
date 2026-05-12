@@ -89,7 +89,7 @@ const PERSONA_TITLES = {
   twin_orbit: "双轨型·关系联动者",
 } as const;
 
-export const BODY_PERSONA_QUESTIONS = [
+export const BODY_PERSONA_QUESTIONS: readonly BodyPersonaQuestion[] = [
   {
     id: "safety_need",
     title: "刚进入体验前，你更在意什么？",
@@ -218,7 +218,7 @@ export const BODY_PERSONA_QUESTIONS = [
       },
     ],
   },
-] satisfies readonly BodyPersonaQuestion[];
+] as const;
 
 export function resolveBodyPersonaResult({
   answers,
