@@ -1,3 +1,85 @@
+export const BODY_PERSONA_CODES = [
+  "soft_glow",
+  "starlit_guard",
+  "tidal_sync",
+  "comet_spark",
+  "ring_control",
+  "twin_orbit",
+] as const;
+
+export type BodyPersonaCode = (typeof BODY_PERSONA_CODES)[number];
+
+export const HIDDEN_ROUTE_CODES = [
+  "zero_profile",
+  "daily_object",
+  "beauty_disguise",
+  "pocket_ready",
+] as const;
+
+export type HiddenRouteCode = (typeof HIDDEN_ROUTE_CODES)[number];
+
+export const BODY_PERSONA_QUESTION_IDS = [
+  "safety_need",
+  "privacy_need",
+  "pace_preference",
+  "sensory_preference",
+  "control_preference",
+  "relationship_preference",
+] as const;
+
+export type BodyPersonaQuestionId = (typeof BODY_PERSONA_QUESTION_IDS)[number];
+
+export type BodyPersonaAnswerValue =
+  | "high"
+  | "medium"
+  | "low"
+  | "slow"
+  | "balanced"
+  | "fast"
+  | "layered"
+  | "direct"
+  | "manual"
+  | "hybrid"
+  | "guided"
+  | "solo"
+  | "paired";
+
+export type BodyPersonaAnswers = Partial<
+  Record<BodyPersonaQuestionId, BodyPersonaAnswerValue>
+>;
+
+export type BodyPersonaWeights = Partial<Record<BodyPersonaCode, number>>;
+
+export type BodyPersonaQuestionOption = {
+  value: BodyPersonaAnswerValue;
+  label: string;
+  weights: BodyPersonaWeights;
+  hidden?: {
+    route: HiddenRouteCode;
+    power: number;
+  };
+};
+
+export type BodyPersonaQuestion = {
+  id: BodyPersonaQuestionId;
+  title: string;
+  options: readonly BodyPersonaQuestionOption[];
+};
+
+export type BodyPersonaResult = {
+  primaryPersonaCode: BodyPersonaCode;
+  secondaryPersonaCode: BodyPersonaCode | null;
+  hiddenRouteCode: HiddenRouteCode;
+  hiddenPowerGrade: "S" | "A" | "B";
+  coLivingComfortGrade: "high" | "medium" | "low";
+  freeSummary: {
+    title: string;
+    blurb: string;
+    why: string;
+    hints: string[];
+  };
+};
+
 const PERSONA_TITLES = {
   soft_glow: "微光型·慢热探索者",
   starlit_guard: "星幕型·隐秘安全感者",
@@ -136,14 +218,14 @@ export const BODY_PERSONA_QUESTIONS = [
       },
     ],
   },
-] as const;
+] satisfies readonly BodyPersonaQuestion[];
 
 export function resolveBodyPersonaResult({
   answers,
 }: {
-  answers: Record<string, string>;
-}) {
-  const personaScores = {
+  answers: BodyPersonaAnswers;
+}): BodyPersonaResult {
+  const personaScores: Record<BodyPersonaCode, number> = {
     soft_glow: 0,
     starlit_guard: 0,
     tidal_sync: 0,
@@ -152,7 +234,7 @@ export function resolveBodyPersonaResult({
     twin_orbit: 0,
   };
 
-  const hiddenRouteScore = {
+  const hiddenRouteScore: Record<HiddenRouteCode, number> = {
     zero_profile: 0,
     daily_object: 0,
     beauty_disguise: 0,
@@ -167,13 +249,15 @@ export function resolveBodyPersonaResult({
     );
     if (!selected) continue;
 
-    for (const [code, score] of Object.entries(selected.weights)) {
-      personaScores[code as keyof typeof personaScores] += score;
+    for (const code of BODY_PERSONA_CODES) {
+      const score = selected.weights[code];
+      if (score) {
+        personaScores[code] += score;
+      }
     }
 
     if (selected.hidden?.route) {
-      hiddenRouteScore[selected.hidden.route as keyof typeof hiddenRouteScore] +=
-        selected.hidden.power;
+      hiddenRouteScore[selected.hidden.route] += selected.hidden.power;
       hiddenPower += selected.hidden.power;
     }
   }
@@ -181,15 +265,20 @@ export function resolveBodyPersonaResult({
   const rankedPersonas = Object.entries(personaScores).sort(
     (a, b) => b[1] - a[1],
   );
-  const primaryPersonaCode = rankedPersonas[0]?.[0] ?? "soft_glow";
-  const secondaryPersonaCode = rankedPersonas[1]?.[0] ?? null;
-  const hiddenRouteCode =
-    Object.entries(hiddenRouteScore).sort((a, b) => b[1] - a[1])[0]?.[0] ??
-    "pocket_ready";
+  const primaryPersonaCode =
+    (rankedPersonas[0]?.[0] as BodyPersonaCode | undefined) ?? "soft_glow";
+  const secondaryPersonaCode =
+    (rankedPersonas[1]?.[0] as BodyPersonaCode | undefined) ?? null;
+  const hiddenRouteCode: HiddenRouteCode =
+    hiddenPower === 0
+      ? "zero_profile"
+      : ((Object.entries(hiddenRouteScore).sort((a, b) => b[1] - a[1])[0]?.[0] as
+          | HiddenRouteCode
+          | undefined) ?? "zero_profile");
   const hiddenPowerGrade =
     hiddenPower >= 5 ? "S" : hiddenPower >= 3 ? "A" : "B";
   const title =
-    PERSONA_TITLES[primaryPersonaCode as keyof typeof PERSONA_TITLES] ??
+    PERSONA_TITLES[primaryPersonaCode] ??
     PERSONA_TITLES.soft_glow;
 
   return {
@@ -220,5 +309,5 @@ export function resolveBodyPersonaResult({
             ? ["优先看反馈直接路线", "更适合启动更快的产品"]
             : ["先看与你当前场景不冲突的路线", "把节奏匹配放在参数前面"],
     },
-  };
+  } satisfies BodyPersonaResult;
 }

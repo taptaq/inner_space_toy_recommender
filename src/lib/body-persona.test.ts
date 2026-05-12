@@ -7,10 +7,14 @@ import {
 } from "./body-persona.ts";
 
 test("BODY_PERSONA_QUESTIONS exposes a compact six-dimension quiz", () => {
-  assert.equal(BODY_PERSONA_QUESTIONS.length >= 6, true);
+  assert.equal(BODY_PERSONA_QUESTIONS.length, 6);
   assert.equal(
     BODY_PERSONA_QUESTIONS.every((question) => question.options.length >= 3),
     true,
+  );
+  assert.equal(
+    new Set(BODY_PERSONA_QUESTIONS.map((question) => question.id)).size,
+    BODY_PERSONA_QUESTIONS.length,
   );
 });
 
@@ -48,4 +52,21 @@ test("resolveBodyPersonaResult returns a fast-start profile for direct answers",
   assert.equal(result.primaryPersonaCode, "comet_spark");
   assert.equal(result.hiddenPowerGrade === "S", false);
   assert.match(result.freeSummary.title, /彗火型|即时点燃者/);
+});
+
+test("resolveBodyPersonaResult returns zero_profile when no hidden power is selected", () => {
+  const result = resolveBodyPersonaResult({
+    answers: {
+      safety_need: "low",
+      privacy_need: "low",
+      pace_preference: "fast",
+      sensory_preference: "direct",
+      control_preference: "guided",
+      relationship_preference: "paired",
+    },
+  });
+
+  assert.equal(result.hiddenRouteCode, "zero_profile");
+  assert.equal(result.hiddenPowerGrade, "B");
+  assert.equal(result.coLivingComfortGrade, "low");
 });
