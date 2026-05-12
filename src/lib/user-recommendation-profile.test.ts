@@ -91,6 +91,29 @@ test("buildRecommendationProfilePayload dedupes saved preference tags", () => {
   assert.equal(payload.summary, "偏好：静音、入门级、防水；推荐：Top Pick");
 });
 
+test("buildRecommendationProfilePayload includes unlocked body persona snapshot", () => {
+  const payload = buildRecommendationProfilePayload({
+    answers: {
+      tags: ["静音"],
+      gender: "female",
+    },
+    topProducts: [makeProduct({ id: "item-1", name: "Top Pick" })],
+    backupProducts: [],
+    recommendationTips: [],
+    shoppingGuidance: [],
+    bodyPersona: {
+      sessionId: "persona-1",
+      title: "星幕型·隐秘安全感者",
+      hiddenRouteSummary: "日常器物型，隐藏力 S，共居安心度 高",
+      unlocked: true,
+    },
+  });
+
+  assert.equal(payload.bodyPersona?.sessionId, "persona-1");
+  assert.equal(payload.bodyPersona?.title, "星幕型·隐秘安全感者");
+  assert.equal(payload.bodyPersona?.unlocked, true);
+});
+
 test("buildRecommendationProfilePayload no longer saves later-comparison candidates", () => {
   const payload = buildRecommendationProfilePayload({
     answers: {

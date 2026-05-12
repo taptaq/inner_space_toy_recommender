@@ -11,6 +11,13 @@ type RecommendationProfileProduct = {
   score: number;
 };
 
+export type RecommendationProfileBodyPersonaSnapshot = {
+  sessionId: string;
+  title: string;
+  hiddenRouteSummary: string;
+  unlocked: boolean;
+};
+
 type ApiErrorPayload = {
   error?: string;
   details?: string;
@@ -26,6 +33,7 @@ export type RecommendationProfilePayload = {
   backupProducts: RecommendationProfileProduct[];
   recommendationTips: string[];
   shoppingGuidance: string[];
+  bodyPersona?: RecommendationProfileBodyPersonaSnapshot;
 };
 
 export type SavedRecommendationProfile = {
@@ -62,12 +70,14 @@ export function buildRecommendationProfilePayload({
   backupProducts,
   recommendationTips,
   shoppingGuidance,
+  bodyPersona,
 }: {
   answers: AnswerState;
   topProducts: RankedProduct[];
   backupProducts: BackupCandidate[];
   recommendationTips: string[];
   shoppingGuidance: string[];
+  bodyPersona?: RecommendationProfileBodyPersonaSnapshot;
 }): RecommendationProfilePayload {
   const topProductSnapshots = topProducts.map(pickProductSnapshot);
   const backupProductSnapshots = backupProducts.map(pickProductSnapshot);
@@ -96,6 +106,7 @@ export function buildRecommendationProfilePayload({
     backupProducts: backupProductSnapshots,
     recommendationTips,
     shoppingGuidance,
+    ...(bodyPersona ? { bodyPersona } : {}),
   };
 }
 

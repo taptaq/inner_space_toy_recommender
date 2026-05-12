@@ -83,6 +83,56 @@ test("results page shows confidence, fit reasons, and caveats for the primary re
   assert.match(html, /防水表现达到 IPX7/);
 });
 
+test("results page mounts the body persona entry and free summary block", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      bodyPersonaState={{
+        sessionId: "persona-session-1",
+        status: "completed_free",
+        freeSummary: {
+          title: "星幕型·隐秘安全感者",
+          blurb: "你更在意低压力进入。",
+          why: "你在隐私与慢热维度更高。",
+          hints: ["优先低存在感路线"],
+        },
+        fullReport: null,
+      }}
+      isStartingBodyPersona={false}
+      isBodyPersonaQuizOpen={false}
+      bodyPersonaQuestions={[]}
+      bodyPersonaDraftAnswers={{}}
+      isSubmittingBodyPersonaQuiz={false}
+      isUnlockingBodyPersona={false}
+      onStartBodyPersona={() => {}}
+      onCloseBodyPersonaQuiz={() => {}}
+      onChangeBodyPersonaAnswer={() => {}}
+      onSubmitBodyPersonaQuiz={async () => {}}
+      onUnlockBodyPersona={async () => {}}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /身体人格测试/);
+  assert.match(html, /星幕型·隐秘安全感者/);
+  assert.match(html, /解锁完整身体人格报告/);
+});
+
 test("results page shows a lightweight status while AI enhancement is still running", () => {
   const html = renderToStaticMarkup(
     <ResultsPage

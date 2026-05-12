@@ -9,6 +9,18 @@ import {
   RERANK_PROVIDER_TIMEOUT_MS,
   createAppAiService,
 } from "./app-ai-service.js";
+import { createBodyPersonaReportService } from "./body-persona-report-service.js";
+import {
+  createBodyPersonaUnlockStatusHandler,
+  createConfirmBodyPersonaUnlockHandler,
+  createCreateBodyPersonaOrderHandler,
+  createCreateBodyPersonaSessionHandler,
+  createGetBodyPersonaSessionHandler,
+} from "./body-persona-route.js";
+import {
+  createBodyPersonaStore,
+  ensureBodyPersonaSchema,
+} from "./body-persona-store.js";
 import {
   createKnowledgeNebulaCreateCardHandler,
   createKnowledgeNebulaRecordCardViewHandler,
@@ -107,6 +119,14 @@ const getRecommendationFeedbackStore = createLazyValue(() =>
 const getRecommendationSessionStore = createLazyValue(() =>
   createRecommendationSessionStore({ pool }),
 );
+const getBodyPersonaStore = createLazyValue(() =>
+  createBodyPersonaStore({ pool }),
+);
+const getBodyPersonaReportService = createLazyValue(() =>
+  createBodyPersonaReportService({
+    appAiService: getAppAiService(),
+  }),
+);
 const getUsernameRegistrationService = createLazyValue(() =>
   createUsernameRegistrationService({
     supabaseUrl: process.env.VITE_SUPABASE_URL,
@@ -137,6 +157,32 @@ const getSaveRecommendationFeedbackEventHandler = createLazyValue(() =>
 const getSaveRecommendationSessionHandler = createLazyValue(() =>
   createSaveRecommendationSessionHandler({
     store: getRecommendationSessionStore(),
+  }),
+);
+const getCreateBodyPersonaSessionHandler = createLazyValue(() =>
+  createCreateBodyPersonaSessionHandler({
+    store: getBodyPersonaStore(),
+  }),
+);
+const getGetBodyPersonaSessionHandler = createLazyValue(() =>
+  createGetBodyPersonaSessionHandler({
+    store: getBodyPersonaStore(),
+  }),
+);
+const getCreateBodyPersonaOrderHandler = createLazyValue(() =>
+  createCreateBodyPersonaOrderHandler({
+    store: getBodyPersonaStore(),
+  }),
+);
+const getConfirmBodyPersonaUnlockHandler = createLazyValue(() =>
+  createConfirmBodyPersonaUnlockHandler({
+    store: getBodyPersonaStore(),
+    reportService: getBodyPersonaReportService(),
+  }),
+);
+const getBodyPersonaUnlockStatusHandler = createLazyValue(() =>
+  createBodyPersonaUnlockStatusHandler({
+    store: getBodyPersonaStore(),
   }),
 );
 const getSaveRecommendationProfileHandler = createLazyValue(() =>
@@ -221,6 +267,13 @@ function ensureRecommendationSessionRouteReady() {
   return ensureRouteInitialized("recommendation-session", async () => {
     ensureDatabaseConfigured();
     await ensureRecommendationSessionSchema(pool);
+  });
+}
+
+function ensureBodyPersonaRouteReady() {
+  return ensureRouteInitialized("body-persona", async () => {
+    ensureDatabaseConfigured();
+    await ensureBodyPersonaSchema(pool);
   });
 }
 
@@ -342,6 +395,41 @@ app.post(
   withLazyRouteHandler(
     ensureRecommendationSessionRouteReady,
     getSaveRecommendationSessionHandler,
+  ),
+);
+app.post(
+  "/api/body-persona/sessions",
+  withLazyRouteHandler(
+    ensureBodyPersonaRouteReady,
+    getCreateBodyPersonaSessionHandler,
+  ),
+);
+app.get(
+  "/api/body-persona/sessions/:id",
+  withLazyRouteHandler(
+    ensureBodyPersonaRouteReady,
+    getGetBodyPersonaSessionHandler,
+  ),
+);
+app.post(
+  "/api/body-persona/orders",
+  withLazyRouteHandler(
+    ensureBodyPersonaRouteReady,
+    getCreateBodyPersonaOrderHandler,
+  ),
+);
+app.post(
+  "/api/body-persona/orders/:id/confirm",
+  withLazyRouteHandler(
+    ensureBodyPersonaRouteReady,
+    getConfirmBodyPersonaUnlockHandler,
+  ),
+);
+app.get(
+  "/api/body-persona/sessions/:id/unlock-status",
+  withLazyRouteHandler(
+    ensureBodyPersonaRouteReady,
+    getBodyPersonaUnlockStatusHandler,
   ),
 );
 app.post(

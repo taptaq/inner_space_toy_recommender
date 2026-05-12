@@ -50,6 +50,18 @@ import {
   type SavedRecommendationProfile,
   saveRecommendationProfile,
 } from "./lib/user-recommendation-profile";
+import {
+  BODY_PERSONA_QUESTIONS,
+  resolveBodyPersonaResult,
+  type BodyPersonaAnswers,
+  type BodyPersonaResult,
+} from "./lib/body-persona";
+import { buildBodyPersonaFullReport } from "./lib/body-persona-report";
+import {
+  confirmBodyPersonaUnlock,
+  createBodyPersonaOrder,
+  createBodyPersonaSession,
+} from "./lib/body-persona-api";
 import { getProductDisplayName } from "./lib/product-display-name.ts";
 import {
   sanitizeLibrarySubtypeSelection,
@@ -153,6 +165,13 @@ type PersistedAppState = {
   backupProducts?: BackupProduct[];
   recommendationTips?: string[];
   shoppingGuidance?: string[];
+  bodyPersonaState?: {
+    sessionId: string;
+    status: "idle" | "completed_free" | "unlocking" | "unlocked";
+    freeSummary: BodyPersonaResult["freeSummary"] | null;
+    fullReport: Record<string, unknown> | null;
+  } | null;
+  bodyPersonaDraftAnswers?: BodyPersonaAnswers;
   filterGender?: string;
   filterType?: string;
   filterSubtype?: string;
@@ -340,6 +359,20 @@ export default function App() {
   const [shoppingGuidance, setShoppingGuidance] = useState<string[]>(
     persistedState.shoppingGuidance ?? [],
   );
+  const [bodyPersonaState, setBodyPersonaState] = useState<{
+    sessionId: string;
+    status: "idle" | "completed_free" | "unlocking" | "unlocked";
+    freeSummary: BodyPersonaResult["freeSummary"] | null;
+    fullReport: Record<string, unknown> | null;
+  } | null>(persistedState.bodyPersonaState ?? null);
+  const [bodyPersonaDraftAnswers, setBodyPersonaDraftAnswers] =
+    useState<BodyPersonaAnswers>(
+      persistedState.bodyPersonaDraftAnswers ?? {},
+    );
+  const [isBodyPersonaQuizOpen, setIsBodyPersonaQuizOpen] = useState(false);
+  const [isSubmittingBodyPersonaQuiz, setIsSubmittingBodyPersonaQuiz] =
+    useState(false);
+  const [isUnlockingBodyPersona, setIsUnlockingBodyPersona] = useState(false);
   const [currentResultProvider, setCurrentResultProvider] = useState<
     AppAiProvider | undefined
   >(persistedResultSourceState.currentResultProvider);
@@ -528,9 +561,18 @@ export default function App() {
     applyResultSourceState(clearResultSourceState());
   };
 
+  const clearBodyPersonaFlow = () => {
+    setBodyPersonaState(null);
+    setBodyPersonaDraftAnswers({});
+    setIsBodyPersonaQuizOpen(false);
+    setIsSubmittingBodyPersonaQuiz(false);
+    setIsUnlockingBodyPersona(false);
+  };
+
   const startFreshQuizSession = () => {
     clearResultTuningTracking();
     resetResultViewState();
+    clearBodyPersonaFlow();
     setRecommendationSessionId(createRecommendationSessionId());
     setAnswerPath([]);
     setAnswers({ tags: [] });
@@ -745,6 +787,8 @@ export default function App() {
         backupProducts,
         recommendationTips,
         shoppingGuidance,
+        bodyPersonaState,
+        bodyPersonaDraftAnswers,
         filterGender,
         filterType,
         filterSubtype,
@@ -768,6 +812,8 @@ export default function App() {
     backupProducts,
     recommendationTips,
     shoppingGuidance,
+    bodyPersonaState,
+    bodyPersonaDraftAnswers,
     filterGender,
     filterType,
     filterSubtype,
@@ -934,6 +980,7 @@ export default function App() {
     const editableAnswers = resultBaseAnswers ?? answers;
 
     clearResultTuningTracking();
+    clearBodyPersonaFlow();
     setAnswerPath((currentPath) =>
       trimQuizAnswerPathFromStep(currentPath, questionIndex),
     );
@@ -949,6 +996,7 @@ export default function App() {
     const editableAnswers = resultBaseAnswers ?? answers;
 
     clearResultTuningTracking();
+    clearBodyPersonaFlow();
     setAnswerPath((currentPath) =>
       trimQuizAnswerPathFromStep(currentPath, questionIndex),
     );
@@ -1514,6 +1562,22 @@ ${JSON.stringify(context.backupCandidates)}
           backupProducts,
           recommendationTips,
           shoppingGuidance,
+          bodyPersona:
+            bodyPersonaState?.status === "unlocked" &&
+            bodyPersonaState.fullReport &&
+            typeof bodyPersonaState.fullReport.hiddenRouteSummary === "string"
+              ? {
+                  sessionId: bodyPersonaState.sessionId,
+                  title:
+                    bodyPersonaState.freeSummary?.title ||
+                    (typeof bodyPersonaState.fullReport.title === "string"
+                      ? bodyPersonaState.fullReport.title
+                      : "身体人格结果"),
+                  hiddenRouteSummary:
+                    bodyPersonaState.fullReport.hiddenRouteSummary,
+                  unlocked: true,
+                }
+              : undefined,
         }),
       });
       setSaveRecommendationProfileMessage(
@@ -1719,10 +1783,158 @@ ${JSON.stringify(context.backupCandidates)}
     }
   };
 
+  const buildBodyPersonaCandidatePool = () =>
+    [...topProducts, ...backupProducts].slice(0, 8).map((product) => ({
+      id: product.id,
+      name: getProductDisplayName(product),
+      score: product.score,
+      tags: product.tags,
+      typeCode: product.typeCode ?? null,
+      appearance: product.appearance ?? null,
+      maxDb: product.maxDb ?? null,
+    }));
+
+  const handleStartBodyPersona = () => {
+    setBodyPersonaDraftAnswers({});
+    setIsBodyPersonaQuizOpen(true);
+  };
+
+  const handleCloseBodyPersonaQuiz = () => {
+    if (isSubmittingBodyPersonaQuiz) {
+      return;
+    }
+
+    setIsBodyPersonaQuizOpen(false);
+  };
+
+  const handleChangeBodyPersonaAnswer = (
+    questionId: keyof BodyPersonaAnswers,
+    value: BodyPersonaAnswers[keyof BodyPersonaAnswers],
+  ) => {
+    if (!value) {
+      return;
+    }
+
+    setBodyPersonaDraftAnswers((current) => ({
+      ...current,
+      [questionId]: value,
+    }));
+  };
+
+  const handleSubmitBodyPersonaQuiz = async () => {
+    const completedCount = BODY_PERSONA_QUESTIONS.filter(
+      (question) => bodyPersonaDraftAnswers[question.id],
+    ).length;
+
+    if (completedCount < BODY_PERSONA_QUESTIONS.length) {
+      return;
+    }
+
+    setIsSubmittingBodyPersonaQuiz(true);
+
+    try {
+      const personaResult = resolveBodyPersonaResult({
+        answers: bodyPersonaDraftAnswers,
+      });
+      const candidatePool = buildBodyPersonaCandidatePool();
+      const fullReport = buildBodyPersonaFullReport({
+        persona: personaResult,
+        candidatePool,
+      });
+      const saved = await createBodyPersonaSession({
+        payload: {
+          recommendationSessionId,
+          userId: supabaseSession?.user?.id ?? null,
+          sourcePageRoute: "/results",
+          questionVersion: "body-persona-question-v1",
+          scoringVersion: "body-persona-scoring-v1",
+          answers: bodyPersonaDraftAnswers as Record<string, unknown>,
+          answerPath: BODY_PERSONA_QUESTIONS.map((question, index) => ({
+            step: index,
+            questionId: question.id,
+            questionTitle: question.title,
+            selectedValue: bodyPersonaDraftAnswers[question.id] ?? null,
+          })),
+          candidatePool,
+          primaryPersonaCode: personaResult.primaryPersonaCode,
+          secondaryPersonaCode: personaResult.secondaryPersonaCode,
+          hiddenRouteCode: personaResult.hiddenRouteCode,
+          hiddenPowerGrade: personaResult.hiddenPowerGrade,
+          coLivingComfortGrade: personaResult.coLivingComfortGrade,
+          freeSummary: personaResult.freeSummary,
+          fullReport,
+        },
+      });
+
+      setBodyPersonaState({
+        sessionId: saved.id,
+        status: "completed_free",
+        freeSummary: personaResult.freeSummary,
+        fullReport: null,
+      });
+      setIsBodyPersonaQuizOpen(false);
+    } catch (error) {
+      console.error("Body persona session create failed", error);
+    } finally {
+      setIsSubmittingBodyPersonaQuiz(false);
+    }
+  };
+
+  const handleUnlockBodyPersona = async () => {
+    if (!bodyPersonaState) {
+      return;
+    }
+
+    setIsUnlockingBodyPersona(true);
+    setBodyPersonaState((current) =>
+      current
+        ? {
+            ...current,
+            status: "unlocking",
+          }
+        : current,
+    );
+
+    try {
+      const order = await createBodyPersonaOrder({
+        sessionId: bodyPersonaState.sessionId,
+        amountCent: 50,
+        paymentProvider: "mock",
+      });
+      const unlocked = await confirmBodyPersonaUnlock({
+        orderId: order.id,
+        confirmationToken: order.confirmationToken,
+      });
+
+      setBodyPersonaState((current) =>
+        current
+          ? {
+              ...current,
+              status: "unlocked",
+              fullReport: unlocked.report,
+            }
+          : current,
+      );
+    } catch (error) {
+      console.error("Body persona unlock failed", error);
+      setBodyPersonaState((current) =>
+        current
+          ? {
+              ...current,
+              status: "completed_free",
+            }
+          : current,
+      );
+    } finally {
+      setIsUnlockingBodyPersona(false);
+    }
+  };
+
   const resetQuiz = () => {
     resultEnhancementRunRef.current += 1;
     setIsEnhancingResults(false);
     clearResultTuningTracking();
+    clearBodyPersonaFlow();
     applyResultSourceState(clearResultSourceState());
     setRecommendationSessionId(createRecommendationSessionId());
     setAnswerPath([]);
@@ -1742,6 +1954,7 @@ ${JSON.stringify(context.backupCandidates)}
     setIsEnhancingResults(false);
     const clearedState = createClearedQuizSessionState();
     clearResultTuningTracking();
+    clearBodyPersonaFlow();
     applyResultSourceState(clearResultSourceState());
     setRecommendationSessionId(createRecommendationSessionId());
     setAnswerPath([]);
@@ -1971,9 +2184,21 @@ ${JSON.stringify(context.backupCandidates)}
               backupProducts={backupProducts}
               shoppingGuidance={shoppingGuidance}
               recommendationTips={recommendationTips}
+              bodyPersonaState={bodyPersonaState}
+              isStartingBodyPersona={false}
+              isBodyPersonaQuizOpen={isBodyPersonaQuizOpen}
+              bodyPersonaQuestions={BODY_PERSONA_QUESTIONS}
+              bodyPersonaDraftAnswers={bodyPersonaDraftAnswers}
+              isSubmittingBodyPersonaQuiz={isSubmittingBodyPersonaQuiz}
+              isUnlockingBodyPersona={isUnlockingBodyPersona}
               isEnhancingResults={isEnhancingResults}
               isRecalibratingResults={isRecalibratingResults}
               resultRecalibrationError={resultRecalibrationError}
+              onStartBodyPersona={handleStartBodyPersona}
+              onCloseBodyPersonaQuiz={handleCloseBodyPersonaQuiz}
+              onChangeBodyPersonaAnswer={handleChangeBodyPersonaAnswer}
+              onSubmitBodyPersonaQuiz={handleSubmitBodyPersonaQuiz}
+              onUnlockBodyPersona={handleUnlockBodyPersona}
               onRecalibrateResults={recalibrateCurrentResults}
               onTuneResults={handleTuneResults}
               onEditQuizCondition={handleEditQuizCondition}

@@ -446,6 +446,20 @@ export function ProfilesPage({
                   </div>
                 </section>
 
+                {selectedProfile.payload.bodyPersona ? (
+                  <section className="rounded-2xl border border-cyan-300/14 bg-cyan-300/[0.05] p-4">
+                    <p className="text-[11px] tracking-[0.22em] text-cyan-200/65">
+                      身体人格快照
+                    </p>
+                    <h3 className="mt-2 text-base text-white">
+                      {selectedProfile.payload.bodyPersona.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">
+                      {selectedProfile.payload.bodyPersona.hiddenRouteSummary}
+                    </p>
+                  </section>
+                ) : null}
+
                 {selectedProfile.payload.shoppingGuidance.length > 0 && (
                   <section className="rounded-2xl border border-amber-300/16 bg-amber-400/8 p-4">
                     <h3 className="mb-2 text-sm font-medium text-amber-100">

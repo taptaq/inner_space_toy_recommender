@@ -43,6 +43,19 @@ const detailedProfile: SavedRecommendationProfile = {
   },
 };
 
+const personaProfile: SavedRecommendationProfile = {
+  ...detailedProfile,
+  payload: {
+    ...detailedProfile.payload,
+    bodyPersona: {
+      sessionId: "persona-1",
+      title: "星幕型·隐秘安全感者",
+      hiddenRouteSummary: "日常器物型，隐藏力 S，共居安心度 高",
+      unlocked: true,
+    },
+  },
+};
+
 test("profiles page renders saved equipment matching profiles", () => {
   const html = renderToStaticMarkup(
     <ProfilesPage
@@ -209,4 +222,22 @@ test("profiles detail keeps dense secondary sections in a separate right rail on
   assert.match(html, /当时的偏好/);
   assert.match(html, /推荐快照/);
   assert.match(html, /space-y-4 xl:space-y-3/);
+});
+
+test("ProfilesPage shows saved body persona summary when present", () => {
+  const html = renderToStaticMarkup(
+    <ProfilesPage
+      profiles={[personaProfile]}
+      isLoading={false}
+      error={null}
+      userLabel="tester"
+      initialSelectedProfile={personaProfile}
+      onBack={() => undefined}
+      onReload={() => undefined}
+    />,
+  );
+
+  assert.match(html, /身体人格快照/);
+  assert.match(html, /星幕型·隐秘安全感者/);
+  assert.match(html, /隐藏力 S/);
 });

@@ -12,9 +12,19 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import { ProductImage } from "../components/ProductImage.tsx";
+import { BodyPersonaQuizDialog } from "../components/BodyPersonaQuizDialog.tsx";
+import { BodyPersonaResultPanel } from "../components/BodyPersonaResultPanel.tsx";
+import { BodyPersonaUnlockCard } from "../components/BodyPersonaUnlockCard.tsx";
 import { ResultParameterGuide } from "../components/ResultParameterGuide.tsx";
 import { AnswerState } from "../data/mock.ts";
 import { RankedProduct } from "../lib/app-shell.ts";
+import type {
+  BodyPersonaAnswerValue,
+  BodyPersonaAnswers,
+  BodyPersonaQuestion,
+  BodyPersonaQuestionId,
+  BodyPersonaResult,
+} from "../lib/body-persona.ts";
 import { dedupeDisplayTags } from "../lib/display-tags.ts";
 import {
   RESULT_TUNING_OPTIONS,
@@ -39,6 +49,12 @@ import { buildKnowledgeNebulaPath } from "../lib/knowledge-nebula-route.ts";
 
 type ResultsBackupProduct = BackupCandidate;
 export type ResultEditableCondition = "budget" | "quietness" | "scene";
+type BodyPersonaPageState = {
+  sessionId: string;
+  status: "idle" | "completed_free" | "unlocking" | "unlocked";
+  freeSummary: BodyPersonaResult["freeSummary"] | null;
+  fullReport: Record<string, unknown> | null;
+};
 
 const MAX_RELAXATION_TIPS = 3;
 const MAX_SHOPPING_GUIDANCE_WITH_RELAXATION = 3;
@@ -314,9 +330,24 @@ type ResultsPageProps = {
   backupProducts: ResultsBackupProduct[];
   shoppingGuidance: string[];
   recommendationTips: string[];
+  bodyPersonaState?: BodyPersonaPageState | null;
+  isStartingBodyPersona?: boolean;
+  isBodyPersonaQuizOpen?: boolean;
+  bodyPersonaQuestions?: readonly BodyPersonaQuestion[];
+  bodyPersonaDraftAnswers?: BodyPersonaAnswers;
+  isSubmittingBodyPersonaQuiz?: boolean;
+  isUnlockingBodyPersona?: boolean;
   isEnhancingResults?: boolean;
   isRecalibratingResults: boolean;
   resultRecalibrationError: string | null;
+  onStartBodyPersona?: () => void;
+  onCloseBodyPersonaQuiz?: () => void;
+  onChangeBodyPersonaAnswer?: (
+    questionId: BodyPersonaQuestionId,
+    value: BodyPersonaAnswerValue,
+  ) => void;
+  onSubmitBodyPersonaQuiz?: () => void | Promise<void>;
+  onUnlockBodyPersona?: () => void | Promise<void>;
   onRecalibrateResults: () => void;
   onTuneResults: (mode: ResultTuningMode) => void;
   onEditQuizCondition?: (condition: ResultEditableCondition) => void;
@@ -345,9 +376,21 @@ export function ResultsPage({
   backupProducts,
   shoppingGuidance,
   recommendationTips,
+  bodyPersonaState = null,
+  isStartingBodyPersona = false,
+  isBodyPersonaQuizOpen = false,
+  bodyPersonaQuestions = [],
+  bodyPersonaDraftAnswers = {},
+  isSubmittingBodyPersonaQuiz = false,
+  isUnlockingBodyPersona = false,
   isEnhancingResults = false,
   isRecalibratingResults,
   resultRecalibrationError,
+  onStartBodyPersona,
+  onCloseBodyPersonaQuiz,
+  onChangeBodyPersonaAnswer,
+  onSubmitBodyPersonaQuiz,
+  onUnlockBodyPersona,
   onRecalibrateResults,
   onTuneResults,
   onEditQuizCondition,
@@ -677,6 +720,42 @@ export function ResultsPage({
           </div>
         </section>
       )}
+
+      <BodyPersonaUnlockCard
+        onStart={onStartBodyPersona ?? (() => undefined)}
+        isBusy={isStartingBodyPersona || isSubmittingBodyPersonaQuiz}
+        freeSummary={
+          bodyPersonaState?.freeSummary
+            ? {
+                title: bodyPersonaState.freeSummary.title,
+                blurb: bodyPersonaState.freeSummary.blurb,
+              }
+            : null
+        }
+      />
+
+      {isBodyPersonaQuizOpen ? (
+        <BodyPersonaQuizDialog
+          questions={bodyPersonaQuestions}
+          answers={bodyPersonaDraftAnswers}
+          onClose={onCloseBodyPersonaQuiz ?? (() => undefined)}
+          onChangeAnswer={
+            onChangeBodyPersonaAnswer ?? (() => undefined)
+          }
+          onSubmit={onSubmitBodyPersonaQuiz ?? (() => undefined)}
+          isSubmitting={isSubmittingBodyPersonaQuiz}
+        />
+      ) : null}
+
+      {bodyPersonaState ? (
+        <BodyPersonaResultPanel
+          status={bodyPersonaState.status}
+          freeSummary={bodyPersonaState.freeSummary}
+          fullReport={bodyPersonaState.fullReport}
+          onUnlock={onUnlockBodyPersona ?? (() => undefined)}
+          isUnlocking={isUnlockingBodyPersona}
+        />
+      ) : null}
 
       {topProducts.length > 0 ? (
         <section className="relative z-10 rounded-2xl border border-white/8 bg-white/[0.025] p-4 sm:p-5">
