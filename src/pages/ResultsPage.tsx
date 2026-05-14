@@ -13,11 +13,16 @@ import {
 } from "lucide-react";
 import { ProductImage } from "../components/ProductImage.tsx";
 import { BodyPersonaQuizDialog } from "../components/BodyPersonaQuizDialog.tsx";
-import { BodyPersonaResultPanel } from "../components/BodyPersonaResultPanel.tsx";
+import {
+  BodyPersonaResultPanel,
+  normalizeBodyPersonaFullReport,
+} from "../components/BodyPersonaResultPanel.tsx";
+import { BodyPersonaFullReportDialog } from "../components/BodyPersonaFullReportDialog.tsx";
 import { BodyPersonaUnlockCard } from "../components/BodyPersonaUnlockCard.tsx";
 import { ResultParameterGuide } from "../components/ResultParameterGuide.tsx";
 import { AnswerState } from "../data/mock.ts";
 import { RankedProduct } from "../lib/app-shell.ts";
+import type { BodyPersonaFullReport } from "../lib/body-persona-report.ts";
 import type {
   BodyPersonaAnswerValue,
   BodyPersonaAnswers,
@@ -53,7 +58,7 @@ type BodyPersonaPageState = {
   sessionId: string;
   status: "idle" | "completed_free" | "unlocking" | "unlocked";
   freeSummary: BodyPersonaResult["freeSummary"] | null;
-  fullReport: Record<string, unknown> | null;
+  fullReport: BodyPersonaFullReport | null;
 };
 
 const MAX_RELAXATION_TIPS = 3;
@@ -337,6 +342,8 @@ type ResultsPageProps = {
   bodyPersonaDraftAnswers?: BodyPersonaAnswers;
   isSubmittingBodyPersonaQuiz?: boolean;
   isUnlockingBodyPersona?: boolean;
+  isBodyPersonaUnlockLoginRequired?: boolean;
+  isBodyPersonaFullReportOpen?: boolean;
   isEnhancingResults?: boolean;
   isRecalibratingResults: boolean;
   resultRecalibrationError: string | null;
@@ -348,6 +355,8 @@ type ResultsPageProps = {
   ) => void;
   onSubmitBodyPersonaQuiz?: () => void | Promise<void>;
   onUnlockBodyPersona?: () => void | Promise<void>;
+  onOpenBodyPersonaFullReport?: () => void;
+  onCloseBodyPersonaFullReport?: () => void;
   onRecalibrateResults: () => void;
   onTuneResults: (mode: ResultTuningMode) => void;
   onEditQuizCondition?: (condition: ResultEditableCondition) => void;
@@ -383,6 +392,8 @@ export function ResultsPage({
   bodyPersonaDraftAnswers = {},
   isSubmittingBodyPersonaQuiz = false,
   isUnlockingBodyPersona = false,
+  isBodyPersonaUnlockLoginRequired,
+  isBodyPersonaFullReportOpen = false,
   isEnhancingResults = false,
   isRecalibratingResults,
   resultRecalibrationError,
@@ -391,6 +402,8 @@ export function ResultsPage({
   onChangeBodyPersonaAnswer,
   onSubmitBodyPersonaQuiz,
   onUnlockBodyPersona,
+  onOpenBodyPersonaFullReport,
+  onCloseBodyPersonaFullReport,
   onRecalibrateResults,
   onTuneResults,
   onEditQuizCondition,
@@ -408,6 +421,11 @@ export function ResultsPage({
   const [isComparisonPanelOpen, setIsComparisonPanelOpen] = useState(false);
   const [isSavePanelOpen, setIsSavePanelOpen] = useState(false);
   const [isParameterGuideOpen, setIsParameterGuideOpen] = useState(false);
+  const bodyPersonaUnlockNeedsLogin =
+    isBodyPersonaUnlockLoginRequired ?? authPanel.userLabel == null;
+  const normalizedBodyPersonaFullReport = normalizeBodyPersonaFullReport(
+    bodyPersonaState?.fullReport ?? null,
+  );
   const [activeTuningMode, setActiveTuningMode] = useState<ResultTuningMode | null>(null);
   const relaxationTips = dedupeGuidanceItems(recommendationTips).slice(
     0,
@@ -751,11 +769,19 @@ export function ResultsPage({
         <BodyPersonaResultPanel
           status={bodyPersonaState.status}
           freeSummary={bodyPersonaState.freeSummary}
-          fullReport={bodyPersonaState.fullReport}
+          fullReport={normalizedBodyPersonaFullReport}
           onUnlock={onUnlockBodyPersona ?? (() => undefined)}
+          onOpenFullReport={onOpenBodyPersonaFullReport}
           isUnlocking={isUnlockingBodyPersona}
+          requiresLoginBeforeUnlock={bodyPersonaUnlockNeedsLogin}
         />
       ) : null}
+
+      <BodyPersonaFullReportDialog
+        isOpen={isBodyPersonaFullReportOpen}
+        report={normalizedBodyPersonaFullReport}
+        onClose={onCloseBodyPersonaFullReport ?? (() => undefined)}
+      />
 
       {topProducts.length > 0 ? (
         <section className="relative z-10 rounded-2xl border border-white/8 bg-white/[0.025] p-4 sm:p-5">

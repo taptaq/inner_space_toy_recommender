@@ -23,7 +23,29 @@
 - 比例:人格体资产 1:1 透明底;分享卡 4:5
 - 文字:人格体本体不带任何文字,所有文字由前端叠加在分享卡层
 
-### 1.3 十二分型共用骨架
+### 1.3 统一主体母版
+
+所有 12 个分型的主体都必须遵循同一套母型定义,不能各自发散成不同物种或不同外形体系。  
+这个主体不是人、不是动物、不是徽章,而是一个**半透明星云果冻状人格生命体**。
+
+统一主体特征:
+
+- **外轮廓**:柔软不规则水滴/星云团形,整体偏圆润,有一个轻微上扬的尖角或隆起,像被轻轻托起的宇宙软体。
+- **材质**:半透明玻璃果冻 / 星云凝胶 / 柔性能量膜,边缘有蓝紫色折射和暖金高光。
+- **内部**:深色宇宙内核,可见细密星尘、微小恒星点、柔和星轨线。
+- **眼睛**:保留两枚小而温暖的椭圆光眼,这是人格体的情感锚点;眼睛只表达陪伴感和生命感,不要做夸张表情。
+- **姿态**:悬浮、安静、轻微呼吸感;像科幻 AI companion,但不机械。
+- **尺度**:主体占画面 55%~70%,不要小到像图标,也不要大到裁切边缘。
+- **变化方式**:12 个分型不改变主体物种,只改变内部星系纹理、Core 亮度、Orbit 轨迹、Halo 开放度、Companion 伴星和 Pulse 微动态。
+
+统一负向约束:
+
+- 不要变成人形小人。
+- 不要变成动物、宠物、史莱姆怪、吉祥物或卡通角色。
+- 不要变成徽章、圆球、机器人、盔甲、NFT 头像。
+- 不要去掉两枚暖光眼,但眼睛不能过大、过萌或有明显表情。
+
+### 1.4 十二分型共用骨架
 
 每个星系人格体由五个要素组成,缺一不可:
 
@@ -37,7 +59,7 @@
 
 这个结构的核心价值是:人格结果不是一张静态图,而是一个"活着的星系人格核心"。即使最终产出是静态 PNG,也要让画面看起来像某一帧空间生命体的定格。
 
-### 1.4 硬约束(所有生成图必须满足)
+### 1.5 硬约束(所有生成图必须满足)
 
 - 不出现人形或身体轮廓
 - 不出现任何具体成人产品
@@ -270,26 +292,53 @@
 
 ## 4. AI 生图 Prompt 模板
 
+### 4.0 母型元素拆解原则
+
+- **主体母型定义**: 主体必须是一种半透明、柔软、悬浮的星云果冻生命体。轮廓像一团被轻轻托起的宇宙凝胶,整体偏圆润,不是标准水滴,不是几何体,不是对称形。
+- **外轮廓拆解**: 顶部有一个轻微上扬的小尖角或小波峰;左右两侧有自然的不对称鼓起;下半身略带软塌感,像受重力影响但仍处于失重悬浮状态。
+- **表层材质拆解**: 外膜是蓝紫到淡靛色的半透明玻璃凝胶,边缘有轻微折射,局部有暖金高光,质感介于果冻、薄玻璃和柔性能量膜之间。
+- **内部结构拆解**: 内部不是塞满图案的实体,而是偏暗的宇宙空腔,能看到稀疏星点、轻雾状星尘、极细弱星轨和一枚小型种子光核。
+- **面部锚点拆解**: 只保留两枚小而温暖的椭圆光眼,低情绪、低表演感,像安静注视你的 AI companion。不要嘴巴,不要眉毛,不要卡通表情。
+- **环绕星系拆解**: 星系元素重点体现在主体外部,是 2 到 3 条不完全闭合的柔性星带、暖色微光尾迹、漂浮粒子群和局部小型旋迹,像在主体周围缓缓绕行。
+- **优先级顺序**: 先对齐主体外轮廓和材质,再做眼睛和内部空腔,再补 Orbit/Halo,最后再加少量星系细节。
+- **内部星系限制**: 不要把完整的大星系、巨大旋臂、巨型花朵、巨大光茧塞进人格体腹部。主体不是“装着星系的容器”,而是“自身带有星尘呼吸感的生命体”。
+- **正确融合方式**: 星系元素更多体现在外部环绕、边缘折射、局部星尘、微弱轨道纹和很轻的核心光感上,内部只保留稀疏星点、弱星雾和一枚小型种子光核。
+
 ### 4.1 基础模板(填入 `{占位符}`)
 
 ```text
-A premium 3D / 2.5D Galaxy Persona Entity, a living inner-space personality core,
-not a badge, not a coin, not a medallion, not a mascot. It is a floating spatial
-entity made of galaxy matter, orbit lines, halo membranes, companion satellites,
-and subtle energy pulses. Mature gender-neutral, soothing wellness-tech aesthetic,
-high-end sci-fi companion feeling, no text, no logo.
+Create a premium 3D / 2.5D Galaxy Persona Entity.
+The main subject must remain a soft translucent cosmic jelly-like soul body:
+rounded irregular droplet/blob silhouette, slightly asymmetrical, softly lifted
+upper crest, blue-violet glass-gel membrane, warm rim highlights, dark starfield
+interior, and two small warm oval glowing eyes. The silhouette must feel alive,
+slightly squishy, gently sagging, and quietly floating, with asymmetrical bulges
+on the sides and lower body. Not a badge, not a coin, not a medallion, not a
+mascot. Mature gender-neutral, soothing wellness-tech aesthetic, high-end sci-fi
+companion feeling, no text, no logo.
 
 Persona variant: {VARIANT_NAME}. It belongs to the broader persona family:
 {PARENT_PERSONA_NAME}. This image should represent the specific variant,
 not just the broad parent category.
 
-Core: {CORE_SHAPE}, rendered as a semi-transparent galaxy core with glass-like
-refraction, inner volumetric glow, stardust, and soft self-illumination,
-palette of {PRIMARY_HEX}, {SECONDARY_HEX}, accented with {ACCENT_HEX}.
+Important composition rule:
+the jelly soul body is the absolute hero.
+Do not place a large spiral galaxy inside the body.
+Do not place a huge central flower, giant cocoon, or giant glowing object in the belly.
+Do not turn the body into a galaxy container.
 
-Orbit: {ORBIT_STRUCTURE}.
+Core: {CORE_SHAPE}, expressed as a small or medium internal energy structure,
+kept subtle inside the dark starfield body, rendered with restrained glow,
+sparse stardust, soft refraction, and palette of {PRIMARY_HEX}, {SECONDARY_HEX},
+accented with {ACCENT_HEX}.
 
-Halo: {HALO_STRUCTURE}.
+Orbit: {ORBIT_STRUCTURE}, preferably expressed as 2-3 elegant asymmetric
+surrounding orbit ribbons or drifting galaxy traces around the outside of the body,
+with soft warm swirl energy, floating stardust clusters, and partial passes in
+front of and behind the body, not as rigid scientific atom rings.
+
+Halo: {HALO_STRUCTURE}, hugging the membrane closely and supporting the feeling
+of protection or openness without becoming a thick frame.
 
 Companion: no hidden-route companion visible in the base asset.
 
@@ -299,62 +348,95 @@ Personality posture: {POSTURE_KEYWORD}.
 
 Variant detail: {VARIANT_DETAIL}.
 
-Galaxy reference: softened energy impression of {GALAXY_NAME}, integrated into
-the core and orbit structure, not used as a flat background image.
+Galaxy reference: softened energy impression of {GALAXY_NAME}, used mainly in
+surrounding orbit accents, membrane-edge refractions, sparse inner star dust,
+and a faint internal seed-light. Do not render a full obvious galaxy inside the body.
 
 Lighting: soft top-left key light, gentle ambient, studio product render.
-Composition: centered floating entity on a very subtle spatial UI pedestal or
-light field, transparent background, cinematic but clean, share-card ready.
+Composition: centered floating jelly-like galaxy entity on a very subtle spatial
+UI pedestal or light field, transparent background, cinematic but clean,
+share-card ready.
 
 Negative: no NFT aesthetic, no game armor, no cartoon, no human figure,
-no animal, no explicit imagery, no adult product, no circular badge frame,
-no coin rim, no thick medallion, no text, no watermark.
+no animal, no robot, no explicit imagery, no adult product, no circular badge
+frame, no coin rim, no thick medallion, no sphere-only shape, no perfect teardrop,
+no large spiral inside the belly, no huge central flower, no rigid atom model,
+no text, no watermark.
 ```
 
 ### 4.2 填充示例(soft_glow_safe_start · 安心起步型)
 
 ```text
-A premium 3D / 2.5D Galaxy Persona Entity, a living inner-space personality core,
-not a badge, not a coin, not a medallion, not a mascot. It is a floating spatial
-entity made of galaxy matter, orbit lines, halo membranes, companion satellites,
-and subtle energy pulses. Mature gender-neutral, soothing wellness-tech aesthetic,
-high-end sci-fi companion feeling, no text, no logo.
+Create a premium 3D / 2.5D Galaxy Persona Entity for soft_glow_safe_start, 安心起步型,
+inspired by M33 Triangulum Galaxy.
 
-Persona variant: soft_glow_safe_start, 安心起步型. It belongs to the broader
-persona family: 慢热探索型. This image should represent the specific variant,
-not just the broad parent category.
+a soft translucent cosmic jelly-like soul body, not a clean teardrop, not symmetrical,
+not geometric. The silhouette should be rounded, irregular, slightly squishy,
+softly sagging, with a small lifted crest on the upper right, and gentle asymmetrical
+bulges on the sides and lower body. It should feel alive, soft, floating, and emotionally warm.
 
-Core: a half-open luminous cocoon, petal-like, slightly asymmetric, with a small
-protected opening seam at the top, rendered as a semi-transparent galaxy core
-with glass-like refraction, warm inner volumetric glow, stardust, and soft
-self-illumination, palette of #F4C8A1, #E8D4B7, accented with #A67B5B.
+Material:
+semi-transparent glass-gel membrane, blue-violet and lilac outer refraction,
+warm golden highlights on the rim, dark starfield interior, two small warm oval glowing eyes.
+Keep the eyes exactly small, quiet, calm, and companion-like. No mouth. No cartoon expression.
 
-Orbit: a close protective champagne-gold orbit line wrapping near the core,
-like a soft safety boundary.
+Important composition rule:
+the jelly soul body is the absolute hero.
+Do not place a large spiral galaxy inside the body.
+Do not place a large flower, cocoon, or giant glowing object in the belly.
+Do not make the body a container for a galaxy.
 
-Halo: a warm translucent halo membrane, slightly closed, low-pressure, protective.
+Galaxy integration:
+use M33 only as subtle surrounding and embedded accents.
+Add delicate warm apricot and champagne-gold galaxy particles, tiny orbiting stardust
+clusters, and soft glowing spiral traces around the outside of the body, especially
+near the shoulders, upper back, and lower side edges.
+The galaxy feeling should be mostly external and surrounding, like gentle orbiting
+cosmic ribbons and drifting luminous particles.
+Inside the body, only keep sparse star dust and a very faint warm core glow,
+not a visible full galaxy.
+
+Core:
+a small, protected, seed-like warm light near the lower center inside the jelly body,
+abstract and minimal, not a literal flower or cocoon.
+
+Orbit:
+two or three elegant, soft, asymmetrical galaxy ribbons orbiting around the outside
+of the jelly body, partially behind it and partially crossing near the outer membrane,
+with warm swirling cosmic accents, tiny glowing dust clusters, and soft incomplete
+spiral traces. These orbit lines should feel organic and atmospheric, not thin
+scientific atom rings, not perfect circles.
+
+Halo:
+a close, soft, warm translucent halo hugging the outer membrane, subtle and protective,
+low-pressure, almost like a breathing aura.
 
 Companion: no hidden-route companion visible in the base asset.
 
-Pulse: very slow breathing light, stable, not outwardly bursting.
+Pulse:
+very slow, gentle breathing glow. The pulse should softly travel from the small
+inner seed-light into the membrane and into the surrounding orbiting dust,
+like trust slowly expanding outward.
 
-Personality posture: gently held before fully unfurling, as if the body is
-learning to trust.
+Mood:
+safe first step, gentle protection, low-pressure beginning, being cared for,
+body slowly learning to trust, healing, intimate, premium, gender-neutral.
 
-Variant detail: the cocoon opening is smaller and safer than the broader
-soft_glow family, the central light is stable, not outwardly bursting.
-
-Galaxy reference: softened energy impression of M33 Triangulum galaxy,
-integrated into the cocoon core and close orbit structure, not used as a flat
-background image.
+Color palette:
+base membrane stays blue-violet and transparent,
+with subtle warm apricot, champagne-gold, and soft ivory galaxy accents inspired by M33.
+Do not let the whole body turn orange or gold.
 
 Lighting: soft top-left key light, gentle ambient, studio product render.
-Composition: centered floating entity on a very subtle spatial UI pedestal or
-light field, transparent background, cinematic but clean, share-card ready.
+Composition: centered floating galaxy persona entity, dark background,
+clean premium product-shot framing, generous breathing room around the body.
 
 Negative: no NFT aesthetic, no game armor, no cartoon, no human figure,
-no animal, no explicit imagery, no adult product, no circular badge frame,
-no coin rim, no thick medallion, no text, no watermark.
+no animal, no robot, no mascot, no explicit imagery, no adult product,
+no circular badge frame, no coin rim, no thick medallion, no sphere-only shape,
+no perfect teardrop shape, no symmetric blob, no large galaxy inside the body,
+no huge belly spiral, no large central flower, no lotus, no scientific atom model,
+no rigid circular rings, no text, no logo, no watermark.
 ```
 
 ## 5. 输出规格
@@ -369,9 +451,13 @@ no coin rim, no thick medallion, no text, no watermark.
 每张生成图在并入集合前,逐项核对:
 
 - [ ] 不像圆形徽章、纪念币、头像框或 NFT 勋章
+- [ ] 主体必须保持统一母型的半透明星云果冻生命体:柔软不规则水滴轮廓、蓝紫玻璃外膜、深色星空内核、两枚暖光椭圆眼
+- [ ] 主体轮廓必须具备轻微上扬的顶部、侧边不对称鼓起和“软塌但悬浮”的生命体感,不能被生成成标准水滴或对称史莱姆
 - [ ] Core 占整体视觉重心 35%~50%,外围 Orbit/Halo 有空间呼吸感
-- [ ] 星系参考融入 Core/Orbit,不是平贴在背景上的星云图
+- [ ] 星系参考主要来自外部 Orbit/Halo/边缘折射,重点是“环绕方式”,不是“把整团星系塞进主体里”
+- [ ] 内部只允许少量星尘、弱星雾和小型种子光核,不允许出现一整个大旋涡星系、巨型花状光核或明显腹部主视觉
 - [ ] 无人形剪影、盔甲、卡通、NFT / 加密币视觉套路
+- [ ] 两枚暖光眼保留,但不能变成夸张表情、萌宠眼或卡通脸
 - [ ] 色板在 ±10% 色相容差内
 - [ ] 同一主画像下的两个分型能看出亲缘关系,但姿态和核心细节明显不同
 - [ ] 整体明度让这张"属于同一套"——把 12 张并排,没有哪一张跳出来

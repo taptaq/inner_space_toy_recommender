@@ -146,7 +146,85 @@ function normalizeReportProductPicks(
         Number.isFinite(candidate.personaScore)
           ? candidate.personaScore
           : 0,
+      reason: normalizeOptionalText(candidate.reason) ?? "",
+      categoryLabel: normalizeOptionalText(candidate.categoryLabel) ?? undefined,
     }));
+}
+
+function normalizeReportDimensionBreakdown(
+  value: unknown,
+  fallback: BodyPersonaFullReport["dimensionBreakdown"],
+): BodyPersonaFullReport["dimensionBreakdown"] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const normalized = value
+    .map((dimension) =>
+      dimension && typeof dimension === "object"
+        ? (dimension as Record<string, unknown>)
+        : null,
+    )
+    .filter((dimension): dimension is Record<string, unknown> => !!dimension)
+    .map((dimension) => ({
+      id:
+        normalizeOptionalText(dimension.id) ??
+        fallback.find((item) => item.label === normalizeOptionalText(dimension.label))?.id,
+      label: normalizeOptionalText(dimension.label) ?? "",
+      score:
+        typeof dimension.score === "number" && Number.isFinite(dimension.score)
+          ? dimension.score
+          : null,
+      summary: normalizeOptionalText(dimension.summary) ?? "",
+    }))
+    .filter(
+      (
+        dimension,
+      ): dimension is BodyPersonaFullReport["dimensionBreakdown"][number] =>
+        !!dimension.id &&
+        dimension.label.length > 0 &&
+        dimension.score !== null &&
+        dimension.summary.length > 0,
+    );
+
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function normalizeReportCategoryMatches(
+  value: unknown,
+  fallback: BodyPersonaFullReport["topCategoryMatches"],
+): BodyPersonaFullReport["topCategoryMatches"] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const normalized = value
+    .map((match) =>
+      match && typeof match === "object"
+        ? (match as Record<string, unknown>)
+        : null,
+    )
+    .filter((match): match is Record<string, unknown> => !!match)
+    .map((match) => ({
+      id: normalizeOptionalText(match.id) ?? "",
+      label: normalizeOptionalText(match.label) ?? "",
+      fitScore:
+        typeof match.fitScore === "number" && Number.isFinite(match.fitScore)
+          ? match.fitScore
+          : null,
+      reason: normalizeOptionalText(match.reason) ?? "",
+    }))
+    .filter(
+      (
+        match,
+      ): match is BodyPersonaFullReport["topCategoryMatches"][number] =>
+        match.id.length > 0 &&
+        match.label.length > 0 &&
+        match.fitScore !== null &&
+        match.reason.length > 0,
+    );
+
+  return normalized.length > 0 ? normalized : fallback;
 }
 
 function getErrorMessage(error: unknown) {
@@ -221,15 +299,77 @@ function toBaseReport(session: ConfirmUnlockSession): BodyPersonaFullReport {
     candidatePool: [],
   });
   const savedReport = normalizeJsonObject(session.fullReport);
+  const legacyTitle = normalizeOptionalText(savedReport.title);
+  const legacyPortrait = normalizeOptionalText(savedReport.portrait);
+  const legacyHiddenRouteSummary = normalizeOptionalText(savedReport.hiddenRouteSummary);
 
   return {
-    title: normalizeOptionalText(savedReport.title) ?? deterministicReport.title,
-    portrait:
-      normalizeOptionalText(savedReport.portrait) ??
-      deterministicReport.portrait,
-    hiddenRouteSummary:
-      normalizeOptionalText(savedReport.hiddenRouteSummary) ??
-      deterministicReport.hiddenRouteSummary,
+    reportTitle:
+      normalizeOptionalText(savedReport.reportTitle) ??
+      legacyTitle ??
+      deterministicReport.reportTitle,
+    personaName:
+      normalizeOptionalText(savedReport.personaName) ??
+      legacyTitle ??
+      deterministicReport.personaName,
+    personaSubtitle:
+      normalizeOptionalText(savedReport.personaSubtitle) ??
+      deterministicReport.personaSubtitle,
+    personaManifesto:
+      normalizeOptionalText(savedReport.personaManifesto) ??
+      deterministicReport.personaManifesto,
+    personaImageAsset: normalizeOptionalText(savedReport.personaImageAsset),
+    primaryPersonaCode: deterministicReport.primaryPersonaCode,
+    secondaryPersonaCode: deterministicReport.secondaryPersonaCode,
+    secondaryPersonaName:
+      normalizeOptionalText(savedReport.secondaryPersonaName) ??
+      deterministicReport.secondaryPersonaName,
+    hiddenRouteCode: deterministicReport.hiddenRouteCode,
+    hiddenRouteName:
+      normalizeOptionalText(savedReport.hiddenRouteName) ??
+      deterministicReport.hiddenRouteName,
+    hiddenPowerGrade: deterministicReport.hiddenPowerGrade,
+    coLivingComfortGrade: deterministicReport.coLivingComfortGrade,
+    portraitShort:
+      normalizeOptionalText(savedReport.portraitShort) ??
+      deterministicReport.portraitShort,
+    portraitLong:
+      normalizeOptionalText(savedReport.portraitLong) ??
+      legacyPortrait ??
+      deterministicReport.portraitLong,
+    whyYouAreThis:
+      normalizeOptionalText(savedReport.whyYouAreThis) ??
+      deterministicReport.whyYouAreThis,
+    strengthTags: normalizeReportStringArray(
+      savedReport.strengthTags,
+      deterministicReport.strengthTags,
+    ),
+    growthTip:
+      normalizeOptionalText(savedReport.growthTip) ?? deterministicReport.growthTip,
+    dimensionBreakdown: normalizeReportDimensionBreakdown(
+      savedReport.dimensionBreakdown,
+      deterministicReport.dimensionBreakdown,
+    ),
+    hiddenRouteSummaryShort:
+      normalizeOptionalText(savedReport.hiddenRouteSummaryShort) ??
+      legacyHiddenRouteSummary ??
+      deterministicReport.hiddenRouteSummaryShort,
+    hiddenRouteSummaryLong:
+      normalizeOptionalText(savedReport.hiddenRouteSummaryLong) ??
+      legacyHiddenRouteSummary ??
+      deterministicReport.hiddenRouteSummaryLong,
+    disguisePreference:
+      normalizeOptionalText(savedReport.disguisePreference) ??
+      deterministicReport.disguisePreference,
+    storagePreference:
+      normalizeOptionalText(savedReport.storagePreference) ??
+      deterministicReport.storagePreference,
+    privacyNeedLevel:
+      normalizeOptionalText(savedReport.privacyNeedLevel) ??
+      deterministicReport.privacyNeedLevel,
+    bestRouteSummary:
+      normalizeOptionalText(savedReport.bestRouteSummary) ??
+      deterministicReport.bestRouteSummary,
     goodFits: normalizeReportStringArray(
       savedReport.goodFits,
       deterministicReport.goodFits,
@@ -238,10 +378,40 @@ function toBaseReport(session: ConfirmUnlockSession): BodyPersonaFullReport {
       savedReport.avoidNotes,
       deterministicReport.avoidNotes,
     ),
+    sceneMatches: normalizeReportStringArray(
+      savedReport.sceneMatches,
+      deterministicReport.sceneMatches,
+    ),
+    paceAdvice: normalizeReportStringArray(
+      savedReport.paceAdvice,
+      deterministicReport.paceAdvice,
+    ),
+    parameterFocus: normalizeReportStringArray(
+      savedReport.parameterFocus,
+      deterministicReport.parameterFocus,
+    ),
+    topCategoryMatches: normalizeReportCategoryMatches(
+      savedReport.topCategoryMatches,
+      deterministicReport.topCategoryMatches,
+    ),
+    pickReasonSummary:
+      normalizeOptionalText(savedReport.pickReasonSummary) ??
+      deterministicReport.pickReasonSummary,
+    mismatchWarnings: normalizeReportStringArray(
+      savedReport.mismatchWarnings,
+      deterministicReport.mismatchWarnings,
+    ),
     productPicks: normalizeReportProductPicks(
       savedReport.productPicks,
       deterministicReport.productPicks,
     ),
+    title: legacyTitle ?? deterministicReport.title,
+    portrait:
+      legacyPortrait ??
+      normalizeOptionalText(savedReport.portraitLong) ??
+      deterministicReport.portrait,
+    hiddenRouteSummary:
+      legacyHiddenRouteSummary ?? deterministicReport.hiddenRouteSummary,
   };
 }
 

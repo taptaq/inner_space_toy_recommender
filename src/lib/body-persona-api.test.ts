@@ -95,6 +95,27 @@ test("confirmBodyPersonaUnlock posts confirmation token and returns unlocked rep
   assert.equal(result.report.title, "星幕型·隐秘安全感者");
 });
 
+test("confirmBodyPersonaUnlock parses richer report payloads", async () => {
+  const response = await confirmBodyPersonaUnlock({
+    orderId: "order-1",
+    fetcher: async () =>
+      new Response(
+        JSON.stringify({
+          unlocked: true,
+          report: {
+            reportTitle: "完整档案",
+            personaName: "隐私安全型",
+            dimensionBreakdown: [],
+            topCategoryMatches: [],
+          },
+        }),
+      ),
+  });
+
+  assert.equal(response.unlocked, true);
+  assert.equal(response.report.personaName, "隐私安全型");
+});
+
 test("getBodyPersonaSession reads the saved session payload", async () => {
   let capturedUrl = "";
   const fetcher = async (url: string) => {

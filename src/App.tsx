@@ -56,7 +56,10 @@ import {
   type BodyPersonaAnswers,
   type BodyPersonaResult,
 } from "./lib/body-persona";
-import { buildBodyPersonaFullReport } from "./lib/body-persona-report";
+import {
+  buildBodyPersonaFullReport,
+  type BodyPersonaFullReport,
+} from "./lib/body-persona-report";
 import {
   confirmBodyPersonaUnlock,
   createBodyPersonaOrder,
@@ -169,7 +172,7 @@ type PersistedAppState = {
     sessionId: string;
     status: "idle" | "completed_free" | "unlocking" | "unlocked";
     freeSummary: BodyPersonaResult["freeSummary"] | null;
-    fullReport: Record<string, unknown> | null;
+    fullReport: BodyPersonaFullReport | null;
   } | null;
   bodyPersonaDraftAnswers?: BodyPersonaAnswers;
   filterGender?: string;
@@ -363,7 +366,7 @@ export default function App() {
     sessionId: string;
     status: "idle" | "completed_free" | "unlocking" | "unlocked";
     freeSummary: BodyPersonaResult["freeSummary"] | null;
-    fullReport: Record<string, unknown> | null;
+    fullReport: BodyPersonaFullReport | null;
   } | null>(persistedState.bodyPersonaState ?? null);
   const [bodyPersonaDraftAnswers, setBodyPersonaDraftAnswers] =
     useState<BodyPersonaAnswers>(
@@ -373,6 +376,12 @@ export default function App() {
   const [isSubmittingBodyPersonaQuiz, setIsSubmittingBodyPersonaQuiz] =
     useState(false);
   const [isUnlockingBodyPersona, setIsUnlockingBodyPersona] = useState(false);
+  const [isBodyPersonaFullReportOpen, setIsBodyPersonaFullReportOpen] =
+    useState(false);
+  const [
+    shouldContinueBodyPersonaUnlockAfterAuth,
+    setShouldContinueBodyPersonaUnlockAfterAuth,
+  ] = useState(false);
   const [currentResultProvider, setCurrentResultProvider] = useState<
     AppAiProvider | undefined
   >(persistedResultSourceState.currentResultProvider);
@@ -567,6 +576,8 @@ export default function App() {
     setIsBodyPersonaQuizOpen(false);
     setIsSubmittingBodyPersonaQuiz(false);
     setIsUnlockingBodyPersona(false);
+    setIsBodyPersonaFullReportOpen(false);
+    setShouldContinueBodyPersonaUnlockAfterAuth(false);
   };
 
   const startFreshQuizSession = () => {
@@ -698,6 +709,15 @@ export default function App() {
       void fetchRecommendationProfiles();
     }
   }, [currentRoute, supabaseSession?.access_token]);
+
+  useEffect(() => {
+    if (!supabaseSession?.user?.id || !shouldContinueBodyPersonaUnlockAfterAuth) {
+      return;
+    }
+
+    setShouldContinueBodyPersonaUnlockAfterAuth(false);
+    void handleUnlockBodyPersona();
+  }, [supabaseSession?.user?.id, shouldContinueBodyPersonaUnlockAfterAuth]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -1499,7 +1519,11 @@ ${JSON.stringify(context.backupCandidates)}
         if (loginResult.session) {
           setSupabaseSession(loginResult.session);
         }
-        setAuthStatusMessage("注册成功，已自动登录。");
+        setAuthStatusMessage(
+          shouldContinueBodyPersonaUnlockAfterAuth
+            ? "注册成功，正在继续解锁完整星系人格档案。"
+            : "注册成功，已自动登录。",
+        );
         return;
       }
 
@@ -1509,7 +1533,9 @@ ${JSON.stringify(context.backupCandidates)}
         setSupabaseSession(data.session);
       }
       setAuthStatusMessage(
-        "登录成功，可以加密保存推荐档案了。",
+        shouldContinueBodyPersonaUnlockAfterAuth
+          ? "登录成功，正在继续解锁完整星系人格档案。"
+          : "登录成功，可以加密保存推荐档案了。",
       );
     } catch (error) {
       setAuthStatusMessage(
@@ -1528,6 +1554,8 @@ ${JSON.stringify(context.backupCandidates)}
       await signOutOfSupabase();
       setSupabaseSession(null);
       setRecommendationProfiles([]);
+      setShouldContinueBodyPersonaUnlockAfterAuth(false);
+      setIsBodyPersonaFullReportOpen(false);
       setAuthStatusMessage("已退出登录。");
       setSaveRecommendationProfileMessage("登录后可加密保存到云端");
     } catch (error) {
@@ -1885,6 +1913,12 @@ ${JSON.stringify(context.backupCandidates)}
       return;
     }
 
+    if (!supabaseSession?.user?.id) {
+      setShouldContinueBodyPersonaUnlockAfterAuth(true);
+      setAuthStatusMessage("登录后可解锁完整星系人格档案");
+      return;
+    }
+
     setIsUnlockingBodyPersona(true);
     setBodyPersonaState((current) =>
       current
@@ -1915,6 +1949,7 @@ ${JSON.stringify(context.backupCandidates)}
             }
           : current,
       );
+      setIsBodyPersonaFullReportOpen(true);
     } catch (error) {
       console.error("Body persona unlock failed", error);
       setBodyPersonaState((current) =>
@@ -1928,6 +1963,14 @@ ${JSON.stringify(context.backupCandidates)}
     } finally {
       setIsUnlockingBodyPersona(false);
     }
+  };
+
+  const handleOpenBodyPersonaFullReport = () => {
+    setIsBodyPersonaFullReportOpen(true);
+  };
+
+  const handleCloseBodyPersonaFullReport = () => {
+    setIsBodyPersonaFullReportOpen(false);
   };
 
   const resetQuiz = () => {
@@ -2199,6 +2242,8 @@ ${JSON.stringify(context.backupCandidates)}
               onChangeBodyPersonaAnswer={handleChangeBodyPersonaAnswer}
               onSubmitBodyPersonaQuiz={handleSubmitBodyPersonaQuiz}
               onUnlockBodyPersona={handleUnlockBodyPersona}
+              onOpenBodyPersonaFullReport={handleOpenBodyPersonaFullReport}
+              onCloseBodyPersonaFullReport={handleCloseBodyPersonaFullReport}
               onRecalibrateResults={recalibrateCurrentResults}
               onTuneResults={handleTuneResults}
               onEditQuizCondition={handleEditQuizCondition}
@@ -2215,6 +2260,8 @@ ${JSON.stringify(context.backupCandidates)}
               authPanel={authPanel}
               onBackHome={handleBackHomeFromQuiz}
               onReset={resetQuiz}
+              isBodyPersonaUnlockLoginRequired={!supabaseSession?.user?.id}
+              isBodyPersonaFullReportOpen={isBodyPersonaFullReportOpen}
             />
           )}
 

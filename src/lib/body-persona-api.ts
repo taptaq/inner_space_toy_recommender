@@ -1,3 +1,5 @@
+import type { BodyPersonaFullReport } from "./body-persona-report.ts";
+
 type ApiErrorPayload = {
   error?: string;
   details?: string;
@@ -36,7 +38,7 @@ export type BodyPersonaUnlockApiResponse = {
   unlocked: boolean;
   order?: unknown;
   entitlement?: unknown;
-  report: Record<string, unknown>;
+  report: BodyPersonaFullReport;
 };
 
 export type BodyPersonaSessionReadResponse = {

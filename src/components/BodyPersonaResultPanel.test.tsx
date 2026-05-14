@@ -22,7 +22,8 @@ test("BodyPersonaResultPanel shows free summary before unlock", () => {
 
   assert.match(html, /星幕型·隐秘安全感者/);
   assert.match(html, /优先低存在感路线/);
-  assert.match(html, /解锁完整身体人格报告/);
+  assert.match(html, /完整星系人格档案已锁定/);
+  assert.match(html, /登录并解锁完整档案|0.5 元解锁完整档案/);
 });
 
 test("BodyPersonaResultPanel shows unlocked report details", () => {
@@ -36,20 +37,59 @@ test("BodyPersonaResultPanel shows unlocked report details", () => {
         hints: ["优先低存在感路线"],
       }}
       fullReport={{
+        reportTitle: "完整星系人格档案",
+        personaName: "隐私安全型",
+        personaSubtitle: "隐私安全型 · M104 草帽星系",
+        personaManifesto: "你不是退缩，你只是更需要边界清晰的靠近方式。",
+        personaImageAsset: null,
+        primaryPersonaCode: "starlit_guard",
+        secondaryPersonaCode: null,
+        secondaryPersonaName: null,
+        hiddenRouteCode: "daily_object",
+        hiddenRouteName: "日常器物型",
+        hiddenPowerGrade: "S",
+        coLivingComfortGrade: "high",
+        portraitShort: "完整画像",
+        portraitLong: "更长画像",
+        whyYouAreThis: "形成原因",
+        strengthTags: ["边界清晰"],
+        growthTip: "成长建议",
+        dimensionBreakdown: [],
+        hiddenRouteSummaryShort: "日常器物型",
+        hiddenRouteSummaryLong: "日常器物型，隐藏力 S，共居安心度 高",
+        disguisePreference: "更偏好伪装",
+        storagePreference: "优先易收纳",
+        privacyNeedLevel: "高",
+        bestRouteSummary: "长期更适合低存在感路线",
+        sceneMatches: ["同住环境"],
+        paceAdvice: ["先低压进入"],
+        parameterFocus: ["优先看静音"],
+        topCategoryMatches: [],
+        pickReasonSummary: "匹配原因总结",
+        mismatchWarnings: ["暂不优先高噪音路线"],
         title: "星幕型·隐秘安全感者",
         portrait: "完整画像",
         hiddenRouteSummary: "日常器物型，隐藏力 S，共居安心度 高",
         goodFits: ["更适合低存在感路线"],
         avoidNotes: ["暂不优先高噪音路线"],
-        productPicks: [{ id: "p1", name: "Quiet Orbit", score: 95, personaScore: 103 }],
+        productPicks: [
+          {
+            id: "p1",
+            name: "Quiet Orbit",
+            score: 95,
+            personaScore: 103,
+            reason: "更适合你",
+          },
+        ],
       }}
       onUnlock={() => undefined}
+      onOpenFullReport={() => undefined}
       isUnlocking={false}
     />,
   );
 
-  assert.match(html, /完整画像/);
-  assert.match(html, /隐藏力 S/);
-  assert.match(html, /Quiet Orbit/);
-  assert.doesNotMatch(html, /解锁完整身体人格报告/);
+  assert.match(html, /完整星系人格档案已解锁/);
+  assert.match(html, /长期更适合低存在感路线/);
+  assert.match(html, /再次查看完整档案/);
+  assert.doesNotMatch(html, /登录并解锁完整档案/);
 });

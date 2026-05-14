@@ -130,7 +130,97 @@ test("results page mounts the body persona entry and free summary block", () => 
 
   assert.match(html, /身体人格测试/);
   assert.match(html, /星幕型·隐秘安全感者/);
-  assert.match(html, /解锁完整身体人格报告/);
+  assert.match(html, /完整星系人格档案已锁定/);
+  assert.match(html, /登录后可解锁完整星系人格档案/);
+  assert.match(html, /0\.5 元一次解锁，可随时回看/);
+  assert.match(html, /登录并解锁完整档案|0.5 元解锁完整档案/);
+});
+
+test("results page shows a reopen entry once the body persona full report is unlocked", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      bodyPersonaState={{
+        sessionId: "persona-session-1",
+        status: "unlocked",
+        freeSummary: {
+          title: "星幕型·隐秘安全感者",
+          blurb: "你更在意低压力进入。",
+          why: "你在隐私与慢热维度更高。",
+          hints: ["优先低存在感路线"],
+        },
+        fullReport: {
+          reportTitle: "完整星系人格档案",
+          personaName: "隐私安全型",
+          personaSubtitle: "隐私安全型 · M104 草帽星系",
+          personaManifesto: "你不是退缩，你只是更需要边界清晰的靠近方式。",
+          personaImageAsset: null,
+          primaryPersonaCode: "starlit_guard",
+          secondaryPersonaCode: "soft_glow",
+          secondaryPersonaName: "慢热探索型",
+          hiddenRouteCode: "daily_object",
+          hiddenRouteName: "日常器物型",
+          hiddenPowerGrade: "S",
+          coLivingComfortGrade: "high",
+          portraitShort: "短描述",
+          portraitLong: "长描述",
+          whyYouAreThis: "形成原因",
+          strengthTags: ["边界清晰"],
+          growthTip: "成长建议",
+          dimensionBreakdown: [],
+          hiddenRouteSummaryShort: "短隐藏路线",
+          hiddenRouteSummaryLong: "长隐藏路线",
+          disguisePreference: "更偏好伪装",
+          storagePreference: "优先易收纳",
+          privacyNeedLevel: "高",
+          bestRouteSummary: "最适合路线",
+          goodFits: ["低存在感路线"],
+          avoidNotes: ["高存在感路线"],
+          sceneMatches: ["同住环境"],
+          paceAdvice: ["先低压进入"],
+          parameterFocus: ["优先看静音"],
+          topCategoryMatches: [],
+          pickReasonSummary: "匹配原因总结",
+          mismatchWarnings: ["别先看高噪音路线"],
+          productPicks: [],
+          title: "隐私安全型",
+          portrait: "长描述",
+          hiddenRouteSummary: "长隐藏路线",
+        },
+      }}
+      isStartingBodyPersona={false}
+      isBodyPersonaQuizOpen={false}
+      bodyPersonaQuestions={[]}
+      bodyPersonaDraftAnswers={{}}
+      isSubmittingBodyPersonaQuiz={false}
+      isUnlockingBodyPersona={false}
+      onStartBodyPersona={() => {}}
+      onCloseBodyPersonaQuiz={() => {}}
+      onChangeBodyPersonaAnswer={() => {}}
+      onSubmitBodyPersonaQuiz={async () => {}}
+      onUnlockBodyPersona={async () => {}}
+      onOpenBodyPersonaFullReport={() => {}}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={{ ...authPanel, userLabel: "taptaq" }}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /完整星系人格档案已解锁/);
+  assert.match(html, /再次查看完整档案/);
 });
 
 test("results page shows a lightweight status while AI enhancement is still running", () => {
