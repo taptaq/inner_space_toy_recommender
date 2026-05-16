@@ -112,13 +112,13 @@ test("createProviderExecutors routes Kimi through the official Moonshot API", as
 
   assert.deepEqual(result, {
     data: [{ id: "p-1", reason: "官方 Kimi 结果" }],
-    modelName: "kimi-k2.5",
+    modelName: "kimi-k2.6",
     provider: "kimi",
   });
   assert.deepEqual(requests[0], {
     apiKey: "moonshot-key",
     baseURL: "https://api.moonshot.cn/v1",
-    model: "kimi-k2.5",
+    model: "kimi-k2.6",
     prompt: "rerank prompt",
     temperature: 1,
     maxTokens: 4096,

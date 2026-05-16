@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
+import { normalizePlaceholderRawDescription } from '../../db/backfill-null-placeholder-raw-description.ts';
 
 dotenv.config();
 
@@ -133,6 +134,9 @@ const isPlaceholderProductName = (value: string): boolean => {
     'unknown product',
   ].includes(normalized);
 };
+
+export const normalizePersistedRawDescription = (value: unknown): string | null =>
+  normalizePlaceholderRawDescription(typeof value === 'string' ? value : String(value ?? ''));
 
 const isDeviceLikeProduct = (text: string): boolean => {
   const normalized = (text || '').toLowerCase();
@@ -716,7 +720,7 @@ ${item.rawDescription}
         sourceUrl: item.sourceUrl,
         image: item.coverImage,
         specs: parsedSpecs,
-        rawDescription: item.rawDescription
+        rawDescription: normalizePersistedRawDescription(item.rawDescription),
       };
       cleanedData.push(processedProduct);
 
@@ -759,7 +763,7 @@ ${item.rawDescription}
          gender:        resolvedGender,
          material:      parsedSpecs.material || inferDefaultMaterial(canonicalName, item.rawDescription),
          image_url:     item.coverImage || null,
-         raw_description: item.rawDescription || null,
+         raw_description: normalizePersistedRawDescription(item.rawDescription),
          updated_at:    new Date(),
       };
 

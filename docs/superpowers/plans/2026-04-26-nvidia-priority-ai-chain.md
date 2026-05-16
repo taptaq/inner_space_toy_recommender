@@ -195,7 +195,7 @@ async function callNvidiaKimi(prompt: string, temperature: number) {
   });
 
   const response = await openai.chat.completions.create({
-    model: "moonshotai/kimi-k2.5",
+    model: "moonshotai/kimi-k2.6",
     messages: [{ role: "user", content: prompt }],
     temperature,
     top_p: 1,

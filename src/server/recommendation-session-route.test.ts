@@ -90,7 +90,7 @@ test("recommendation session handler stores normalized completed sessions", asyn
         answerPath: [{ questionId: "q0", tag: "男性向" }],
         topProducts: [{ id: "p1", score: 97 }],
         resultProvider: "kimi",
-        resultModelName: "kimi-k2.5",
+        resultModelName: "kimi-k2.6",
         pageRoute: " /results ",
       },
     }),
@@ -107,7 +107,7 @@ test("recommendation session handler stores normalized completed sessions", asyn
     flowVersion: "quiz-flow-v1",
     algorithmVersion: "recommendation-v1",
     resultProvider: "kimi",
-    resultModelName: "kimi-k2.5",
+    resultModelName: "kimi-k2.6",
     pageRoute: "/results",
   });
 });

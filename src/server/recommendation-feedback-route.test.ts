@@ -96,7 +96,7 @@ test("recommendation feedback handler stores normalized reroll events", async ()
         rerollAttempt: 3,
         rerollReason: "did_not_understand",
         resultProvider: "kimi",
-        resultModelName: "kimi-k2.5",
+        resultModelName: "kimi-k2.6",
         pageRoute: " /results ",
       },
     }),
@@ -114,7 +114,7 @@ test("recommendation feedback handler stores normalized reroll events", async ()
     rerollAttempt: 3,
     rerollReason: "did_not_understand",
     resultProvider: "kimi",
-    resultModelName: "kimi-k2.5",
+    resultModelName: "kimi-k2.6",
     pageRoute: "/results",
     userAgent: "Mozilla/5.0 RecommendationFeedbackTest",
   });

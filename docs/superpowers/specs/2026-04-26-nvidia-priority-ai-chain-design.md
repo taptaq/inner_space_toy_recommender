@@ -81,7 +81,7 @@ The app recommendation chain after this change should be:
    - model: `z-ai/glm-5.1`
 4. `NVIDIA Kimi`
    - base URL: `https://integrate.api.nvidia.com/v1`
-   - model: `moonshotai/kimi-k2.5`
+   - model: `moonshotai/kimi-k2.6`
 5. `DeepSeek`
    - base URL: `https://api.deepseek.com/v1`
    - model: `deepseek-v4-flash`
