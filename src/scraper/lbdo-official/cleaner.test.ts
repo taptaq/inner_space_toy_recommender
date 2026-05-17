@@ -109,3 +109,57 @@ test('buildNormalizedSpecs classifies card game content away from silicone', () 
 
   assert.equal(specs.material, '纸质/数字内容');
 });
+
+test('buildNormalizedSpecs classifies water-based lubricant material away from silicone', () => {
+  const specs = cleaner.buildNormalizedSpecs(
+    {
+      name: 'Flow Water-Based',
+      subtitle: 'Lubricant',
+      priceSourceAmount: 30,
+      originalPriceSourceAmount: null,
+      priceCurrency: 'USD',
+      rawDescription: 'Natural water-based lubricant with organic aloe vera, pH balanced, toy-friendly.',
+      genderHint: 'unisex',
+      categoryHints: ['Lubricant'],
+    },
+    TEST_FX,
+  );
+
+  assert.equal(specs.material, '水基配方');
+});
+
+test('buildNormalizedSpecs classifies massage candle material away from silicone', () => {
+  const specs = cleaner.buildNormalizedSpecs(
+    {
+      name: 'Melt',
+      subtitle: 'Massage Candle',
+      priceSourceAmount: 40,
+      originalPriceSourceAmount: null,
+      priceCurrency: 'USD',
+      rawDescription: 'Massage candle made with shea butter, soy wax, jojoba oil and macadamia oil.',
+      genderHint: 'unisex',
+      categoryHints: ['Massage Candle'],
+    },
+    TEST_FX,
+  );
+
+  assert.equal(specs.material, '大豆蜡/油脂复合');
+});
+
+test('buildNormalizedSpecs classifies card game content away from silicone', () => {
+  const specs = cleaner.buildNormalizedSpecs(
+    {
+      name: 'Journey Deeper: Intimacy Edition',
+      subtitle: 'Card game',
+      priceSourceAmount: 49,
+      originalPriceSourceAmount: null,
+      priceCurrency: 'USD',
+      rawDescription: 'A card game with 100 prompt cards designed to deepen intimacy and communication.',
+      genderHint: 'unisex',
+      categoryHints: ['Card game'],
+    },
+    TEST_FX,
+  );
+
+  assert.equal(specs.material, '纸质/数字内容');
+});
