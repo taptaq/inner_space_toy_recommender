@@ -18,6 +18,7 @@ import {
   prepareUniqueBufferItemsForCleaning,
   resolvePersistedRawDescription,
 } from '../nomitang-official/cleaner-helpers.ts';
+import { ensureCompetitorRecord } from '../shared/competitor-registry.ts';
 
 dotenv.config();
 
@@ -409,6 +410,17 @@ export async function runCleaner(): Promise<CleanedRow[]> {
   const prepared = prepareUniqueBufferItemsForCleaning(bufferData);
   const fx = await refreshUsdToCnyRate();
   const cleanedRows: CleanedRow[] = [];
+  let brandId: string | null = null;
+
+  try {
+    brandId = await ensureCompetitorRecord({
+      prisma,
+      withDbRetry,
+      brandName: BRAND_NAME,
+    });
+  } catch (error) {
+    console.warn('[警告] competitors 关联失败，将继续非关联入库。', error);
+  }
 
   for (const item of prepared.items as CleanerBufferItem[]) {
     const canonicalName = normalizeWhitespace(
@@ -458,6 +470,7 @@ export async function runCleaner(): Promise<CleanedRow[]> {
       } as any,
       gender: 'Female',
       tags: specs.function_tags,
+      competitor_id: brandId ?? undefined,
     };
 
     const toyPayload = {

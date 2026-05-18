@@ -51,6 +51,27 @@ const CACHE_CONTROL_HEADER =
   "public, max-age=0, s-maxage=300, stale-while-revalidate=1800";
 const DEFAULT_CACHE_TTL_MS = 5 * 60_000;
 
+function isTransientDatabaseReadError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /Connection terminated|ECONNRESET|server closed the connection|terminating connection|P1001|P1017/i.test(
+    message,
+  );
+}
+
+async function queryWithRetry(
+  pool: Queryable,
+  sql: string,
+) {
+  try {
+    return await pool.query(sql);
+  } catch (error) {
+    if (!isTransientDatabaseReadError(error)) {
+      throw error;
+    }
+    return await pool.query(sql);
+  }
+}
+
 function isAudienceGender(value: string | null | undefined): value is Exclude<
   LibraryAudienceGender,
   "all"
@@ -204,7 +225,7 @@ export function createListRecommenderToysHandler({
         return;
       }
 
-      const result = await pool.query(`
+      const result = await queryWithRetry(pool, `
         SELECT
           t.id,
           t.name,

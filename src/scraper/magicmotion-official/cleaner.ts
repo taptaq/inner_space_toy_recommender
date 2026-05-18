@@ -18,6 +18,7 @@ import {
   prepareUniqueBufferItemsForCleaning,
   resolvePersistedRawDescription,
 } from '../nomitang-official/cleaner-helpers.ts';
+import { ensureCompetitorRecord } from '../shared/competitor-registry.ts';
 
 dotenv.config();
 
@@ -362,6 +363,17 @@ export async function runCleaner(): Promise<CleanedRow[]> {
   console.log(`[clean] review-buffer 已载入 ${prepared.items.length} 条`);
   const fx = await refreshCurrencyToCnyRate(String((prepared.items[0] as CleanerBufferItem)?.priceCurrency || 'USD'));
   const cleanedRows: CleanedRow[] = [];
+  let brandId: string | null = null;
+
+  try {
+    brandId = await ensureCompetitorRecord({
+      prisma,
+      withDbRetry,
+      brandName: BRAND_NAME,
+    });
+  } catch (error) {
+    console.warn('[警告] competitors 关联失败，将继续非关联入库。', error);
+  }
 
   for (const [index, item] of (prepared.items as CleanerBufferItem[]).entries()) {
     const canonicalName = normalizeWhitespace(
@@ -400,6 +412,7 @@ export async function runCleaner(): Promise<CleanedRow[]> {
       } as any,
       gender: specs.gender === 'male' ? 'Male' : specs.gender === 'female' ? 'Female' : 'Unisex',
       tags: specs.function_tags,
+      competitor_id: brandId ?? undefined,
     };
 
     const toyPayload = {

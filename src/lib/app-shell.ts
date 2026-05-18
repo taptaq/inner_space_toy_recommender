@@ -22,13 +22,37 @@ export type AppRoute =
 
 export const APP_STATE_STORAGE_KEY = "inner-space-recommender-app-state-v1";
 export const PRODUCTS_CACHE_STORAGE_KEY =
-  "inner-space-recommender-products-cache-v2";
+  "inner-space-recommender-products-cache-v3";
 const KNOWLEDGE_NEBULA_PATH_PATTERN = /^\/knowledge(?:\/|$)/;
 
 type ProductsCachePayload = {
   updatedAt: number;
   products: Product[];
 };
+
+type MinimalCachedProduct = Pick<
+  Product,
+  | "id"
+  | "name"
+  | "canonicalName"
+  | "safeDisplayName"
+  | "displayName"
+  | "price"
+  | "maxDb"
+  | "waterproof"
+  | "appearance"
+  | "physicalForm"
+  | "motorType"
+  | "gender"
+  | "typeCode"
+  | "subtypeCode"
+  | "brand"
+  | "material"
+  | "imagePlaceholder"
+  | "link"
+  | "sourceUrl"
+> &
+  Partial<Pick<Product, "rawDescription" | "tags">>;
 
 function isStoredAudienceGender(
   value: string | null | undefined,
@@ -191,15 +215,65 @@ export function normalizeProductsPayload(payload: unknown): Product[] {
   return [];
 }
 
+function buildMinimalCachedProducts(products: Product[]): MinimalCachedProduct[] {
+  return products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    canonicalName: product.canonicalName,
+    safeDisplayName: product.safeDisplayName,
+    displayName: product.displayName,
+    price: product.price,
+    maxDb: product.maxDb,
+    waterproof: product.waterproof,
+    appearance: product.appearance,
+    physicalForm: product.physicalForm,
+    motorType: product.motorType,
+    gender: product.gender,
+    typeCode: product.typeCode,
+    subtypeCode: product.subtypeCode,
+    brand: product.brand,
+    material: product.material,
+    imagePlaceholder: product.imagePlaceholder,
+    link: product.link,
+    sourceUrl: product.sourceUrl,
+    tags: Array.isArray(product.tags) ? product.tags.slice(0, 8) : product.tags,
+    rawDescription:
+      typeof product.rawDescription === "string"
+        ? product.rawDescription.slice(0, 600)
+        : product.rawDescription,
+  }));
+}
+
 export function writeProductsCache(products: Product[]) {
   if (typeof window === "undefined" || products.length === 0) return;
-  window.localStorage.setItem(
-    PRODUCTS_CACHE_STORAGE_KEY,
-    JSON.stringify({
-      updatedAt: Date.now(),
-      products,
-    } satisfies ProductsCachePayload),
-  );
+
+  const writePayload = (payloadProducts: Product[] | MinimalCachedProduct[]) => {
+    window.localStorage.setItem(
+      PRODUCTS_CACHE_STORAGE_KEY,
+      JSON.stringify({
+        updatedAt: Date.now(),
+        products: payloadProducts,
+      } satisfies ProductsCachePayload),
+    );
+  };
+
+  try {
+    writePayload(products);
+    return;
+  } catch (error) {
+    if (!(error instanceof Error) || error.name !== "QuotaExceededError") {
+      throw error;
+    }
+  }
+
+  try {
+    writePayload(buildMinimalCachedProducts(products));
+  } catch (error) {
+    if (!(error instanceof Error) || error.name !== "QuotaExceededError") {
+      throw error;
+    }
+    window.localStorage.removeItem(PRODUCTS_CACHE_STORAGE_KEY);
+  }
 }
 
 export function detectRoute(pathname: string): AppRoute {

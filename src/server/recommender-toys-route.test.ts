@@ -177,3 +177,80 @@ test("createListRecommenderToysHandler returns 304 when the cached payload etag 
   assert.equal(second.readStatusCode(), 304);
   assert.equal(second.readJsonPayload(), undefined);
 });
+
+test("createListRecommenderToysHandler retries once on transient database disconnects", async () => {
+  let queryCount = 0;
+
+  const handler = createListRecommenderToysHandler({
+    ensureLibraryRouteReady: async () => {},
+    now: () => 1000,
+    cacheTtlMs: 60_000,
+    pool: {
+      query: async () => {
+        queryCount += 1;
+        if (queryCount === 1) {
+          throw new Error("Connection terminated unexpectedly");
+        }
+        return {
+          rows: [
+            {
+              id: "toy-1",
+              name: "测试装备",
+              safe_display_name: "测试装备",
+              price: "199.00",
+              max_db: 42,
+              waterproof: 7,
+              appearance: "normal",
+              physical_form: "external",
+              motor_type: "gentle",
+              gender: "female",
+              type_code: "suction",
+              subtype_code: "suction_pure",
+              brand: "Brand",
+              material: "硅胶",
+              image_url: "https://cdn.example.com/a.jpg",
+              resolved_raw_description: "气脉冲测试",
+              link: "https://example.com/product",
+              tags: ["静音"],
+              persona_analysis: "适合新手",
+              is_domestic: true,
+            },
+          ],
+        };
+      },
+    },
+  });
+
+  const response = createMockResponse();
+  await handler({ query: {}, headers: {} } as never, response.response as never, (() => {}) as never);
+
+  assert.equal(queryCount, 2);
+  assert.equal(response.readStatusCode(), 200);
+  assert.deepEqual(response.readJsonPayload(), [
+    {
+      id: "toy-1",
+      name: "测试装备",
+      canonicalName: "测试装备",
+      displayName: "测试装备",
+      safeDisplayName: "测试装备",
+      price: 199,
+      maxDb: 42,
+      waterproof: 7,
+      appearance: "normal",
+      physicalForm: "external",
+      motorType: "gentle",
+      gender: "female",
+      typeCode: "suction",
+      subtypeCode: "suction_pure",
+      brand: "Brand",
+      material: "硅胶",
+      rawDescription: "气脉冲测试",
+      imagePlaceholder: "https://cdn.example.com/a.jpg",
+      link: "https://example.com/product",
+      sourceUrl: "https://example.com/product",
+      tags: ["静音"],
+      personaAnalysis: "适合新手",
+      isDomestic: true,
+    },
+  ]);
+});

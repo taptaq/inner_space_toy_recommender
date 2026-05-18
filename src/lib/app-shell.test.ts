@@ -5,8 +5,10 @@ import {
   APP_STATE_STORAGE_KEY,
   detectRoute,
   normalizeProductsPayload,
+  readProductsCache,
   readSessionJsonStorage,
   resolveProfilesReturnRoute,
+  writeProductsCache,
   writeSessionJsonStorage,
 } from "./app-shell.ts";
 
@@ -171,4 +173,65 @@ test("normalizeProductsPayload stores a unified displayName for user-visible pro
   ]);
 
   assert.equal(products[0]?.displayName, "个人护理用品 套装");
+});
+
+test("writeProductsCache degrades gracefully when localStorage quota is exceeded", () => {
+  const previousWindow = globalThis.window;
+  const oversizedProducts = Array.from({ length: 2 }, (_, index) => ({
+    id: `p-${index}`,
+    name: `Product ${index}`,
+    safeDisplayName: `Product ${index}`,
+    canonicalName: `Product ${index}`,
+    price: 199,
+    maxDb: 42,
+    waterproof: 7,
+    appearance: "normal",
+    physicalForm: "external",
+    motorType: "gentle",
+    gender: "female",
+    brand: "Brand",
+    material: "硅胶",
+    imagePlaceholder: "",
+    rawDescription: "x".repeat(8_000),
+    tags: ["tag-a", "tag-b", "tag-c"],
+  }));
+
+  const localStorage = {
+    getItem: () => null,
+    setItem: (() => {
+      let attempt = 0;
+      return (_key: string, value: string) => {
+        attempt += 1;
+        if (attempt === 1) {
+          const error = new Error("quota");
+          error.name = "QuotaExceededError";
+          throw error;
+        }
+        assert.ok(value.length > 0);
+      };
+    })(),
+    removeItem: () => {},
+  };
+
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      localStorage,
+      sessionStorage: createMemoryStorage(),
+    },
+  });
+
+  try {
+    assert.doesNotThrow(() => {
+      writeProductsCache(oversizedProducts as never);
+    });
+
+    const cached = readProductsCache();
+    assert.equal(Array.isArray(cached), true);
+  } finally {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: previousWindow,
+    });
+  }
 });

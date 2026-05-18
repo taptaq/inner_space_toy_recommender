@@ -519,11 +519,11 @@ export async function runCleaner() {
       console.log(`[关联] 已定位 ROMP 竞品 ID: ${brandId}`);
     } else {
         // 如果不存在，尝试创建一个基础记录
-        console.log('[创建] 数据库中未发现「绒谱 / ROMP」，正在初始化记录...');
+        console.log('[创建] 数据库中未发现「ROMP / 绒谱」，正在初始化记录...');
         const newBrand = await prisma.competitors.create({
             data: {
-                name: '绒谱',
-                description: '绒谱（ROMP）是主打女性向\u60c5\u8da3玩具的品牌，当前店铺商品以吮吸、震动、跳蛋与便携玩具为主。',
+                name: 'ROMP',
+                description: 'ROMP 是主打女性向情趣玩具的品牌，当前店铺商品以吮吸、震动、跳蛋与便携玩具为主。',
                 is_domestic: false
             }
         });
@@ -741,7 +741,7 @@ ${item.rawDescription}
          original_id:   originalId,
          name:          canonicalName,
          safe_display_name: buildSafeDisplayName(canonicalName),
-         brand:         '绒谱',
+         brand:         'ROMP',
          price:         numericPrice,
          max_db:        productKind === 'device' ? (parsedSpecs.max_db ?? 50) : null,
          waterproof:    parsedSpecs.waterproof || null,
@@ -755,7 +755,7 @@ ${item.rawDescription}
          updated_at:    new Date(),
       };
 
-      await prisma.recommender_toys.deleteMany({ where: { name: canonicalName, brand: '绒谱' } });
+      await prisma.recommender_toys.deleteMany({ where: { name: canonicalName, brand: 'ROMP' } });
       await prisma.recommender_toys.create({ data: itemPayload });
 
       console.log(`[完成] \`${canonicalName}\` 数据已注入数据库。`);

@@ -18,6 +18,7 @@ import {
   prepareUniqueBufferItemsForCleaning,
   resolvePersistedRawDescription,
 } from '../nomitang-official/cleaner-helpers.ts';
+import { ensureCompetitorRecord } from '../shared/competitor-registry.ts';
 
 dotenv.config();
 
@@ -230,28 +231,11 @@ export async function runCleaner() {
 
   let brandId: string | null = null;
   try {
-    const competitor = await withDbRetry('查询 Arcwave 竞品', () =>
-      prisma.competitors.findFirst({
-        where: {
-          OR: [{ name: { contains: 'Arcwave', mode: 'insensitive' } }],
-        },
-      }),
-    );
-
-    if (competitor) {
-      brandId = competitor.id;
-    } else {
-      const newBrand = await withDbRetry('创建 Arcwave 竞品', () =>
-        prisma.competitors.create({
-          data: {
-            name: 'Arcwave',
-            description: 'Arcwave 是男性向高端情趣科技品牌，聚焦男士快感设备与创新空气脉冲体验。',
-            is_domestic: false,
-          },
-        }),
-      );
-      brandId = newBrand.id;
-    }
+    brandId = await ensureCompetitorRecord({
+      prisma,
+      withDbRetry,
+      brandName: BRAND_NAME,
+    });
   } catch (error) {
     console.warn('[警告] Arcwave 竞品品牌记录处理失败，将跳过 competitor_id 关联:', error);
   }
