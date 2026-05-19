@@ -244,6 +244,26 @@ test("buildResultRouteSummary uses male-facing route wording for male answers", 
   assert.equal(result.routeLabel, "自动包裹 / 强反馈路线");
 });
 
+test("buildNaturalLanguageResultNarrative explains must, prefer, and avoid signals from the original query", () => {
+  const result = buildNaturalLanguageResultNarrative({
+    answers: {
+      gender: "female",
+      tags: ["女性向"],
+      maxDb: 50,
+    },
+    naturalLanguageQuery:
+      "我是女生，想要吮吸感更强一点，波形更多一点，不要入体，不要APP，也不要情侣款。",
+  });
+
+  assert.match(result.summary, /更强吮吸|波形更多|不要入体|不要APP|不要情侣款/);
+  assert.match(result.nextPriority, /不要入体|不要APP|不要情侣款|更强吮吸|波形更多/);
+  assert.ok(result.matchedTokens.includes("更强吮吸"));
+  assert.ok(result.matchedTokens.includes("波形更多"));
+  assert.ok(result.matchedTokens.includes("不要入体"));
+  assert.ok(result.matchedTokens.includes("不要APP\/远控"));
+  assert.ok(result.matchedTokens.includes("不要情侣款"));
+});
+
 test("buildResultAvoidanceTips highlights high-noise and high-intensity routes for sensitive uncertain answers", () => {
   const result = buildResultAvoidanceTips({
     tags: ["路线待判断", "敏感度待判断"],
@@ -481,9 +501,9 @@ test("buildNaturalLanguageResultNarrative reflects the original prompt in a user
       "我是女生，想找一个吮吸感更强一点的，波形更多的，噪音适中的。",
   });
 
-  assert.match(result.summary, /静音/);
+  assert.match(result.summary, /更强吮吸|波形更多|噪音适中/);
   assert.match(result.summary, /女性向/);
-  assert.match(result.nextPriority, /静音|清洁|预算/);
+  assert.match(result.nextPriority, /更强吮吸|波形更多|噪音适中/);
   assert.match(result.routeLabel, /女性向/);
 });
 

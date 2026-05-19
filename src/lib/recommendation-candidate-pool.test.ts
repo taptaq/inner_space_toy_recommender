@@ -224,3 +224,52 @@ test("natural language suction requests keep only external candidates unless ins
     ["external-suction"],
   );
 });
+
+test("natural language avoid constraints exclude insertable, app-controlled, and couple-oriented candidates", () => {
+  const pool = buildRecommendationCandidatePool(
+    { gender: "female", tags: [] },
+    [
+      makeProduct({
+        id: "safe-suction",
+        gender: "female",
+        typeCode: "suction",
+        subtypeCode: "clitoral_suction",
+        physicalForm: "external",
+        rawDescription: "外部吮吸器，单人使用，非 APP 控制。",
+      }),
+      makeProduct({
+        id: "insertable-suction",
+        gender: "female",
+        typeCode: "dual_stimulation",
+        subtypeCode: "suction_dual",
+        physicalForm: "composite",
+        rawDescription: "内外双刺激吮吸器，入体结构。",
+      }),
+      makeProduct({
+        id: "app-suction",
+        gender: "female",
+        typeCode: "suction",
+        subtypeCode: "clitoral_suction",
+        physicalForm: "external",
+        rawDescription: "外部吮吸器，支持 APP 远控和异地遥控。",
+      }),
+      makeProduct({
+        id: "couple-suction",
+        gender: "unisex",
+        typeCode: "wearable_remote",
+        subtypeCode: "dual_wearable_remote",
+        physicalForm: "external",
+        rawDescription: "情侣共玩远控穿戴款，双人互动。",
+      }),
+    ],
+    {
+      naturalLanguageQuery:
+        "想要一个吮吸器，不要入体，不要APP，也不要情侣款。",
+    },
+  );
+
+  assert.deepEqual(
+    pool.relaxedProducts.map((product) => product.id),
+    ["safe-suction"],
+  );
+});

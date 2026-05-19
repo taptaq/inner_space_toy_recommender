@@ -31,6 +31,7 @@
     "db:backfill:lbdo-materials": "tsx -r dotenv/config src/db/backfill-lbdo-materials.ts",
     "db:backfill:toy-materials": "tsx -r dotenv/config src/db/backfill-toy-materials.ts",
     "db:backfill:knowledge-embeddings": "tsx -r dotenv/config src/db/backfill-knowledge-nebula-embeddings.ts",
+    "db:backfill:recommendation-product-features": "tsx -r dotenv/config src/db/backfill-recommendation-product-features.ts",
     "debug:param-chain": "tsx -r dotenv/config src/scraper/darentang/debug-param-chain.ts",
     "debug:param-chain:xiaoguaishou": "tsx -r dotenv/config src/scraper/xiaoguaishou/debug-param-chain.ts",
     "debug:param-chain:iroha": "tsx -r dotenv/config src/scraper/iroha/debug-param-chain.ts",

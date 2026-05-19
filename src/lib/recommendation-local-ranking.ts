@@ -4,6 +4,8 @@ import {
   buildRecommendationCandidatePool,
   type RecommendationCandidatePoolContext,
 } from "./recommendation-candidate-pool.js";
+import { parseNaturalLanguageRecommendationIntent } from "./recommendation-natural-language-intent.js";
+import { buildRecommendationProductFeatures } from "./recommendation-product-features.js";
 import {
   getBranchPreferenceAdjustments,
   selectScorePresetId,
@@ -72,6 +74,22 @@ type NaturalLanguagePreferenceAdjustment = {
   summary: string[];
   hardMisses: number;
 };
+
+function getFirstEvidenceText(
+  product: Product,
+  signal: "suction" | "patterns" | "appOrRemote" | "couple" | "intensity",
+  polarity: "positive" | "negative" = "positive",
+) {
+  const features = buildRecommendationProductFeatures(product);
+  return features.evidence.find(
+    (item) => item.signal === signal && item.polarity === polarity,
+  )?.text;
+}
+
+function buildEvidenceSummaryLine(prefix: string, evidenceText?: string) {
+  if (!evidenceText) return prefix;
+  return `${prefix}：${evidenceText}`;
+}
 
 const SCORE_PRESET_FEMALE: ScorePreset = {
   id: "female",
@@ -232,15 +250,6 @@ function getBudgetGap(price: number, budget?: [number, number]) {
   return 0;
 }
 
-function hasPositiveSuctionSignal(text: string) {
-  const normalized = String(text || "").toLowerCase();
-  if (!normalized) return false;
-  if (/不是吮吸|非吮吸|不带吮吸|无吮吸|not suction|non-suction/.test(normalized)) {
-    return false;
-  }
-  return /吮吸|吸感|吸吮|小海豚|阴蒂吸|air ?pulse|suction/.test(normalized);
-}
-
 function getNaturalLanguagePreferenceAdjustment(
   product: Product,
   naturalLanguageQuery?: string,
@@ -251,72 +260,65 @@ function getNaturalLanguagePreferenceAdjustment(
   }
 
   const lowerQuery = query.toLowerCase();
-  const haystack = [
-    product.name,
-    product.displayName,
-    product.safeDisplayName,
-    product.canonicalName,
-    product.rawDescription,
-    ...(product.tags ?? []),
-    product.typeCode,
-    product.subtypeCode,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  const intent = parseNaturalLanguageRecommendationIntent(query);
+  const features = buildRecommendationProductFeatures(product);
+  const haystack = features.haystack;
 
   let score = 0;
   let hardMisses = 0;
   const summary: string[] = [];
 
-  const wantsSuction =
-    /吮吸|吸感|吸吮|小海豚|阴蒂吸|air ?pulse|suction/.test(lowerQuery);
-  const wantsStrongSuction =
-    /吮吸感更强|更强吮吸|更强吸感|吸力更强|吸感更强/.test(lowerQuery);
-  const allowsInsertable =
-    /入体|插入|深入|内外|双刺激|双通道|g点|g\s*点/.test(lowerQuery);
-  if (wantsSuction) {
-    const productSupportsSuction =
-      hasPositiveSuctionSignal(haystack) ||
-      product.typeCode === "suction";
-    if (productSupportsSuction) {
+  if (intent.must.suctionProduct) {
+    if (features.isSuctionLike) {
       score += 42;
-      summary.push("原始描述明确偏向吮吸路线");
+      summary.push(
+        buildEvidenceSummaryLine(
+          "原始描述明确偏向吮吸路线",
+          getFirstEvidenceText(product, "suction"),
+        ),
+      );
     } else {
       score -= 28;
       hardMisses += 1;
     }
 
-    if (!allowsInsertable && product.physicalForm === "external") {
+    if (intent.must.externalOnly && product.physicalForm === "external") {
       score += 18;
       summary.push("更贴近外部使用路径");
     }
 
-    if (wantsStrongSuction) {
-      if (/强劲|强力|高能|爆发|大吸力|强吸/.test(haystack)) {
+    if (intent.prefer.strongSuction) {
+      if (features.hasStrongSuctionSignal) {
         score += 24;
-        summary.push("更贴近强吮吸诉求");
-      } else if (productSupportsSuction) {
+        summary.push(
+          buildEvidenceSummaryLine(
+            "更贴近强吮吸诉求",
+            getFirstEvidenceText(product, "intensity"),
+          ),
+        );
+      } else if (features.isSuctionLike) {
         score += 8;
       }
     }
   }
 
-  const wantsMorePatterns =
-    /波形.*多|模式.*多|档位.*多|变化.*多|花样.*多/.test(lowerQuery);
-  if (wantsMorePatterns) {
-    const productHasPatternSignals =
-      /波形|模式|档位|频率|节奏|变化/.test(haystack);
-    if (productHasPatternSignals) {
+  if (intent.prefer.morePatterns) {
+    if (features.hasManyPatterns) {
       score += 16;
-      summary.push("模式变化更贴近你的原话");
+      summary.push(
+        buildEvidenceSummaryLine(
+          "模式变化更贴近你的原话",
+          getFirstEvidenceText(product, "patterns"),
+        ),
+      );
     }
   }
 
   const wantsStrongIntensity =
-    /更强|强一点|吸力强|力度强|刺激强/.test(lowerQuery) && !wantsStrongSuction;
+    /更强|强一点|吸力强|力度强|刺激强/.test(lowerQuery) &&
+    !intent.prefer.strongSuction;
   if (wantsStrongIntensity) {
-    if (product.motorType === "strong" || /强劲|强力|高能|爆发/.test(haystack)) {
+    if (features.hasStrongIntensitySignal) {
       score += 18;
       summary.push("强度表达更贴近你的描述");
     } else if (product.motorType === "gentle") {
@@ -324,10 +326,37 @@ function getNaturalLanguagePreferenceAdjustment(
     }
   }
 
-  const wantsModerateNoise = /噪音适中|声音适中|别太吵|不要太吵|静音|夜晚|宿舍|同住/.test(
-    lowerQuery,
-  );
-  if (wantsModerateNoise && product.maxDb != null) {
+  if (intent.avoid.strongIntensity || intent.prefer.gentleIntensity) {
+    if (features.hasGentleSignal) {
+      score += 16;
+      summary.push("更贴近温和不刺激的诉求");
+    } else if (features.hasStrongIntensitySignal) {
+      score -= 18;
+      hardMisses += 1;
+    }
+  }
+
+  if (intent.avoid.appOrRemote) {
+    if (features.supportsAppOrRemote) {
+      score -= 20;
+      hardMisses += 1;
+    } else {
+      score += 8;
+      summary.push("避免了 APP/远控依赖");
+    }
+  }
+
+  if (intent.avoid.couple) {
+    if (features.isCoupleOriented) {
+      score -= 20;
+      hardMisses += 1;
+    } else {
+      score += 8;
+      summary.push("更贴近单人使用诉求");
+    }
+  }
+
+  if (intent.prefer.moderateNoise && product.maxDb != null) {
     if (product.maxDb <= 50) {
       score += 14;
       summary.push("噪音表现更贴近原始场景");
@@ -493,10 +522,20 @@ export function scoreStructuredProduct(
   hardMisses += naturalLanguageAdjustments.hardMisses;
   matchSummary.push(...naturalLanguageAdjustments.summary);
 
+  const prioritizedMatchSummary =
+    context?.naturalLanguageQuery?.trim()
+      ? [
+          ...naturalLanguageAdjustments.summary,
+          ...matchSummary.filter(
+            (line) => !naturalLanguageAdjustments.summary.includes(line),
+          ),
+        ]
+      : matchSummary;
+
   return {
     ...product,
     score: Math.max(0, Math.round(score)),
-    matchSummary: Array.from(new Set(matchSummary)).slice(0, 4),
+    matchSummary: Array.from(new Set(prioritizedMatchSummary)).slice(0, 4),
     hardMisses,
     budgetGap,
     noiseGap,

@@ -64,18 +64,21 @@ export function NaturalLanguageMatchPage({
             <p className="text-xs leading-6 text-slate-300">
               你可以从这些方向来描述：
             </p>
+            <p className="mt-2 text-xs leading-6 text-cyan-100/72">
+              最容易说清楚的方式是：先写 `必须要什么`，再写 `最好是什么`，最后补 `绝对不要什么`。
+            </p>
             <ul className="mt-2 space-y-1 text-xs leading-6 text-slate-400">
-              <li>想要的感觉：温和、强烈、外部、入体、双刺激</li>
+              <li>想要的感觉：温和、强烈、吮吸、外部、入体、双刺激</li>
               <li>使用场景：独处、情侣、异地、宿舍、夜晚</li>
-              <li>现实限制：预算、静音、防水、便携、外观低调</li>
+              <li>现实限制：预算、静音、防水、便携、外观低调、不要入体、不要APP、不要太吵、不要情侣款</li>
               <li>经验状态：新手、怕刺激、想进阶、一步到位</li>
             </ul>
             <div className="mt-4 rounded-xl border border-cyan-300/10 bg-cyan-300/[0.05] px-3 py-3 text-xs leading-6 text-cyan-50/78">
               例如：
               <br />
-              “想要一个更静音、预算 300 以内、适合女生新手、最好容易清洁的产品。”
+              “必须是吮吸类，最好波形更多一点，不要入体，也不要 APP。”
               <br />
-              “想找情侣共用、异地也能互动的产品，不要太吵，外观别太高调。”
+              “想要一个更静音、预算 300 以内、适合女生新手、最好容易清洁的产品。”
             </div>
           </div>
 

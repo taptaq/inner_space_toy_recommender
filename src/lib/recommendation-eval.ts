@@ -16,6 +16,7 @@ type TopProductExpectation = {
 export type RecommendationEvalExpectations = {
   topCount?: number;
   top1?: TopProductExpectation;
+  forbiddenIdsInTop?: string[];
   forbiddenGendersInTop?: Product["gender"][];
   forbiddenTypeCodesInTop?: string[];
   requiredTypeCodesInTop?: string[];
@@ -99,6 +100,15 @@ export function runRecommendationEvalScenario(
     if (matched.length > 0) {
       failures.push(
         `${scenario.id}: top products should not include gender ${forbiddenGender}: ${matched.map(formatProduct).join(", ")}`,
+      );
+    }
+  }
+
+  for (const forbiddenId of scenario.expectations.forbiddenIdsInTop ?? []) {
+    const matched = topProducts.filter((product) => product.id === forbiddenId);
+    if (matched.length > 0) {
+      failures.push(
+        `${scenario.id}: top products should not include id ${forbiddenId}: ${matched.map(formatProduct).join(", ")}`,
       );
     }
   }

@@ -81,6 +81,20 @@ const evalProducts: Product[] = [
     tags: ["女性", "吮吸", "模式多", "多档位", "多频率"],
   }),
   makeProduct({
+    id: "female-remote-suction",
+    name: "远控吮吸器",
+    gender: "female",
+    typeCode: "suction",
+    subtypeCode: "clitoral_suction",
+    physicalForm: "external",
+    motorType: "gentle",
+    price: 269,
+    maxDb: 45,
+    waterproof: 7,
+    rawDescription: "外部吮吸器，支持 APP 远控和异地互动，模式丰富。",
+    tags: ["女性", "吮吸", "APP", "远控", "模式多"],
+  }),
+  makeProduct({
     id: "female-dual-remote",
     name: "远控复合双刺激",
     gender: "female",
@@ -264,6 +278,66 @@ const scenarios: RecommendationEvalScenario[] = [
       topCount: 3,
       top1: { id: "female-pattern-suction", gender: "female", typeCodes: ["suction"] },
       forbiddenTypeCodesInTop: ["external_vibe", "masturbator", "prostate"],
+      requiredTypeCodesInTop: ["suction"],
+    },
+  },
+  {
+    id: "natural language avoid app and strong intensity should prefer gentle non-app suction",
+    answers: {
+      gender: "female",
+      maxDb: 50,
+      tags: ["女性向"],
+    },
+    context: {
+      naturalLanguageQuery:
+        "我是女生，想要一个吮吸器，不要APP，不要太刺激，噪音适中。",
+    },
+    products: evalProducts,
+    expectations: {
+      topCount: 3,
+      top1: { id: "female-quiet-suction", gender: "female", typeCodes: ["suction"] },
+      forbiddenIdsInTop: ["female-remote-suction", "female-dual-remote"],
+      forbiddenTypeCodesInTop: ["external_vibe", "masturbator", "prostate"],
+      requiredTypeCodesInTop: ["suction"],
+    },
+  },
+  {
+    id: "natural language avoid insertable app and couple should keep only simple suction route",
+    answers: {
+      gender: "female",
+      maxDb: 50,
+      tags: ["女性向"],
+    },
+    context: {
+      naturalLanguageQuery:
+        "我是女生，想要吮吸感更强，但不要入体，不要APP，也不要情侣款。",
+    },
+    products: evalProducts,
+    expectations: {
+      topCount: 3,
+      top1: { id: "female-strong-suction", gender: "female", typeCodes: ["suction"] },
+      forbiddenIdsInTop: ["female-remote-suction", "female-dual-remote", "unisex-ring"],
+      forbiddenTypeCodesInTop: ["dual_stimulation", "external_vibe", "prostate", "masturbator"],
+      requiredTypeCodesInTop: ["suction"],
+    },
+  },
+  {
+    id: "natural language gentle but suction should remain suction instead of drifting to generic gentle vibes",
+    answers: {
+      gender: "female",
+      maxDb: 50,
+      tags: ["女性向"],
+    },
+    context: {
+      naturalLanguageQuery:
+        "我是女生，想要温和一点，不要太刺激，但一定要是吮吸类。",
+    },
+    products: evalProducts,
+    expectations: {
+      topCount: 3,
+      top1: { id: "female-quiet-suction", gender: "female", typeCodes: ["suction"] },
+      forbiddenIdsInTop: ["female-external-vibe", "female-dual-remote"],
+      forbiddenTypeCodesInTop: ["external_vibe", "dual_stimulation", "masturbator", "prostate"],
       requiredTypeCodesInTop: ["suction"],
     },
   },

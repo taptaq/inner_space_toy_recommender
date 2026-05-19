@@ -1,5 +1,6 @@
 import type { AnswerState, Product } from "../data/mock.js";
 import type { QuizAnswerPathEntry } from "./recommendation-session.js";
+import { parseNaturalLanguageRecommendationIntent } from "./recommendation-natural-language-intent.js";
 import {
   buildBranchFallbackReason,
   buildBranchBackupReason,
@@ -652,15 +653,21 @@ export function buildNaturalLanguageResultNarrative({
   naturalLanguageQuery?: string;
 }) {
   const query = String(naturalLanguageQuery || "").trim();
+  const intent = parseNaturalLanguageRecommendationIntent(query);
   const matchedTokens = [
-    /静音|安静|低调|不吵/.test(query) ? "静音" : null,
-    /预算|价格|价位/.test(query) ? "预算" : null,
-    /防水|清洁|好打理/.test(query) ? "清洁" : null,
+    intent.must.suctionProduct ? "吮吸类" : null,
+    intent.prefer.strongSuction ? "更强吮吸" : null,
+    intent.prefer.morePatterns ? "波形更多" : null,
+    intent.prefer.moderateNoise ? "噪音适中" : null,
+    intent.prefer.gentleIntensity ? "温和一点" : null,
+    intent.avoid.insertable ? "不要入体" : null,
+    intent.avoid.appOrRemote ? "不要APP/远控" : null,
+    intent.avoid.couple ? "不要情侣款" : null,
+    /预算|价格|价位|[0-9]{2,5}\s*(元|块)/.test(query) ? "预算" : null,
+    /防水|清洁|好打理|可水洗/.test(query) ? "清洁" : null,
     /女生|女性|女用|女性向/.test(query) ? "女性向" : null,
     /男生|男性|男用|男性向/.test(query) ? "男性向" : null,
-    /情侣|异地|双人|共用/.test(query) ? "情侣共玩" : null,
     /新手|第一次|怕刺激|慢热/.test(query) ? "新手慢热" : null,
-    /强刺激|强烈|更猛/.test(query) ? "强刺激" : null,
   ].filter((item): item is string => Boolean(item));
 
   const userSummary = query
@@ -675,19 +682,31 @@ export function buildNaturalLanguageResultNarrative({
     answers.physicalForm ? "路线" : null,
   ].filter((item): item is string => Boolean(item));
 
+  const naturalLanguagePriorities = [
+    intent.avoid.insertable ? "不要入体" : null,
+    intent.avoid.appOrRemote ? "不要APP/远控" : null,
+    intent.avoid.couple ? "不要情侣款" : null,
+    intent.prefer.strongSuction ? "更强吮吸" : null,
+    intent.prefer.morePatterns ? "波形更多" : null,
+    intent.prefer.gentleIntensity ? "温和一点" : null,
+    intent.prefer.moderateNoise ? "噪音适中" : null,
+  ].filter((item): item is string => Boolean(item));
+
   const nextPriority = query
-    ? `下一步先确认${parameterFocus.slice(0, 2).join("、") || "最关键的体验约束"}，再回头看主推荐是否和你的原话一致。`
+    ? `下一步先确认${naturalLanguagePriorities.slice(0, 2).join("、") || parameterFocus.slice(0, 2).join("、") || "最关键的体验约束"}，再回头看主推荐是否和你的原话一致。`
     : "下一步先确认静音、清洁和预算是否还符合你的真实使用环境。";
 
   const routeLabel =
-    /情侣|异地|双人|共用/.test(query)
+    intent.avoid.couple
+      ? "女性向体验路线"
+      : /情侣|异地|双人|共用/.test(query)
       ? "双人共玩路线"
       : /男性|男用|男生/.test(query)
         ? "男性向体验路线"
         : "女性向体验路线";
 
   const summary = query
-    ? `${userSummary} 这次更适合先看${parameterFocus.slice(0, 3).join(" / ") || "核心参数"}。`
+    ? `${userSummary} 这次更适合先看${matchedTokens.slice(0, 3).join(" / ") || parameterFocus.slice(0, 3).join(" / ") || "核心参数"}。`
     : "这次更适合先看静音 / 清洁 / 预算这三项核心参数。";
 
   return {
