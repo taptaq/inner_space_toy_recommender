@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,222 +7,370 @@ import { runCleaner } from './cleaner.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 目标分类页入口列表
+const ORIGIN = 'https://www.lelo.com';
 const TARGET_URLS = [
-  'https://www.lelo.com/zh-hant/\x73ex-toys-for-women',
-  'https://www.lelo.com/zh-hant/\x73ex-toys-for-men'
+  `${ORIGIN}/zh-hant/sex-toys-for-women`,
+  `${ORIGIN}/zh-hant/sex-toys-for-men`,
 ];
-const MAX_ITEMS = 50;
-const DELAY_BETWEEN_PAGES = 2500; // 2.5s delay to avoid bot protection
+const MAX_ITEMS = Number(process.env.LELO_MAX_ITEMS || '200');
+const DELAY_BETWEEN_PAGES = Number(process.env.LELO_DETAIL_DELAY_MS || '1800');
 
-const BUFFER_PATH = path.resolve(__dirname, '../../data/review-buffer.json');
+export const BUFFER_PATH = path.resolve(__dirname, '../../data/lelo-review-buffer.json');
 
-async function runCrawler() {
-  console.log('--- 启动 Playwright 无头抓取引擎 [Target: LELO] ---');
-  
-  // 以 headless 模式启动以消除视觉干扰
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  });
-  const page = await context.newPage();
+type ListItem = {
+  sourceUrl: string;
+  name: string;
+  subtitle: string;
+  coverImage: string;
+  priceText: string;
+  genderHint: 'female' | 'male' | 'unisex';
+  categoryHints: string[];
+};
 
-  let listItems: any[] = [];
+type DetailItem = {
+  title: string;
+  subtitle: string;
+  priceText: string;
+  coverImage: string;
+  rawDescription: string;
+  categoryHints: string[];
+};
 
-  for (const targetUrl of TARGET_URLS) {
-    console.log(`\n[雷达] 正在准备潜入列表页: ${targetUrl}`);
-    
-    // 根据 URL 判断类别性别暗示
-    const genderHint = targetUrl.includes('for-men') ? 'male' : 'female';
-    
+function normalizeLocalePathname(pathname: string): string {
+  return pathname.replace(/^\/zh-hant\//, '/zh-hans/');
+}
+
+function isAllowedProductPath(pathname: string): boolean {
+  const normalized = normalizeLocalePathname(pathname);
+  return /^\/zh-hans\/[^/?#]+$/.test(normalized);
+}
+
+function normalizeWhitespace(value: string): string {
+  return String(value || '')
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ ]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function uniqueStrings(values: Array<string | null | undefined>, limit = 20): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    const normalized = normalizeWhitespace(String(value || ''));
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+    if (result.length >= limit) break;
+  }
+
+  return result;
+}
+
+function normalizeProductUrl(href: string): string {
+  const trimmed = String(href || '').trim();
+  if (!trimmed) return '';
+
+  try {
+    const url = new URL(trimmed, ORIGIN);
+    url.protocol = 'https:';
+    url.host = 'www.lelo.com';
+    url.search = '';
+    url.hash = '';
+    url.pathname = url.pathname.replace(/\/$/, '');
+    return url.toString();
+  } catch {
+    return '';
+  }
+}
+
+export function extractLeloPriceTextFromHtml(html: string): string {
+  const schemaMatch = html.match(
+    /<script[^>]+id="schema_product"[^>]*>([\s\S]*?)<\/script>/i,
+  );
+  if (schemaMatch?.[1]) {
     try {
-      // 访问分类页并获取原始文本以进行正则匹配 (模拟 view-source)
-      const response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      const rawHtml = await response?.text() || '';
-      
-      // 使用正则提取源码中的 views-row 内容
-      const rowRegex = /<div\s+class="views-row">\s*<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>\s*<\/div>/gi;
-      let match;
-      let pageCount = 0;
-      
-      while ((match = rowRegex.exec(rawHtml)) !== null) {
-          let href = match[1];
-          let innerHtml = match[2];
-
-          if (!href.startsWith('http')) href = 'https://www.lelo.com' + (href.startsWith('/') ? '' : '/') + href;
-          
-          // 进一步过滤掉非产品功能的链接
-          if (href.includes('/cart') || href.includes('/checkout') || href.includes('/login') || href.includes('/account')) continue;
-
-          // 从 a 标签内部内容中粗略提取标题
-          const titleMatch = innerHtml.match(/aria-label="([^"]+)"/) || innerHtml.match(/title="([^"]+)"/);
-          let title = titleMatch ? titleMatch[1].replace('Go to the', '').trim() : '';
-
-          listItems.push({ href, title, genderHint });
-          pageCount++;
+      const parsed = JSON.parse(schemaMatch[1]) as Record<string, unknown>;
+      const offers =
+        parsed.offers && typeof parsed.offers === 'object'
+          ? (parsed.offers as Record<string, unknown>)
+          : null;
+      const currency = String(offers?.priceCurrency || '').trim();
+      const price = String(offers?.price || '').trim();
+      if (currency && price) {
+        return `${currency} ${price}`;
       }
-
-      console.log(`  -> 该页面源码共解析出 ${pageCount} 个产品节点`);
-
-      // 如果正则没抓到，尝试作为兜底的前端 DOM 探测
-      if (pageCount === 0) {
-          console.log('  -> [兜底] 正则未命中，尝试 DOM 注入式探测...');
-          const domItems = await page.evaluate(() => {
-            const productAnchorTags = Array.from(document.querySelectorAll('a[aria-label^="Go to the"]'));
-            return productAnchorTags.map(a => {
-               const href = (a as HTMLAnchorElement).href || '';
-               const imgEl = a.querySelector('img');
-               let titleText = a.getAttribute('aria-label')?.replace('Go to the', '').trim() || imgEl?.alt || '';
-               return { href, img: imgEl ? imgEl.src : null, title: titleText || 'UNKNOWN', priceText: '0' };
-            }).filter(item => item.href.includes('lelo.com/zh-hant/'));
-          });
-          listItems.push(...domItems);
-          console.log(`  -> [兜底] DOM 探测补全了 ${domItems.length} 个节点`);
-      }
-    } catch (err) {
-      console.error(`  -> [故障] 无法扫描该路径: ${targetUrl}`, err);
+    } catch {
+      // Ignore malformed schema JSON.
     }
   }
 
-  // 全局去重与性别归一化：若产品同时出现在多个性别分类中，标记为 unisex (通用)
-  const uniqueItemsMap = new Map<string, any>();
-  
-  listItems.forEach(item => {
-    if (!item.href) return;
-    
-    // 标准化 URL 用于 key 匹配
-    const normalizedHref = item.href.replace(/\/$/, '');
-    
-    if (uniqueItemsMap.has(normalizedHref)) {
-      const existing = uniqueItemsMap.get(normalizedHref);
-      // 如果已存项的性别暗示与当前项不同，则判定为通用
-      if (existing.genderHint && item.genderHint && existing.genderHint !== item.genderHint) {
-        console.log(`[逻辑] 检测到跨分类产品，性别强制归一化为通用: ${item.title}`);
-        existing.genderHint = 'unisex';
-      }
-    } else {
-      uniqueItemsMap.set(normalizedHref, { ...item });
-    }
-  });
+  const dataLayerMatch = html.match(/"ecommerce"\s*:\s*\{[\s\S]*?"currency"\s*:\s*"([A-Z]{3})"[\s\S]*?"items"\s*:\s*\[\s*\{[\s\S]*?"price"\s*:\s*([0-9.]+)/i);
+  if (dataLayerMatch?.[1] && dataLayerMatch?.[2]) {
+    return `${dataLayerMatch[1]} ${dataLayerMatch[2]}`;
+  }
 
-  const uniqueItems = Array.from(uniqueItemsMap.values());
+  return '';
+}
 
-  const targetItems = uniqueItems.slice(0, MAX_ITEMS);
-  console.log(`\n[整理] 去重完毕，共取得 ${targetItems.length} 个不重复的目标商品。准备开始详情页探测...\n`);
+function extractJsonLdListItems(html: string, genderHint: ListItem['genderHint']): ListItem[] {
+  const results: ListItem[] = [];
+  const seen = new Set<string>();
+  const scripts = Array.from(
+    html.matchAll(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi),
+  );
 
-  const bufferData = [];
-
-  for (let i = 0; i < targetItems.length; i++) {
-    const item = targetItems[i];
+  for (const match of scripts) {
     try {
-      console.log(`\n[探测] 正在潜入详情节点: ${item.href}`);
-      
-      // 设定宽容等待时长，以应对可能的网速延迟
-      await page.goto(item.href, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      
-      // 容忍特定框架的延迟渲染
-      await page.waitForTimeout(3000); 
+      const parsed = JSON.parse(match[1] || '{}') as Record<string, unknown>;
+      const graph = Array.isArray(parsed['@graph']) ? parsed['@graph'] : [parsed];
 
-      // 提取核心全文描述数据
-      const scrapedData = await page.evaluate(() => {
-        // 关闭可能的底部弹窗或提示以防遮盖 DOM 节点（如订阅弹窗、Cookie 等）
-        const closeBtns = document.querySelectorAll('.omni-close, .close-button, [aria-label="Close"], .accept-cookie');
-        closeBtns.forEach(btn => (btn as HTMLElement).click());
+      for (const node of graph) {
+        const mainEntity =
+          typeof node === 'object' && node
+            ? (node as Record<string, unknown>).mainEntity
+            : null;
+        const itemListElement = Array.isArray((mainEntity as Record<string, unknown> | null)?.itemListElement)
+          ? ((mainEntity as Record<string, unknown>).itemListElement as Array<Record<string, unknown>>)
+          : [];
 
-        // 尝试优先抓取商品特有的介绍区块（Summary等）
-        let contentEl = document.querySelector('[class*="Summary-sc"]') || 
-                        document.querySelector('#summary') || 
-                        document.querySelector('.product-details-content') ||
-                        document.querySelector('main') || 
-                        document.body;
-                        
-        // 尝试抓取大标题修正数据，详情页里的 H1 通常是最准确的产品名
-        const titleEl = document.querySelector('h1') || document.querySelector('[class*="Title-sc"]');
-        const title = titleEl ? titleEl.textContent?.trim() : '';
+        for (const entry of itemListElement) {
+          const item =
+            typeof entry.item === 'object' && entry.item
+              ? (entry.item as Record<string, unknown>)
+              : null;
+          const name = normalizeWhitespace(String(item?.name || entry.name || ''));
+          const sourceUrl = normalizeProductUrl(
+            String(item?.url || item?.['@id'] || entry.url || entry['@id'] || ''),
+          );
+          const description = normalizeWhitespace(String(item?.description || entry.description || ''));
+          const image =
+            item?.image && !Array.isArray(item.image)
+              ? String(item.image)
+              : Array.isArray(item?.image)
+                ? String(item.image[0] || '')
+                : '';
 
-        // 获取精确价格文本 (增强版：基于正则的全局盲搜)
-        // 1. 尝试特定的类名
-        let priceText = '';
-        const priceEl = document.querySelector('[class*="Price-sc"]') || 
-                        document.querySelector('[data-test-id="price"]');
-        
-        if (priceEl && priceEl.textContent?.includes('$')) {
-           priceText = priceEl.textContent.trim();
-        } else {
-           // 2. 如果基础选择器失效，扫描页面上所有包含 USD 的短文本块
-           const allText = document.body.innerText;
-           const priceMatch = allText.match(/USD\s?\d+(\.\d+)?/);
-           if (priceMatch) {
-             priceText = priceMatch[0];
-           }
+          if (!name || !sourceUrl) continue;
+
+          const pathname = new URL(sourceUrl).pathname;
+          if (!isAllowedProductPath(pathname)) continue;
+          if (seen.has(sourceUrl)) continue;
+          seen.add(sourceUrl);
+
+          results.push({
+            sourceUrl,
+            name,
+            subtitle: '',
+            coverImage: image,
+            priceText: '',
+            genderHint,
+            categoryHints: uniqueStrings([
+              genderHint === 'male' ? 'male collection' : 'female collection',
+              description,
+            ], 6),
+          });
         }
-
-        // 取正文并去除大量冗余的换行符和空行
-        const rawText = contentEl ? (contentEl as HTMLElement).innerText.replace(/\n\s*\n/g, '\n').trim() : '';
-
-        // 抓取主图 (针对 LELO 详情页常用的选择器)
-        const mainImgEl = document.querySelector('[class*="ImageWrapper-sc"] img') || 
-                          document.querySelector('.product-image img') || 
-                          document.querySelector('main img') as HTMLImageElement;
-        const mainImg = mainImgEl ? (mainImgEl as HTMLImageElement).src : '';
-
-        return { title, rawText, priceText, mainImg };
-      });
-
-      // 结合第一轮列表页和第二轮详情页的数据（详情页优先）
-      const finalTitle = scrapedData.title || item.title || 'UNKNOWN_TITLE';
-      const finalPrice = scrapedData.priceText || item.priceText || '0';
-      const finalImg = scrapedData.mainImg || item.img || '';
-
-      // --- 关键过滤：排除购物车、空页面等非产品数据 ---
-      if (finalTitle.includes('購物車') || finalTitle.includes('Shopping Cart') || finalTitle === 'UNKNOWN_TITLE') {
-        console.log(`[过滤] 检测到非产品页面或购物车节点，已自动闭屏: ${finalTitle}`);
-        continue;
       }
+    } catch {
+      // Ignore malformed JSON-LD.
+    }
+  }
 
-      console.log(`[捕获] 成功带回终局数据帧: ${finalTitle}`);
-      
+  return results;
+}
+
+async function extractListItems(page: Page, targetUrl: string) {
+  const genderHint: ListItem['genderHint'] = targetUrl.includes('for-men') ? 'male' : 'female';
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForTimeout(3000);
+  const html = await page.content();
+  return extractJsonLdListItems(html, genderHint);
+}
+
+async function extractDetailItem(page: Page) {
+  await page.waitForTimeout(2200);
+  const html = await page.content();
+
+  const getMetaContent = (key: string) => {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const patterns = [
+      new RegExp(`<meta[^>]+(?:name|property)=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+      new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${escaped}["'][^>]*>`, 'i'),
+    ];
+
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return normalizeWhitespace(match[1]);
+    }
+
+    return '';
+  };
+
+  const stripTags = (value: string) =>
+    normalizeWhitespace(
+      String(value || '')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>'),
+    );
+
+  const findFirst = (patterns: RegExp[]) => {
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return stripTags(match[1]);
+    }
+    return '';
+  };
+
+  const title = findFirst([
+    /<h1[^>]*>([\s\S]*?)<\/h1>/i,
+    /<title[^>]*>([\s\S]*?)<\/title>/i,
+  ]).replace(/\s*\|.*$/, '').trim();
+
+  const subtitle = findFirst([
+    /<p[^>]+class="[^"]*(?:subtitle|SubTitle)[^"]*"[^>]*>([\s\S]*?)<\/p>/i,
+    /<h1[^>]*>[\s\S]*?<\/h1>\s*<p[^>]*>([\s\S]*?)<\/p>/i,
+  ]);
+
+  const priceText = extractLeloPriceTextFromHtml(html) || findFirst([
+    /<[^>]+data-test-id="price"[^>]*>([\s\S]*?)<\/[^>]+>/i,
+    /<[^>]+class="[^"]*(?:Price|price)[^"]*"[^>]*>(USD[\s\d.,]+)<\/[^>]+>/i,
+    />(USD[\s\d.,]+)</i,
+  ]);
+
+  const coverImage = (() => {
+    const match = html.match(/<img[^>]+src="([^"]+)"[^>]+(?:alt="[^"]*"[^>]*class="[^"]*(?:ProductImage|ImageWrapper)|class="[^"]*(?:ProductImage|ImageWrapper)[^"]*"[^>]*alt="[^"]*")[^>]*>/i)
+      || html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i);
+    return match?.[1] ? String(match[1]) : '';
+  })();
+
+  const detailBlocks = Array.from(
+    html.matchAll(
+      /<(?:section|div)[^>]+class="[^"]*(?:Summary|summary|Description|description|Accordion|accordion)[^"]*"[^>]*>([\s\S]*?)<\/(?:section|div)>/gi,
+    ),
+  )
+    .map((match) => stripTags(match[1] || ''))
+    .filter(Boolean);
+
+  const metaDescription = getMetaContent('description') || getMetaContent('og:description');
+  const rawDescription = uniqueStrings([metaDescription, ...detailBlocks], 12).join('\n\n');
+  const categoryHints = uniqueStrings(
+    (rawDescription.match(/\b(suction|sonic|rabbit|g-spot|prostate|couples|wearable|travel)\b/gi) || []).map(String),
+    10,
+  );
+
+  return {
+    title,
+    subtitle,
+    priceText,
+    coverImage,
+    rawDescription,
+    categoryHints,
+  };
+}
+
+export async function runCrawler() {
+  console.log('--- 启动 Playwright 无头抓取引擎 [Target: LELO] ---');
+
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    locale: 'zh-TW',
+  });
+  const page = await context.newPage();
+
+  const listMap = new Map<string, ListItem>();
+
+  for (const targetUrl of TARGET_URLS) {
+    console.log(`\n[列表] 抓取分类页: ${targetUrl}`);
+    try {
+      const items = await extractListItems(page, targetUrl);
+      for (const item of items) {
+        const normalizedUrl = normalizeProductUrl(item.sourceUrl);
+        if (!normalizedUrl) continue;
+        const existing = listMap.get(normalizedUrl);
+        if (existing) {
+          const normalizedGenderHint =
+            existing.genderHint !== item.genderHint ? 'unisex' : existing.genderHint;
+          listMap.set(normalizedUrl, { ...existing, ...item, sourceUrl: normalizedUrl, genderHint: normalizedGenderHint });
+          continue;
+        }
+        listMap.set(normalizedUrl, { ...item, sourceUrl: normalizedUrl });
+      }
+      console.log(`[列表] 当前累计 ${listMap.size} 个唯一商品`);
+    } catch (error) {
+      console.error(`[列表] 抓取失败: ${targetUrl}`, error);
+    }
+  }
+
+  const targetItems = Array.from(listMap.values()).slice(0, MAX_ITEMS);
+  console.log(`\n[详情] 准备抓取 ${targetItems.length} 个 LELO 商品详情`);
+
+  const bufferData: Array<Record<string, unknown>> = [];
+
+  for (const [index, item] of targetItems.entries()) {
+    try {
+      console.log(`[详情] ${index + 1}/${targetItems.length}: ${item.sourceUrl}`);
+      await page.goto(item.sourceUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      const detail = await extractDetailItem(page);
+      const finalName = normalizeWhitespace(detail.title || item.name);
+      if (!finalName || /shopping cart|購物車/i.test(finalName)) continue;
+
       bufferData.push({
-        sourceUrl: item.href,
-        name: finalTitle,
-        priceText: finalPrice,
-        coverImage: finalImg, 
+        sourceUrl: item.sourceUrl,
+        name: finalName,
+        subtitle: normalizeWhitespace(detail.subtitle || item.subtitle),
+        priceText: normalizeWhitespace(detail.priceText || item.priceText),
+        priceCurrency: 'USD',
+        coverImage: detail.coverImage || item.coverImage,
         genderHint: item.genderHint,
-        // 截断多余的长文本，保留最核心的部分留给 LLM 洗数据
-        rawDescription: scrapedData.rawText.substring(0, 8000), 
-        imagePlaceholder: 'bg-gradient-to-br from-indigo-900/40 to-blue-900/40',
+        categoryHints: uniqueStrings([...(item.categoryHints || []), ...(detail.categoryHints || [])]),
+        rawDescription: normalizeWhitespace(detail.rawDescription).slice(0, 12000),
         isReviewed: false,
       });
-
     } catch (error) {
-      console.error(`[故障] 引力异常脱轨 ${item.href}:`, error);
+      console.error(`[详情] 抓取失败: ${item.sourceUrl}`, error);
     }
-    
-    // 强制加入人工呼吸般的停顿，避免触发反爬虫护盾
-    if (i < targetItems.length - 1) {
-      console.log(`[隐藏] 伪装静默等待 ${DELAY_BETWEEN_PAGES} 毫秒...`);
+
+    if (index < targetItems.length - 1) {
       await page.waitForTimeout(DELAY_BETWEEN_PAGES);
     }
   }
 
   await browser.close();
 
-  // 若无目录则自行创建
   const dir = path.dirname(BUFFER_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
   fs.writeFileSync(BUFFER_PATH, JSON.stringify(bufferData, null, 2));
-  
-  console.log(`\n--- 抓取任务终结 ---`);
-  console.log(`已将第一维度的混沌数据池密封至本地缓冲区: ${BUFFER_PATH}`);
-  
-  // =================自动无缝管线流水线触发=================
-  console.log(`[接力] 即将无缝移交至阶段四：通过 AI 降维清洗模块`);
+
+  console.log(`\n--- 抓取任务完成 ---`);
+  console.log(`已写入 LELO review-buffer: ${BUFFER_PATH}`);
+
   try {
-     await runCleaner();
+    await runCleaner();
   } catch (cleanerError) {
-     console.error(`[致命错误] 清洗模块流水线崩塌:`, cleanerError);
+    console.error('[致命错误] LELO cleaner 执行失败:', cleanerError);
   }
 }
 
-runCrawler().catch(console.error);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  runCrawler().catch(console.error);
+}

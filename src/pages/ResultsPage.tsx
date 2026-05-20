@@ -1052,7 +1052,7 @@ export function ResultsPage({
           disabled={isRecalibratingResults}
           className="w-full rounded-xl bg-white/5 py-4 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
         >
-          重新回答偏好问题
+          重新校准匹配
         </button>
       </div>
     </motion.div>

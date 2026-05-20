@@ -14,6 +14,7 @@ import {
   prepareUniqueBufferItemsForCleaning,
   resolvePersistedRawDescription,
 } from '../nomitang-official/cleaner-helpers.ts';
+import { resolveLovehoneyPersistenceMode } from './persistence.ts';
 
 dotenv.config();
 
@@ -449,17 +450,6 @@ export async function runCleaner() {
     cleanedData.push({ ...processedProduct, dbAction: 'pending' });
 
     try {
-      const existingProduct = await withDbRetry(`查重商品 ${canonicalName}`, () =>
-        prisma.products.findFirst({ where: { name: canonicalName } }),
-      );
-      if (existingProduct) {
-        cleanedData[cleanedData.length - 1] = { ...processedProduct, dbAction: 'skipped_duplicate_name' };
-        console.log(`[跳过] 数据库中已存在同名商品，不重复入库: ${canonicalName}`);
-        continue;
-      }
-
-      cleanedData[cleanedData.length - 1] = { ...processedProduct, dbAction: 'created' };
-
       const productPayload = {
         name: canonicalName,
         price: specs.price_rmb,
@@ -476,6 +466,47 @@ export async function runCleaner() {
         tags: specs.function_tags || [],
         competitor_id: brandId ?? null,
       };
+
+      const existingProduct = await withDbRetry(`查重商品 ${canonicalName}`, () =>
+        prisma.products.findFirst({ where: { name: canonicalName } }),
+      );
+      const persistenceMode = resolveLovehoneyPersistenceMode({
+        existingProductId: existingProduct?.id ?? null,
+      });
+
+      if (persistenceMode === 'update' && existingProduct) {
+        cleanedData[cleanedData.length - 1] = { ...processedProduct, dbAction: 'updated_existing' };
+
+        await withDbRetry(`更新商品 ${canonicalName}`, async () => {
+          await prisma.products.update({
+            where: { id: existingProduct.id },
+            data: productPayload,
+          });
+
+          await prisma.recommender_toys.updateMany({
+            where: { name: canonicalName },
+            data: {
+              price: specs.price_rmb,
+              max_db: specs.max_db ?? 40,
+              waterproof:
+                typeof specs.waterproof === 'number' && Number.isFinite(specs.waterproof) ? specs.waterproof : null,
+              appearance: mapAppearance(specs.appearance),
+              physical_form: mapPhysicalForm(specs.physical_form),
+              motor_type: mapMotorType(specs.motor_type),
+              gender: normalizedGender,
+              material: specs.material,
+              image_url: coverImage || item.imagePlaceholder || null,
+              raw_description: persistedRawDescription || null,
+              updated_at: new Date(),
+            },
+          });
+        });
+
+        console.log(`[更新] 已回填数据库中已存在的同名商品: ${canonicalName}`);
+        continue;
+      }
+
+      cleanedData[cleanedData.length - 1] = { ...processedProduct, dbAction: 'created' };
 
       await withDbRetry(`同步商品 ${canonicalName}`, async () => {
         const created = await prisma.products.create({ data: productPayload });

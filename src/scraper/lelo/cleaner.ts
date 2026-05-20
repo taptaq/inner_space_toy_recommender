@@ -1,303 +1,577 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { buildSafeDisplayName } from '../../lib/product-display-name.ts';
+import {
+  classifyLibrarySubtypeCode,
+  classifyLibraryTypeCode,
+} from '../../lib/library-product-type-classifier.ts';
+import { translateRawDescriptionToZh } from '../shared/raw-description-translator.ts';
+import {
+  extractCanonicalName,
+  hasMeaningfulEnglish,
+  isPlaceholderProductName,
+  prepareUniqueBufferItemsForCleaning,
+  resolvePersistedRawDescription,
+} from '../nomitang-official/cleaner-helpers.ts';
+import { ensureCompetitorRecord } from '../shared/competitor-registry.ts';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const BUFFER_PATH = path.resolve(__dirname, '../../data/review-buffer.json');
-const CLEANED_PATH = path.resolve(__dirname, '../../data/cleaned-data.json');
 
-// --- Prisma 7 适配器初始化开始 ---
-// 利用 pg 驱动连接数据库，并注入给 PrismaClient
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+export const BUFFER_PATH = path.resolve(__dirname, '../../data/lelo-review-buffer.json');
+export const CLEANED_PATH = path.resolve(__dirname, '../../data/lelo-cleaned-data.json');
+const RAW_TRANSLATION_CACHE_PATH = path.resolve(__dirname, '../../data/lelo-raw-description-zh-cache.json');
+const FALLBACK_USD_TO_CNY_RATE = 7.2;
+const BRAND_NAME = 'LELO';
+
+type FxSnapshot = {
+  rate: number;
+  source: string;
+  date: string | null;
+};
+
+type Gender = 'male' | 'female' | 'unisex';
+
+type CleanerBufferItem = {
+  sourceUrl?: string;
+  name?: string;
+  subtitle?: string;
+  priceText?: string | null;
+  priceUsd?: number | null;
+  originalPriceUsd?: number | null;
+  priceCurrency?: string | null;
+  coverImage?: string | null;
+  rawDescription?: string;
+  categoryHints?: unknown;
+  genderHint?: string;
+  [key: string]: unknown;
+};
+
+export type NormalizedSpecs = {
+  price_usd: number | null;
+  price_rmb: number | null;
+  original_price_usd: number | null;
+  original_price_rmb: number | null;
+  fx_rate_usd_cny: number;
+  fx_rate_source: string;
+  fx_rate_date: string | null;
+  gender: Gender;
+  material: string;
+  appearance: string;
+  physical_form: string;
+  motor_type: string;
+  waterproof: number | null;
+  max_db: number | null;
+  function_tags: string[];
+  type_code: string | null;
+  subtype_code: string | null;
+};
+
+export type CleanedRow = {
+  sourceUrl: string;
+  name: string;
+  safeDisplayName: string;
+  brand: string;
+  price: number | null;
+  coverImage: string;
+  rawDescription: string;
+  gender: Gender;
+  material: string;
+  specs: NormalizedSpecs & {
+    price_source_currency: string;
+    price_source_amount: number | null;
+  };
+  typeCode: string | null;
+  subtypeCode: string | null;
+};
+
+const pool = new pg.Pool({ connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-// --- Prisma 7 适配器初始化结束 ---
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 设置可变的 OpenAI 客户端，延迟初始化以防 Key 缺失导致崩溃
-let openai: OpenAI | null = null;
-try {
-  const primaryKey = process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY;
-  if (primaryKey) {
-    openai = new OpenAI({
-      apiKey: primaryKey,
-      baseURL: 'https://api.deepseek.com/v1',
-    });
-  }
-} catch (e) {
-  console.warn('⚠️ [Init] 初始模型客户端加载失败，将依赖兜底轨道');
+function normalizeWhitespace(value: string): string {
+  return String(value || '')
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ ]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .trim();
 }
 
-async function callGlmFallback(prompt: string) {
-  console.log('⚠️ [Fallback] 正在切换至 glm-4.6v 兜底链路...');
-  const apiKey = process.env.GLM_API_KEY;
-  if (!apiKey) throw new Error('GLM_API_KEY 未配置');
-
-  const glm = new OpenAI({
-    apiKey,
-    baseURL: 'https://open.bigmodel.cn/api/paas/v4/',
-  });
-
-  const response = await glm.chat.completions.create({
-    model: 'glm-4.6v',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.1,
-  });
-
-  return response.choices[0]?.message?.content || '{}';
+function parsePositiveNumber(value: unknown): number | null {
+  const parsed = Number(String(value ?? '').replace(/[^\d.]+/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-// --- 数据映射工具函数 (Standardizing Enums) ---
+function uniqueStrings(values: Array<string | null | undefined>, limit = 24): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
 
-// 映射性别字段以符合数据库 Check 约束
-// products 表通常要求首字母大写 ('Male', 'Female', 'Unisex')
-// recommender_toys 表要求全小写 ('male', 'female', 'unisex')
-const mapGender = (raw: string, format: 'lowercase' | 'capitalized' = 'lowercase'): string => {
-  const val = (raw || '').toLowerCase();
-  let result = 'unisex';
-  if (val.includes('female') || val.includes('女性')) result = 'female';
-  else if (val.includes('male') || val.includes('男性')) result = 'male';
-  
-  if (format === 'capitalized') {
-    return result.charAt(0).toUpperCase() + result.slice(1);
+  for (const value of values) {
+    const normalized = normalizeWhitespace(String(value || ''));
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+    if (result.length >= limit) break;
   }
-  return result; 
-};
 
-// 映射物理形态 (external | internal | composite)
-const mapPhysicalForm = (raw: string): string => {
-  const val = (raw || '').toLowerCase();
-  if (val.includes('composite') || val.includes('复合')) return 'composite';
-  if (val.includes('internal') || val.includes('内') || val.includes('入')) return 'internal';
-  return 'external';
-};
+  return result;
+}
 
-// 映射马达类型 (gentle | strong)
-const mapMotorType = (raw: string): string => {
-  const val = (raw || '').toLowerCase();
-  if (val.includes('strong') || val.includes('强')) return 'strong';
-  return 'gentle';
-};
+function hasAnyHint(text: string, hints: string[]): boolean {
+  const source = normalizeWhitespace(text).toLowerCase();
+  return hints.some((hint) => source.includes(hint.toLowerCase()));
+}
 
-// 映射外观 (high_disguise | normal)
-const mapAppearance = (raw: string): string => {
-  const val = (raw || '').toLowerCase();
-  if (val.includes('disguise') || val.includes('隐蔽') || val.includes('伪装')) return 'high_disguise';
-  return 'normal';
-};
-
-const isPlaceholderProductName = (value: string): boolean => {
+function normalizeGenderHint(value: unknown): Gender {
   const normalized = String(value || '').trim().toLowerCase();
-  if (!normalized) return true;
-  return [
-    '未知产品',
-    '未知商品',
-    '未命名产品',
-    '未命名商品',
-    '无标题',
-    'unknown product',
-  ].includes(normalized);
+  if (normalized === 'female' || normalized === 'male' || normalized === 'unisex') {
+    return normalized;
+  }
+
+  return 'female';
+}
+
+function inferMaterial(name: string, rawDescription: string): string {
+  const text = `${name}\n${rawDescription}`.toLowerCase();
+  if (/silicone|body-safe silicone|医用级硅胶|亲肤硅胶/.test(text)) return '硅胶';
+  if (/abs|plastic|polycarbonate/.test(text)) return 'ABS/硅胶复合';
+  if (/metal|steel|aluminum|铝/.test(text)) return '金属';
+  if (/latex/.test(text)) return '乳胶';
+  return '硅胶';
+}
+
+function inferAppearance(text: string): string {
+  return /travel|discreet|compact|quiet|便携|旅行|静音/i.test(text) ? 'high_disguise' : 'normal';
+}
+
+function inferPhysicalForm(text: string): string {
+  if (/dual stimulation|rabbit|g-spot.{0,12}clit|clitoral.{0,12}g-spot|内外刺激|双刺激/i.test(text)) {
+    return 'composite';
+  }
+  if (/g-spot|g spot|insertable|internal|vaginal|prostate|anal|插入|入体|阴道|前列腺/i.test(text)) {
+    return 'internal';
+  }
+  return 'external';
+}
+
+function inferMotorType(text: string): string {
+  return /powerful|intense|deep|strong|high intensity|强劲|高强度/i.test(text) ? 'strong' : 'gentle';
+}
+
+function inferWaterproof(text: string): number | null {
+  const ipxMatch = text.match(/ipx\s*([0-9])/i);
+  if (ipxMatch) return Number(ipxMatch[1]);
+  const explicitLevelMatch =
+    text.match(/waterproof\s*([0-9])/i) ||
+    text.match(/防水\s*([0-9])/i);
+  if (explicitLevelMatch) return Number(explicitLevelMatch[1]);
+  return /waterproof|100% waterproof|防水/i.test(text) ? 7 : null;
+}
+
+function inferNoiseMaxDb(text: string): number | null {
+  const match =
+    text.match(/(?:noise level|max(?:imum)? noise|sound level)\s*[:：]?\s*([0-9]{2,3})\s*d?b/i) ||
+    text.match(/([0-9]{2,3})\s*d\s*b/i) ||
+    text.match(/([0-9]{2,3})\s*分贝/);
+  if (!match?.[1]) return null;
+
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function inferFunctionTags(text: string, typeCode: string | null, subtypeCode: string | null): string[] {
+  return uniqueStrings([
+    hasAnyHint(text, ['sonic', 'suction', 'sensonic', 'air pulse', 'clitoral suction', '吮吸']) ? '吮吸刺激' : null,
+    hasAnyHint(text, ['vibrator', 'vibration', '震动', '振动']) ? '震动刺激' : null,
+    hasAnyHint(text, ['g-spot', 'g spot', 'g点']) ? 'G点刺激' : null,
+    hasAnyHint(text, ['dual stimulation', 'rabbit', '双刺激']) ? '双刺激' : null,
+    hasAnyHint(text, ['couples', 'partner', 'wearable', '情侣', '共玩']) ? '情侣共玩' : null,
+    hasAnyHint(text, ['remote', 'app control', '遥控']) ? '遥控' : null,
+    hasAnyHint(text, ['rechargeable', 'usb', 'charging', '可充电', '充电']) ? '可充电' : null,
+    hasAnyHint(text, ['waterproof', 'ipx', '防水']) ? '防水' : null,
+    hasAnyHint(text, ['quiet', 'silent', '静音']) ? '静音' : null,
+    typeCode === 'suction' && subtypeCode === 'suction_pure' ? '定点刺激' : null,
+  ]);
+}
+
+function collectClassifierTags(item: Record<string, unknown>, rawDescription: string): string[] {
+  const rawTags = Array.isArray(item.categoryHints)
+    ? item.categoryHints.filter((value): value is string => typeof value === 'string')
+    : [];
+  const signalText = `${item.name || ''}\n${item.subtitle || ''}\n${rawDescription}`;
+
+  return uniqueStrings([
+    ...rawTags,
+    hasAnyHint(signalText, ['suction', 'sonic', 'sensonic', '吮吸']) ? 'suction' : null,
+    hasAnyHint(signalText, ['rabbit']) ? 'rabbit' : null,
+    hasAnyHint(signalText, ['g-spot', 'g spot']) ? 'g_spot' : null,
+    hasAnyHint(signalText, ['clitoral', 'clitoris', '阴蒂']) ? 'clitoral' : null,
+    hasAnyHint(signalText, ['dual stimulation', '双刺激']) ? 'dual_stimulation' : null,
+    hasAnyHint(signalText, ['wearable', 'couples', '情侣']) ? 'couples' : null,
+    hasAnyHint(signalText, ['prostate', '前列腺']) ? 'prostate' : null,
+  ]);
+}
+
+const isTransientDbError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /Connection terminated|ECONNRESET|server closed the connection|terminating connection|Can't reach database|P1001|P1017/i.test(
+    message,
+  );
 };
 
-export async function runCleaner() {
-  console.log('\n======================================================');
-  console.log('--- 启动 AI 降维清洗与数据库注入模块 [Phase 4] ---');
-  console.log('======================================================');
-  
-  if (!fs.existsSync(BUFFER_PATH)) {
-    console.error('[中断] 未发现在港的数据缓冲池，请先执行爬虫动作：npx tsx src/scraper/crawler.ts');
-    return;
-  }
-
-  const rawDataStr = fs.readFileSync(BUFFER_PATH, 'utf-8');
-  let bufferData;
-  try {
-    bufferData = JSON.parse(rawDataStr);
-  } catch (e) {
-    console.error('[中断] JSON 解析失败，检查 review-buffer.json 是否完好。');
-    return;
-  }
-
-  // --- 预搜索 LELO 在 competitors 表中的 ID ---
-  let leloCompetitorId: string | null = null;
-  try {
-    const competitor = await prisma.competitors.findFirst({
-      where: { name: { contains: 'LELO', mode: 'insensitive' } }
-    });
-    if (competitor) {
-      leloCompetitorId = competitor.id;
-      console.log(`[关联] 已定位 LELO 竞品 ID: ${leloCompetitorId}`);
-    }
-  } catch (err) {
-    console.warn('[警告] 无法查询 competitors 表，将跳过外键关联。');
-  }
-
-  const cleanedData = [];
-
-  for (const item of bufferData) {
-    if (item.isReviewed) {
-      console.log(`[跳过] 商品 ${item.name} 已被标记为已审核。`);
-      continue;
-    }
-    if (isPlaceholderProductName(item.name)) {
-      console.log(`[跳过] 商品名无效 (${item.name || 'empty'})，不执行清洗与入库。`);
-      continue;
-    }
-
-    console.log(`\n[AI清洗] 正在降维萃取: ${item.name}`);
-    
-    // 全新高强度的 Prompt 模板
-    const prompt = `
-你是一个专注处理个人护理设备参数的数据拆解助手。现有抓取至 LELO 等品牌独立站的纯文本长描述，可能掺杂无用情感营销文案：
-
-【商品名称】: ${item.name}
-【原始价格抓取】: ${item.priceText}
-【原始文案描述】:
-"""
-${item.rawDescription}
-"""
-
-请你剥离其中营销成分，精准定位并提取相关的特征。结果必须是一个绝对合法的 JSON 对象。严禁返回任何 markdown 标记或中文啰嗦。
-字段和格式要求：
-{
-  "max_db": 50, // 提取最大分贝数，若无填写整数 50
-  "waterproof": 5, // 提取防水分级（如 IPX7 填7，全身水洗填7，无则填5）
-  "appearance": "normal", // 极其隐蔽(项链/口红等)填 'high_disguise'，否则 'normal'
-  "physical_form": "external", // 吮吸外置填 'external'，\u63d2\u5165填 'internal'，双效填 'composite'
-  "motor_type": "gentle", // 'strong'（强震双马达）或 'gentle'
-  "function_tags": ["防水", "定点刺激", "双马达"], // 提取最多5个核心功能关键词数组
-  "gender": "female", // 严格使用：'female'(女性向), 'male'(男性向), 'unisex'(通用/情侣)
-  "material": "亲肤硅胶", // 材质提取，如果没提及就填 "未知"
-  "price_rmb": 1200 // 将原始价格换算为纯数字的人民币预估值，无报价填 0
+async function reconnectPrisma() {
+  await prisma.$disconnect().catch(() => {});
+  await sleep(800);
+  await prisma.$connect();
 }
-`;
 
-    let resultText = '{}';
+async function ensurePrismaConnection() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (error) {
+    if (!isTransientDbError(error)) throw error;
+    console.warn('[DB] 检测到连接已断开，正在重建 Prisma 连接...');
+    await reconnectPrisma();
+  }
+}
+
+async function withDbRetry<T>(label: string, action: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      if (!openai) throw new Error("无有效的强链路客户端");
-      const response = await openai.chat.completions.create({
-        model: 'deepseek-v4-flash', 
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1, 
-      });
-      resultText = response.choices[0].message.content || '{}';
-    } catch (e) {
-       console.error(`[警告] 第一链路降维通道超载:`, (e as Error).message);
-       try {
-         resultText = await callGlmFallback(prompt);
-       } catch (fallbackError) {
-         console.error(`[故障] 双重模型链路全部中断`);
-         continue; 
-       }
-    }
-
-    try {
-      const extractJsonText = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsedSpecs = JSON.parse(extractJsonText);
-      console.log(`[萃取完毕] 价格预估: ${parsedSpecs.price_rmb}元 | 标签: ${(parsedSpecs.function_tags || []).join(',')}`);
-      
-      // 合体到内存
-      const processedProduct = {
-        name: item.name,
-        priceText: item.priceText,
-        sourceUrl: item.sourceUrl,
-        image: item.coverImage,
-        specs: parsedSpecs,
-        rawDescription: item.rawDescription
-      };
-      
-      cleanedData.push(processedProduct);
-
-      // --- 第一步：推入 `products` 表 (作为原始数据源) ---
-      console.log(`[数据库] 1/2 正在同步 \`products\` 表...`);
-      
-      const productPayload = {
-        name:          processedProduct.name,
-        price:         parsedSpecs.price_rmb > 0 ? parsedSpecs.price_rmb : null,
-        image:         processedProduct.image || null,
-        link:          processedProduct.sourceUrl,
-        specs:         parsedSpecs as any,
-        gender:        mapGender(item.genderHint || parsedSpecs.gender || parsedSpecs.targetAudience, 'capitalized'),
-        tags:          parsedSpecs.function_tags || [],
-        competitor_id: leloCompetitorId
-      };
-
-      // 查找是否已存在同名产品
-      const existingProduct = await prisma.products.findFirst({
-        where: { name: processedProduct.name }
-      });
-
-      let originalId: string;
-      if (existingProduct) {
-        const updated = await prisma.products.update({
-          where: { id: existingProduct.id },
-          data: productPayload
-        });
-        originalId = updated.id;
-        console.log(`  -> [products] 原始记录已更新 (ID: ${originalId})`);
-      } else {
-        const created = await prisma.products.create({
-          data: productPayload
-        });
-        originalId = created.id;
-        console.log(`  -> [products] 全新原始记录已创建 (ID: ${originalId})`);
-      }
-
-      // --- 第二步：推入 `recommender_toys` 表 (关联 original_id) ---
-      console.log(`[数据库] 2/2 正在同步 \`recommender_toys\` 表...`);
-
-      const itemPayload = {
-         original_id:   originalId, // 绑定溯源 ID
-         name:          processedProduct.name,
-         safe_display_name: buildSafeDisplayName(processedProduct.name),
-         brand:         'LELO',                                          
-         price:         parsedSpecs.price_rmb > 0 ? parsedSpecs.price_rmb : null,                                        
-         max_db:        typeof parsedSpecs.max_db === 'number' ? parsedSpecs.max_db : (parsedSpecs.maxDb || null),
-         waterproof:    typeof parsedSpecs.waterproof === 'number' ? parsedSpecs.waterproof : null,
-         appearance:    mapAppearance(parsedSpecs.appearance),
-         physical_form: mapPhysicalForm(parsedSpecs.physical_form || parsedSpecs.physicalForm),
-         motor_type:    mapMotorType(parsedSpecs.motor_type || parsedSpecs.motorType),
-         gender:        mapGender(item.genderHint || parsedSpecs.gender || parsedSpecs.targetAudience || 'unisex'),
-         material:      parsedSpecs.material     || '未知',
-         image_url:     processedProduct.image   || null,
-         raw_description: item.rawDescription || null,
-         updated_at:    new Date(),
-      };
-
-      // 【去重策略】: 清除同名记录后\u63d2\u5165
-      await prisma.recommender_toys.deleteMany({
-         where: { name: item.name }
-      });
-      
-      await prisma.recommender_toys.create({ data: itemPayload });
-      console.log(`  -> [recommender_toys] 推荐器标准模型已就绪 (Linked to ${originalId})`);
-
-    } catch (e) {
-       console.error(`[故障] JSON解析失败或数据库推入错误:`, e);
+      await ensurePrismaConnection();
+      return await action();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientDbError(error) || attempt === 3) break;
+      console.warn(`[DB] ${label} 遇到瞬断，重连后重试 (${attempt}/3)...`);
+      await reconnectPrisma();
+      await sleep(1000 * attempt);
     }
   }
 
-  // 持久化存储清洗的备份
+  throw lastError;
+}
+
+export function resolveRmbPrice(usd: number | null, rate = FALLBACK_USD_TO_CNY_RATE): number | null {
+  if (!Number.isFinite(Number(usd)) || Number(usd) <= 0) return null;
+  return Math.round(Number(usd) * rate);
+}
+
+async function refreshUsdToCnyRate(): Promise<FxSnapshot> {
+  try {
+    const response = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=CNY', {
+      headers: { accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const payload = (await response.json()) as { date?: string; rates?: Record<string, number> };
+    const liveRate = Number(payload?.rates?.CNY);
+    if (!Number.isFinite(liveRate) || liveRate <= 0) throw new Error('missing CNY rate');
+
+    return {
+      rate: liveRate,
+      source: 'frankfurter',
+      date: String(payload?.date || '').trim() || null,
+    };
+  } catch (error) {
+    console.warn(`[汇率] 实时汇率获取失败，回退到固定汇率 USD/CNY=${FALLBACK_USD_TO_CNY_RATE}:`, error);
+    return {
+      rate: FALLBACK_USD_TO_CNY_RATE,
+      source: 'fallback',
+      date: null,
+    };
+  }
+}
+
+function finalizeTypeCode(
+  initialTypeCode: string | null,
+  initialSubtypeCode: string | null,
+  text: string,
+): { typeCode: string | null; subtypeCode: string | null } {
+  if (initialTypeCode && initialTypeCode !== 'unknown' && initialSubtypeCode) {
+    return { typeCode: initialTypeCode, subtypeCode: initialSubtypeCode };
+  }
+
+  if (initialTypeCode === 'dual_stimulation') {
+    if (hasAnyHint(text, ['suction', 'sonic', 'sensonic', 'clitoral']) && hasAnyHint(text, ['g-spot', 'insertable', 'internal'])) {
+      return { typeCode: 'dual_stimulation', subtypeCode: 'suction_dual' };
+    }
+    if (hasAnyHint(text, ['rabbit'])) {
+      return { typeCode: 'dual_stimulation', subtypeCode: 'rabbit_dual' };
+    }
+    return { typeCode: 'dual_stimulation', subtypeCode: 'multi_head_dual' };
+  }
+
+  if (hasAnyHint(text, ['suction', 'sonic', 'sensonic', 'clitoral']) && hasAnyHint(text, ['g-spot', 'insertable', 'internal', '双刺激', 'dual stimulation'])) {
+    return { typeCode: 'dual_stimulation', subtypeCode: 'suction_dual' };
+  }
+
+  if (hasAnyHint(text, ['suction', 'sonic', 'sensonic', 'air pulse', 'clitoral suction', '吮吸'])) {
+    return { typeCode: 'suction', subtypeCode: 'suction_pure' };
+  }
+
+  if (hasAnyHint(text, ['rabbit', 'dual stimulation', '双刺激'])) {
+    return { typeCode: 'dual_stimulation', subtypeCode: 'rabbit_dual' };
+  }
+
+  if (hasAnyHint(text, ['g-spot', 'g spot', 'insertable', 'internal', '插入', '入体'])) {
+    return { typeCode: 'insertable', subtypeCode: 'gspot_insertable' };
+  }
+
+  if (hasAnyHint(text, ['prostate', 'p-spot', '前列腺'])) {
+    return { typeCode: 'prostate', subtypeCode: 'prostate_vibe' };
+  }
+
+  if (hasAnyHint(text, ['couples', 'partner', 'wearable', '情侣'])) {
+    return { typeCode: 'couples', subtypeCode: 'external_couples' };
+  }
+
+  if (hasAnyHint(text, ['vibrator', 'vibration', 'wand', 'massager', '震动', '振动'])) {
+    return { typeCode: 'external_vibe', subtypeCode: 'bullet_vibe' };
+  }
+
+  return { typeCode: initialTypeCode, subtypeCode: initialSubtypeCode };
+}
+
+export function buildNormalizedSpecs(item: Record<string, unknown>, fx: FxSnapshot): NormalizedSpecs {
+  const rawDescription = normalizeWhitespace(String(item.rawDescription || ''));
+  const priceUsd = parsePositiveNumber(item.priceUsd ?? item.price ?? item.priceText ?? null);
+  const originalPriceUsd = parsePositiveNumber(item.originalPriceUsd ?? null);
+  const gender = normalizeGenderHint(item.genderHint);
+  const tags = collectClassifierTags(item, rawDescription);
+  const signalText = [item.name, item.subtitle, rawDescription, ...tags].filter(Boolean).join('\n');
+  const classifierInput = {
+    gender,
+    physicalForm: inferPhysicalForm(signalText),
+    name: String(item.name || ''),
+    rawDescription,
+    tags,
+  };
+  const classifiedTypeCode = classifyLibraryTypeCode(classifierInput);
+  const classifiedSubtypeCode = classifyLibrarySubtypeCode({
+    ...classifierInput,
+    typeCode: classifiedTypeCode,
+  });
+  const finalClassification = finalizeTypeCode(classifiedTypeCode, classifiedSubtypeCode, signalText);
+  const explicitMaxDb = inferNoiseMaxDb(signalText);
+  const explicitWaterproof = inferWaterproof(signalText);
+  const looksPoweredDevice =
+    finalClassification.typeCode != null &&
+    finalClassification.typeCode !== 'unknown' &&
+    !hasAnyHint(signalText, ['condom', '避孕套', 'massage candle', '润滑', 'cleaner', '保湿液']);
+
+  return {
+    price_usd: priceUsd,
+    price_rmb: resolveRmbPrice(priceUsd, fx.rate),
+    original_price_usd: originalPriceUsd,
+    original_price_rmb: resolveRmbPrice(originalPriceUsd, fx.rate),
+    fx_rate_usd_cny: fx.rate,
+    fx_rate_source: fx.source,
+    fx_rate_date: fx.date,
+    gender,
+    material: inferMaterial(String(item.name || ''), rawDescription),
+    appearance: inferAppearance(signalText),
+    physical_form: inferPhysicalForm(signalText),
+    motor_type: inferMotorType(signalText),
+    waterproof: explicitWaterproof ?? (looksPoweredDevice ? 7 : null),
+    max_db: explicitMaxDb ?? (looksPoweredDevice ? 50 : null),
+    function_tags: inferFunctionTags(signalText, finalClassification.typeCode, finalClassification.subtypeCode),
+    type_code: finalClassification.typeCode,
+    subtype_code: finalClassification.subtypeCode,
+  };
+}
+
+function formatLeloRawDescription(input: string): string {
+  const normalized = String(input || '').replace(/\r/g, '\n');
+  if (!normalized.trim()) return '';
+
+  return normalized
+    .replace(
+      /\s*(Features|Details|How to use|Materials|Specifications|Description|Overview|What makes it special)\s*:?/gi,
+      '\n$1: ',
+    )
+    .replace(/\s+(?=https?:\/\/)/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+async function translateForPersistence(rawDescription: string, canonicalName: string): Promise<string> {
+  if (!hasMeaningfulEnglish(rawDescription)) {
+    return formatLeloRawDescription(rawDescription);
+  }
+
+  try {
+    const translatedRawDescription = await translateRawDescriptionToZh(rawDescription, {
+      cachePath: RAW_TRANSLATION_CACHE_PATH,
+      logLabel: canonicalName,
+    });
+
+    const finalizedRawDescription = resolvePersistedRawDescription(translatedRawDescription, rawDescription);
+    return formatLeloRawDescription(finalizedRawDescription);
+  } catch (error) {
+    console.warn(`[翻译] ${canonicalName} 翻译失败，保留原始描述。`, error);
+    return formatLeloRawDescription(rawDescription);
+  }
+}
+
+export async function runCleaner(): Promise<CleanedRow[]> {
+  if (!fs.existsSync(BUFFER_PATH)) {
+    console.error('[中断] 未发现 LELO review-buffer。');
+    return [];
+  }
+
+  const bufferData = JSON.parse(fs.readFileSync(BUFFER_PATH, 'utf8')) as Array<Record<string, unknown>>;
+  if (bufferData.length === 0) {
+    const dir = path.dirname(CLEANED_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CLEANED_PATH, JSON.stringify([], null, 2));
+    return [];
+  }
+
+  const prepared = prepareUniqueBufferItemsForCleaning(bufferData);
+  const fx = await refreshUsdToCnyRate();
+  const cleanedRows: CleanedRow[] = [];
+  let brandId: string | null = null;
+
+  try {
+    brandId = await ensureCompetitorRecord({
+      prisma,
+      withDbRetry,
+      brandName: BRAND_NAME,
+    });
+  } catch (error) {
+    console.warn('[警告] competitors 关联失败，将继续非关联入库。', error);
+  }
+
+  for (const item of prepared.items as CleanerBufferItem[]) {
+    const canonicalName = normalizeWhitespace(
+      extractCanonicalName(String(item.rawDescription || ''), String(item.name || '')),
+    );
+    if (isPlaceholderProductName(canonicalName)) continue;
+
+    const persistedRawDescription = await translateForPersistence(String(item.rawDescription || ''), canonicalName);
+    const specs = buildNormalizedSpecs(
+      {
+        ...item,
+        name: canonicalName,
+        rawDescription: persistedRawDescription,
+      },
+      fx,
+    );
+
+    const cleanedRow: CleanedRow = {
+      sourceUrl: String(item.sourceUrl || ''),
+      name: canonicalName,
+      safeDisplayName: buildSafeDisplayName(canonicalName),
+      brand: BRAND_NAME,
+      price: specs.price_rmb,
+      coverImage: String(item.coverImage || ''),
+      rawDescription: persistedRawDescription,
+      gender: specs.gender,
+      material: specs.material,
+      specs: {
+        ...specs,
+        price_source_currency: normalizeWhitespace(String(item.priceCurrency || 'USD')) || 'USD',
+        price_source_amount: specs.price_usd,
+      },
+      typeCode: specs.type_code,
+      subtypeCode: specs.subtype_code,
+    };
+
+    cleanedRows.push(cleanedRow);
+
+    const productPayload = {
+      name: canonicalName,
+      price: specs.price_rmb,
+      image: cleanedRow.coverImage || null,
+      link: cleanedRow.sourceUrl || null,
+      specs: {
+        ...cleanedRow.specs,
+        rawDescription: persistedRawDescription || null,
+      } as any,
+      gender: specs.gender.charAt(0).toUpperCase() + specs.gender.slice(1),
+      tags: specs.function_tags,
+      competitor_id: brandId ?? undefined,
+    };
+
+    const toyPayload = {
+      name: canonicalName,
+      safe_display_name: cleanedRow.safeDisplayName,
+      brand: BRAND_NAME,
+      price: specs.price_rmb,
+      max_db: specs.max_db,
+      waterproof: specs.waterproof,
+      appearance: specs.appearance,
+      physical_form: specs.physical_form,
+      motor_type: specs.motor_type,
+      gender: specs.gender,
+      material: specs.material,
+      image_url: cleanedRow.coverImage || null,
+      raw_description: persistedRawDescription || null,
+      type_code: specs.type_code,
+      subtype_code: specs.subtype_code,
+      updated_at: new Date(),
+    };
+
+    try {
+      await withDbRetry(`同步商品 ${canonicalName}`, async () => {
+        const existingProduct = await prisma.products.findFirst({ where: { name: canonicalName } });
+        let originalId: string;
+        if (existingProduct) {
+          const updated = await prisma.products.update({ where: { id: existingProduct.id }, data: productPayload });
+          originalId = updated.id;
+        } else {
+          const created = await prisma.products.create({ data: productPayload });
+          originalId = created.id;
+        }
+
+        await prisma.recommender_toys.deleteMany({ where: { name: canonicalName } });
+        await prisma.recommender_toys.create({
+          data: {
+            original_id: originalId,
+            ...toyPayload,
+          },
+        });
+      });
+    } catch (error) {
+      console.error(`[故障] 数据处理失败: ${canonicalName}`, error);
+    }
+  }
+
   const dir = path.dirname(CLEANED_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(CLEANED_PATH, JSON.stringify(cleanedData, null, 2));
-  
-  await prisma.$disconnect();
-  console.log(`\n--- 所有清洗入库任务已完美终结 ---`);
+  fs.writeFileSync(CLEANED_PATH, JSON.stringify(cleanedRows, null, 2));
+  await prisma.$disconnect().catch(() => {});
+  console.log(`[clean] cleaned-data 已写入 ${cleanedRows.length} 条: ${CLEANED_PATH}`);
+  return cleanedRows;
 }
 
-// 兼容原来的手动单独运行方式
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  runCleaner().catch(err => {
-    console.error(err);
-    prisma.$disconnect();
+  runCleaner().catch(async (error) => {
+    console.error('[clean] LELO cleaner 失败:', error);
+    await prisma.$disconnect().catch(() => {});
+    process.exitCode = 1;
   });
 }
