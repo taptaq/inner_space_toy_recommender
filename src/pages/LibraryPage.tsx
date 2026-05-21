@@ -12,6 +12,10 @@ import {
   sanitizeLibrarySubtypeSelection,
   sanitizeLibraryTypeSelection,
   type LibraryAudienceGender,
+  type LibrarySelectableTypeCode,
+  type LibrarySubtypeCode,
+  type LibrarySubtypeSelection,
+  type LibraryTypeSelection,
 } from "../lib/library-product-types.ts";
 import {
   resolveLibrarySubtypeCode,
@@ -52,6 +56,81 @@ function resolveProductLibrarySubtypeCode(product: Product, typeCode: string) {
     rawDescription: product.rawDescription ?? null,
     tags: product.tags ?? [],
   });
+}
+
+function getProductsMatchingLibraryGender(
+  products: Product[],
+  gender: LibraryAudienceGender,
+) {
+  if (gender === "all") return products;
+  return products.filter((product) => product.gender === gender);
+}
+
+function getAvailableLibraryTypeCodes(
+  products: Product[],
+  gender: LibraryAudienceGender,
+): LibrarySelectableTypeCode[] {
+  const allowedTypeCodes = getAllowedLibraryTypeCodes(gender);
+  const allowedTypeCodeSet = new Set<string>(allowedTypeCodes);
+  const presentTypeCodeSet = new Set<string>();
+
+  for (const product of getProductsMatchingLibraryGender(products, gender)) {
+    const typeCode = resolveProductLibraryTypeCode(product);
+    if (allowedTypeCodeSet.has(typeCode)) {
+      presentTypeCodeSet.add(typeCode);
+    }
+  }
+
+  return allowedTypeCodes.filter((typeCode) => presentTypeCodeSet.has(typeCode));
+}
+
+function sanitizeAvailableLibraryTypeSelection(
+  type: string,
+  gender: LibraryAudienceGender,
+  availableTypeCodes: LibrarySelectableTypeCode[],
+): LibraryTypeSelection {
+  const sanitizedType = sanitizeLibraryTypeSelection(type, gender);
+  if (sanitizedType === "all") return "all";
+  return availableTypeCodes.includes(sanitizedType) ? sanitizedType : "all";
+}
+
+function getAvailableLibrarySubtypeCodes(
+  products: Product[],
+  gender: LibraryAudienceGender,
+  type: LibraryTypeSelection,
+): LibrarySubtypeCode[] {
+  if (type === "all") return [];
+
+  const allowedSubtypeCodes = getAllowedLibrarySubtypeCodes(gender, type);
+  const allowedSubtypeCodeSet = new Set<string>(allowedSubtypeCodes);
+  const presentSubtypeCodeSet = new Set<string>();
+
+  for (const product of getProductsMatchingLibraryGender(products, gender)) {
+    const productTypeCode = resolveProductLibraryTypeCode(product);
+    if (productTypeCode !== type) continue;
+
+    const subtypeCode = resolveProductLibrarySubtypeCode(product, productTypeCode);
+    if (allowedSubtypeCodeSet.has(subtypeCode)) {
+      presentSubtypeCodeSet.add(subtypeCode);
+    }
+  }
+
+  return allowedSubtypeCodes.filter((subtypeCode) =>
+    presentSubtypeCodeSet.has(subtypeCode),
+  );
+}
+
+function sanitizeAvailableLibrarySubtypeSelection(
+  subtype: string,
+  gender: LibraryAudienceGender,
+  type: LibraryTypeSelection,
+  availableSubtypeCodes: LibrarySubtypeCode[],
+): LibrarySubtypeSelection {
+  const sanitizedSubtype = sanitizeLibrarySubtypeSelection(subtype, gender, type);
+  if (sanitizedSubtype === "all") return "all";
+  return availableSubtypeCodes.includes(sanitizedSubtype)
+    ? sanitizedSubtype
+    : "all";
 }
 
 function LibraryFilterSelect({
@@ -220,19 +299,25 @@ export function LibraryPage({
     filterGender === "female" || filterGender === "male" || filterGender === "unisex"
       ? filterGender
       : "all";
-  const allowedTypeCodes = getAllowedLibraryTypeCodes(normalizedFilterGender);
-  const effectiveFilterType = sanitizeLibraryTypeSelection(
-    filterType,
+  const availableTypeCodes = getAvailableLibraryTypeCodes(
+    products,
     normalizedFilterGender,
   );
-  const allowedSubtypeCodes = getAllowedLibrarySubtypeCodes(
+  const effectiveFilterType = sanitizeAvailableLibraryTypeSelection(
+    filterType,
+    normalizedFilterGender,
+    availableTypeCodes,
+  );
+  const availableSubtypeCodes = getAvailableLibrarySubtypeCodes(
+    products,
     normalizedFilterGender,
     effectiveFilterType,
   );
-  const effectiveFilterSubtype = sanitizeLibrarySubtypeSelection(
+  const effectiveFilterSubtype = sanitizeAvailableLibrarySubtypeSelection(
     filterSubtype,
     normalizedFilterGender,
     effectiveFilterType,
+    availableSubtypeCodes,
   );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -365,7 +450,7 @@ export function LibraryPage({
                 onChange={onFilterTypeChange}
                 options={[
                   { value: "all", label: "全部类型" },
-                  ...allowedTypeCodes.map((typeCode) => ({
+                  ...availableTypeCodes.map((typeCode) => ({
                     value: typeCode,
                     label: getLibraryTypeLabel(typeCode),
                   })),
@@ -373,7 +458,7 @@ export function LibraryPage({
               />
             </div>
 
-            {allowedSubtypeCodes.length > 0 && (
+            {availableSubtypeCodes.length > 0 && (
               <div className="space-y-2">
                 <label className={libraryFilterLabelClassName}>
                   类型细分
@@ -383,7 +468,7 @@ export function LibraryPage({
                   onChange={onFilterSubtypeChange}
                   options={[
                     { value: "all", label: "全部细分" },
-                    ...allowedSubtypeCodes.map((subtypeCode) => ({
+                    ...availableSubtypeCodes.map((subtypeCode) => ({
                       value: subtypeCode,
                       label: getLibrarySubtypeLabel(subtypeCode),
                     })),

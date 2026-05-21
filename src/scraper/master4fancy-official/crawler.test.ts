@@ -1029,11 +1029,11 @@ test('orchestrateMaster4FancyDetailOcr skips 404 images with concise logging and
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
   const originalGlm = process.env.GLM_API_KEY;
-  const originalQwen = process.env.QWEN_API_KEY;
+  const originalMoonshot = process.env.MOONSHOT_API_KEY;
   const warnings: string[] = [];
 
   delete process.env.GLM_API_KEY;
-  delete process.env.QWEN_API_KEY;
+  delete process.env.MOONSHOT_API_KEY;
   console.warn = (...args: unknown[]) => {
     warnings.push(args.map((value) => String(value)).join(' '));
   };
@@ -1077,10 +1077,10 @@ test('orchestrateMaster4FancyDetailOcr skips 404 images with concise logging and
     } else {
       process.env.GLM_API_KEY = originalGlm;
     }
-    if (originalQwen == null) {
-      delete process.env.QWEN_API_KEY;
+    if (originalMoonshot == null) {
+      delete process.env.MOONSHOT_API_KEY;
     } else {
-      process.env.QWEN_API_KEY = originalQwen;
+      process.env.MOONSHOT_API_KEY = originalMoonshot;
     }
   }
 });

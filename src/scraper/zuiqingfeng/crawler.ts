@@ -201,15 +201,15 @@ function getListCardLocator(page: any, item: any) {
 }
 
 /**
- * 使用 Qwen VL 对一组图片进行多图合并分析
+ * 使用 Kimi k2.6 对一组图片进行多图合并分析
  */
-async function ocrWithQwenVL(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_PROMPT): Promise<string> {
-  const apiKey = process.env.QWEN_API_KEY;
-  if (!apiKey) throw new Error('QWEN_API_KEY 未配置');
+async function ocrWithKimiVision(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_PROMPT): Promise<string> {
+  const apiKey = process.env.MOONSHOT_API_KEY;
+  if (!apiKey) throw new Error('MOONSHOT_API_KEY 未配置');
 
   const openai = new OpenAI({
     apiKey,
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    baseURL: process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1',
   });
 
   const content: any[] = [{ type: 'text', text: prompt }];
@@ -218,12 +218,13 @@ async function ocrWithQwenVL(imageUrls: string[], prompt: string = TOY_DETAIL_OC
   });
 
   const response = await openai.chat.completions.create({
-    model: 'qwen-vl-plus',
+    model: 'kimi-k2.6',
     messages: [{ role: 'user', content }],
-    temperature: 0.1,
+    temperature: 0.6,
   });
 
-  return response.choices[0]?.message?.content || '';
+  const message = response.choices[0]?.message as any;
+  return message?.content || message?.reasoning_content || '';
 }
 
 /**
@@ -250,29 +251,30 @@ async function ocrWithGLMV(imageUrls: string[], prompt: string = TOY_DETAIL_OCR_
     temperature: 0.1,
   });
 
-  return response.choices[0]?.message?.content || '';
+  const message = response.choices[0]?.message as any;
+  return message?.content || message?.reasoning_content || '';
 }
 
 /**
- * 视觉识别编排器：普通商品 GLM 优先；服饰类图片更容易触发 GLM 安全拦截，改为 Qwen 优先。
+ * 视觉识别编排器：普通商品 GLM 优先；服饰类图片更容易触发 GLM 安全拦截，改为 Kimi 优先。
  */
 async function orchestrateOCR(
   imageUrls: string[],
   prompt: string = TOY_DETAIL_OCR_PROMPT,
-  preferQwenFirst = false,
+  preferKimiFirst = false,
 ): Promise<string> {
-  if (preferQwenFirst) {
-    console.log(`  [识别] 启动 Qwen-VL 进行服饰类详情解析...`);
+  if (preferKimiFirst) {
+    console.log(`  [识别] 启动 Kimi k2.6 进行服饰类详情解析...`);
     try {
-      const qwenResult = await ocrWithQwenVL(imageUrls, prompt);
-      if (qwenResult && qwenResult.length > 20) {
-        console.log('  [识别] Qwen-VL 服饰模板解析成功。');
-        console.log('  [OCR 结果回显]:\n------------------------------------------------\n' + qwenResult + '\n------------------------------------------------');
-        return qwenResult;
+      const kimiResult = await ocrWithKimiVision(imageUrls, prompt);
+      if (kimiResult && kimiResult.length > 20) {
+        console.log('  [识别] Kimi k2.6 服饰模板解析成功。');
+        console.log('  [OCR 结果回显]:\n------------------------------------------------\n' + kimiResult + '\n------------------------------------------------');
+        return kimiResult;
       }
-      throw new Error('Qwen 返回内容过短或为空');
+      throw new Error('Kimi 返回内容过短或为空');
     } catch (err: any) {
-      console.warn(`  [告警] Qwen-VL 解析中断 (${err.message})，尝试 GLM-4V 兜底...`);
+      console.warn(`  [告警] Kimi k2.6 解析中断 (${err.message})，尝试 GLM-4V 兜底...`);
     }
   }
 
@@ -286,11 +288,11 @@ async function orchestrateOCR(
     }
     throw new Error('GLM 返回内容过短或为空');
   } catch (err: any) {
-    console.warn(`  [告警] GLM-4V 解析中断 (${err.message})，正在由于 Qwen-VL 执行兜底方案...`);
-    const qwenResult = await ocrWithQwenVL(imageUrls, prompt);
-    console.log('  [识别] Qwen-VL 兜底解析完成。');
-    console.log('  [OCR 结果回显]:\n------------------------------------------------\n' + qwenResult + '\n------------------------------------------------');
-    return qwenResult;
+    console.warn(`  [告警] GLM-4V 解析中断 (${err.message})，正在由于 Kimi k2.6 执行兜底方案...`);
+    const kimiResult = await ocrWithKimiVision(imageUrls, prompt);
+    console.log('  [识别] Kimi k2.6 兜底解析完成。');
+    console.log('  [OCR 结果回显]:\n------------------------------------------------\n' + kimiResult + '\n------------------------------------------------');
+    return kimiResult;
   }
 }
 
@@ -304,10 +306,10 @@ async function rescueNumericPriceFromImage(imageDataUrl: string): Promise<number
     if (numeric !== null) return numeric;
     throw new Error('GLM 未识别出数字价格');
   } catch (err: any) {
-    console.warn(`  [列表价格补救] GLM 失败 (${err.message})，改用 Qwen-VL...`);
-    const result = await ocrWithQwenVL([imageDataUrl], LIST_PRICE_OCR_PROMPT);
+    console.warn(`  [列表价格补救] GLM 失败 (${err.message})，改用 Kimi k2.6...`);
+    const result = await ocrWithKimiVision([imageDataUrl], LIST_PRICE_OCR_PROMPT);
     const numeric = parsePriceNumber(result);
-    console.log(`  [列表价格补救] Qwen 返回: ${result.trim()} -> ${numeric ?? '未识别'}`);
+    console.log(`  [列表价格补救] Kimi 返回: ${result.trim()} -> ${numeric ?? '未识别'}`);
     return numeric;
   }
 }
@@ -332,7 +334,8 @@ async function textFallbackWithDeepSeek(pageText: string): Promise<string> {
     temperature: 0.1,
   });
 
-  return response.choices[0]?.message?.content || '';
+  const message = response.choices[0]?.message as any;
+  return message?.content || message?.reasoning_content || '';
 }
 
 /**

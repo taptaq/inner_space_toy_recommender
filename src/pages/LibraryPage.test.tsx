@@ -137,7 +137,7 @@ test("library page enables reset button once any filter is active", () => {
   );
 });
 
-test("library page shows only male type options when male gender is selected", () => {
+test("library page shows only in-stock male type options when male gender is selected", () => {
   const html = renderToStaticMarkup(
     <LibraryPage
       allProducts={[
@@ -168,8 +168,8 @@ test("library page shows only male type options when male gender is selected", (
 
   assert.match(html, /类型/);
   assert.match(html, /飞机杯/);
-  assert.match(html, /前列腺探索/);
-  assert.match(html, /护理与周边/);
+  assert.doesNotMatch(html, /前列腺探索/);
+  assert.doesNotMatch(html, /护理与周边/);
   assert.doesNotMatch(html, /吮吸类/);
 });
 
@@ -217,8 +217,8 @@ test("library page filters care accessory products by subtype", () => {
 
   assert.match(html, /护理与周边/);
   assert.match(html, /润滑护理/);
-  assert.match(html, /避孕套/);
   assert.match(html, /内衣服饰/);
+  assert.doesNotMatch(html, /避孕套/);
   assert.match(html, /Water-Based Lubricant 100ml/);
   assert.doesNotMatch(html, /Lace Bodysuit/);
 });
@@ -465,7 +465,7 @@ test("library page product grid and back-to-top affordance stay mobile-friendly"
   assert.match(source, /sm:bottom-8 sm:right-8/);
 });
 
-test("library page shows subtype options only after a supported top-level type is selected", () => {
+test("library page shows only in-stock subtype options after a supported top-level type is selected", () => {
   const html = renderToStaticMarkup(
     <LibraryPage
       allProducts={[
@@ -502,7 +502,7 @@ test("library page shows subtype options only after a supported top-level type i
 
   assert.match(html, /类型细分/);
   assert.match(html, /兔耳双刺激/);
-  assert.match(html, /双头多点/);
+  assert.doesNotMatch(html, /双头多点/);
 });
 
 test("library page brand options follow origin filter", () => {
@@ -617,7 +617,54 @@ test("library page shows male subtype options for masturbator products", () => {
 
   assert.match(html, /类型细分/);
   assert.match(html, /互动杯/);
-  assert.match(html, /震动杯/);
+  assert.doesNotMatch(html, /震动杯/);
+});
+
+test("library page derives type options from loaded products while keeping taxonomy labels", () => {
+  const html = renderToStaticMarkup(
+    <LibraryPage
+      allProducts={[
+        makeProduct({
+          id: "s1",
+          name: "Suction One",
+          gender: "female",
+          typeCode: "suction",
+          subtypeCode: "suction_pure",
+        }),
+        makeProduct({
+          id: "m1",
+          name: "Cup One",
+          gender: "male",
+          typeCode: "masturbator",
+          subtypeCode: "interactive_masturbator",
+        }),
+      ]}
+      filterGender="all"
+      filterType="all"
+      filterSubtype="all"
+      filterBrand="all"
+      filterOrigin="all"
+      filterMaterial="all"
+      filterPriceRange="all"
+      filterMaxDb={70}
+      isLoading={false}
+      error={null}
+      onReload={() => {}}
+      onFilterGenderChange={() => {}}
+      onFilterTypeChange={() => {}}
+      onFilterSubtypeChange={() => {}}
+      onFilterBrandChange={() => {}}
+      onFilterOriginChange={() => {}}
+      onFilterMaterialChange={() => {}}
+      onFilterPriceRangeChange={() => {}}
+      onFilterMaxDbChange={() => {}}
+      onBack={() => {}}
+    />,
+  );
+
+  assert.match(html, /吮吸类/);
+  assert.match(html, /飞机杯/);
+  assert.doesNotMatch(html, /双刺激/);
 });
 
 test("library page filters products by selected subtype code", () => {

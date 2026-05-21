@@ -243,13 +243,13 @@ async function fetchImageAsDataUrl(url: string): Promise<Master4FancyOcrImageFet
   }
 }
 
-async function ocrWithQwenVL(imageInputs: string[], prompt: string): Promise<string> {
-  const apiKey = process.env.QWEN_API_KEY;
-  if (!apiKey) throw new Error('QWEN_API_KEY 未配置');
+async function ocrWithKimiVision(imageInputs: string[], prompt: string): Promise<string> {
+  const apiKey = process.env.MOONSHOT_API_KEY;
+  if (!apiKey) throw new Error('MOONSHOT_API_KEY 未配置');
 
   const openai = new OpenAI({
     apiKey,
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    baseURL: process.env.MOONSHOT_BASE_URL || 'https://api.moonshot.cn/v1',
   });
 
   const content: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [
@@ -260,12 +260,13 @@ async function ocrWithQwenVL(imageInputs: string[], prompt: string): Promise<str
   });
 
   const response = await openai.chat.completions.create({
-    model: 'qwen-vl-plus',
+    model: 'kimi-k2.6',
     messages: [{ role: 'user', content }],
-    temperature: 0.1,
+    temperature: 0.6,
   });
 
-  return String(response.choices[0]?.message?.content || '').trim();
+  const message = response.choices[0]?.message as any;
+  return String(message?.content || message?.reasoning_content || '').trim();
 }
 
 async function ocrWithGLMV(imageInputs: string[], prompt: string): Promise<string> {
@@ -290,7 +291,8 @@ async function ocrWithGLMV(imageInputs: string[], prompt: string): Promise<strin
     temperature: 0.1,
   });
 
-  return String(response.choices[0]?.message?.content || '').trim();
+  const message = response.choices[0]?.message as any;
+  return String(message?.content || message?.reasoning_content || '').trim();
 }
 
 export async function orchestrateMaster4FancyDetailOcr(
@@ -313,7 +315,7 @@ export async function orchestrateMaster4FancyDetailOcr(
   const imageInputs = imageFetchResults
     .map((result) => result.dataUrl)
     .filter((value): value is string => Boolean(value));
-  if (!process.env.GLM_API_KEY && !process.env.QWEN_API_KEY) {
+  if (!process.env.GLM_API_KEY && !process.env.MOONSHOT_API_KEY) {
     return {
       ocrText: '',
       reachableImageUrls,
@@ -338,20 +340,20 @@ export async function orchestrateMaster4FancyDetailOcr(
     }
     throw new Error('GLM 返回内容过短或为空');
   } catch (error: any) {
-    console.warn(`[master4fancy-official][OCR] GLM-4.6V 失败 (${error?.message || error})，尝试 Qwen-VL...`);
+    console.warn(`[master4fancy-official][OCR] GLM-4.6V 失败 (${error?.message || error})，尝试 Kimi k2.6...`);
   }
 
   try {
-    const qwenResult = await ocrWithQwenVL(imageInputs, prompt);
-    if (qwenResult.length >= 20) {
+    const kimiResult = await ocrWithKimiVision(imageInputs, prompt);
+    if (kimiResult.length >= 20) {
       return {
-        ocrText: qwenResult,
+        ocrText: kimiResult,
         reachableImageUrls,
       };
     }
-    throw new Error('Qwen 返回内容过短或为空');
+    throw new Error('Kimi 返回内容过短或为空');
   } catch (error) {
-    console.warn(`[master4fancy-official][OCR] Qwen-VL 失败: ${error}`);
+    console.warn(`[master4fancy-official][OCR] Kimi k2.6 失败: ${error}`);
     return {
       ocrText: '',
       reachableImageUrls,

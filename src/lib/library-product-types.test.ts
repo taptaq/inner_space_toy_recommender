@@ -37,6 +37,7 @@ test("getAllowedLibraryTypeCodes hides female-only categories from male selectio
     "prostate",
     "cock_ring",
     "care_accessory",
+    "bdsm",
     "unknown",
   ]);
   assert.equal(getAllowedLibraryTypeCodes("male").includes("suction"), false);
