@@ -36,6 +36,23 @@ export type CompetitorRegistryConfig = {
 
 export const OFFICIAL_COMPETITOR_REGISTRY: CompetitorRegistryConfig[] = [
   {
+    canonicalName: "POPOCAT",
+    matchNames: ["popocat"],
+    domain: "popocat.tmall.com",
+    country: "China",
+    description:
+      "POPOCAT 是天猫在售的个人护理与情趣用品品牌，覆盖女性向器具、情侣场景用品以及部分护理耗材。",
+    focus: "Female",
+    philosophy: [
+      "以电商货架式运营为主，强调丰富 SKU、入门友好和女性向使用场景。",
+      "产品覆盖器具、润滑与辅助用品，强调从单人到情侣场景的可选范围。",
+      "以天猫店铺为核心销售阵地，依赖平台化内容呈现与促销转化。",
+    ],
+    majorUserGroupProfile:
+      "【核心人口】20-40 岁女性用户为主，兼顾情侣共同购买场景。\n【心理特征】偏好在电商平台直接比价和快速下单，重视隐私包装、基础功能和价格接受度。\n【核心痛点】希望在一个店铺内快速买齐入门器具与配套用品，减少跨品牌筛选成本。\n【消费行为】更依赖天猫搜索、活动页与店铺货架推荐，对促销、销量和图文卖点敏感。",
+    isDomestic: true,
+  },
+  {
     canonicalName: "KUMOCOOM",
     matchNames: ["kumocoom"],
     domain: "kumocoom.com",
@@ -91,6 +108,7 @@ export const OFFICIAL_COMPETITOR_REGISTRY: CompetitorRegistryConfig[] = [
     canonicalName: "LBDO",
     matchNames: ["lbdo"],
     domain: "us.lbdo.com",
+    country: "USA",
     description:
       "LBDO 是情趣与亲密关系场景品牌，产品覆盖玩具、润滑剂、蜡烛与互动套装。",
     focus: "Unisex",
@@ -107,6 +125,7 @@ export const OFFICIAL_COMPETITOR_REGISTRY: CompetitorRegistryConfig[] = [
     canonicalName: "Hello Nancy",
     matchNames: ["hello nancy", "hellonancy", "nancy"],
     domain: "hellonancy.com",
+    country: "China",
     description:
       "Hello Nancy 是面向女性情趣场景的品牌，覆盖吸吮、震动与便携式个人护理玩具。",
     focus: "Female",
@@ -157,6 +176,7 @@ export const OFFICIAL_COMPETITOR_REGISTRY: CompetitorRegistryConfig[] = [
     canonicalName: "Arcwave",
     matchNames: ["arcwave"],
     domain: "www.arcwave.com",
+    country: "Germany",
     foundedDate: "2020",
     description:
       "Arcwave 是男性向高端情趣科技品牌，聚焦男士快感设备与空气脉冲体验。",
