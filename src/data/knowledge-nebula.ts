@@ -4,7 +4,8 @@ export type KnowledgeNebulaTopicSlug =
   | "lgbtq"
   | "first-time"
   | "couples"
-  | "care";
+  | "care"
+  | "brand";
 
 export type KnowledgeNebulaSection = {
   id: string;
@@ -352,6 +353,49 @@ const TOPIC_SEEDS: KnowledgeNebulaTopicSeed[] = [
         ],
       },
       ...createCareCards(),
+    ],
+  },
+  {
+    slug: "brand",
+    title: "品牌星图",
+    shortLabel: "品牌星图",
+    summary: "从品牌定位、风格和适用场景，读懂一条完整的品牌路径。",
+    accent: "indigo",
+    featuredSectionIds: ["brand-overview", "brand-style", "brand-path"],
+    sections: [
+      {
+        id: "brand-overview",
+        title: "品牌信息该怎么看",
+        summary: "先看定位，再看风格，最后看它适不适合你的场景。",
+        tags: ["品牌", "定位", "导览"],
+        body: [
+          "品牌信息不只是名字和国家，它更像是一种长期稳定的使用气质。",
+          "在做决策时，品牌短卡只负责帮你快速抓住“它是什么、什么风格、适不适合我”，不替代具体参数判断。",
+          "如果你已经对产品路线有明确偏好，品牌信息适合作为最后一层校准；如果你还不确定，可以先回到路线和预算，再来看品牌。",
+        ],
+      },
+      {
+        id: "brand-style",
+        title: "风格比口号更重要",
+        summary: "真正影响复用率的往往是稳定的产品气质，而不是单次营销点。",
+        tags: ["风格", "复用率", "体验"],
+        body: [
+          "有些品牌更强调设计感和完成度，有些更强调功能效率，也有些更强调入门友好和轻决策成本。",
+          "风格会影响你愿不愿意长期把它拿出来，也会影响你在犹豫时是否愿意继续看同品牌的其他产品。",
+          "如果你发现自己总是在同一类品牌里反复挑选，通常说明你已经有了比较稳定的风格偏好。",
+        ],
+      },
+      {
+        id: "brand-path",
+        title: "品牌只是路径，不是答案",
+        summary: "不要让品牌替代路线判断，但可以让它减少决策疲劳。",
+        tags: ["品牌", "决策", "路径"],
+        body: [
+          "品牌卡更适合出现在结果页、档案页和产品卡旁边，帮助你确认这是不是一条愿意继续往下走的路。",
+          "长版品牌页适合补充品牌的气质、常见方向和适用场景，但不会替代具体产品的参数筛选。",
+          "当你需要横向比较时，品牌信息可以帮你缩小范围；当你需要做最终决定时，还是要回到路线、预算、噪音、防水和材质。",
+        ],
+      },
     ],
   },
 ];

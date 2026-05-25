@@ -1,3 +1,5 @@
+import type { BrandBrief } from "../lib/brand-brief.ts";
+
 export type Product = {
   id: string;
   originalId?: string | null;
@@ -24,6 +26,7 @@ export type Product = {
   reason?: string;
   personaAnalysis?: string;
   isDomestic?: boolean;
+  brandBrief?: BrandBrief | null;
 };
 
 export const products: Product[] = [];

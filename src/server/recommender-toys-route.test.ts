@@ -75,6 +75,13 @@ test("createListRecommenderToysHandler caches the normalized library payload and
               tags: ["静音"],
               persona_analysis: "适合新手",
               is_domestic: true,
+              competitor_country: "Germany",
+              competitor_description: "Brand 是偏设计感与材质完成度的一线品牌。",
+              competitor_focus: "Female",
+              competitor_philosophy: [
+                "整体风格更现代、克制，也更强调稳定体验。",
+              ],
+              competitor_major_user_group_profile: null,
             },
           ],
         };
@@ -117,6 +124,13 @@ test("createListRecommenderToysHandler caches the normalized library payload and
       tags: ["静音"],
       personaAnalysis: "适合新手",
       isDomestic: true,
+      brandBrief: {
+        brandName: "Brand",
+        brandSlug: "brand",
+        countryLabel: "Germany",
+        positioning: "Brand 是偏设计感与材质完成度的一线品牌。",
+        styleSummary: "整体风格更现代、克制，也更强调稳定体验。",
+      },
     },
   ]);
 
@@ -158,6 +172,13 @@ test("createListRecommenderToysHandler returns 304 when the cached payload etag 
             tags: ["静音"],
             persona_analysis: "适合新手",
             is_domestic: true,
+            competitor_country: "Germany",
+            competitor_description: "Brand 是偏设计感与材质完成度的一线品牌。",
+            competitor_focus: "Female",
+            competitor_philosophy: [
+              "整体风格更现代、克制，也更强调稳定体验。",
+            ],
+            competitor_major_user_group_profile: null,
           },
         ],
       }),
@@ -218,6 +239,13 @@ test("createListRecommenderToysHandler retries once on transient database discon
               tags: ["静音"],
               persona_analysis: "适合新手",
               is_domestic: true,
+              competitor_country: "Germany",
+              competitor_description: "Brand 是偏设计感与材质完成度的一线品牌。",
+              competitor_focus: "Female",
+              competitor_philosophy: [
+                "整体风格更现代、克制，也更强调稳定体验。",
+              ],
+              competitor_major_user_group_profile: null,
             },
           ],
         };
@@ -256,6 +284,13 @@ test("createListRecommenderToysHandler retries once on transient database discon
       tags: ["静音"],
       personaAnalysis: "适合新手",
       isDomestic: true,
+      brandBrief: {
+        brandName: "Brand",
+        brandSlug: "brand",
+        countryLabel: "Germany",
+        positioning: "Brand 是偏设计感与材质完成度的一线品牌。",
+        styleSummary: "整体风格更现代、克制，也更强调稳定体验。",
+      },
     },
   ]);
 });

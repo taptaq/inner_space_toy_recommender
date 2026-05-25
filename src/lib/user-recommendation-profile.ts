@@ -1,5 +1,6 @@
 import type { AnswerState } from "../data/mock.js";
 import type { RankedProduct } from "./app-shell.js";
+import type { BrandBrief } from "./brand-brief.js";
 import { dedupeDisplayTags } from "./display-tags.js";
 import { getProductDisplayName } from "./product-display-name.js";
 import type { BackupCandidate } from "./recommendation-results.js";
@@ -9,6 +10,7 @@ type RecommendationProfileProduct = {
   name: string;
   displayName?: string;
   score: number;
+  brandBrief?: BrandBrief | null;
 };
 
 export type RecommendationProfileBodyPersonaSnapshot = {
@@ -54,7 +56,10 @@ async function readApiErrorMessage(response: Response, fallback: string) {
 }
 
 function pickProductSnapshot(
-  product: Pick<RankedProduct, "id" | "name" | "displayName" | "safeDisplayName" | "score">,
+  product: Pick<
+    RankedProduct,
+    "id" | "name" | "displayName" | "safeDisplayName" | "score" | "brandBrief"
+  >,
 ): RecommendationProfileProduct {
   const displayName = getProductDisplayName(product);
 
@@ -63,6 +68,7 @@ function pickProductSnapshot(
     name: displayName,
     displayName,
     score: product.score,
+    brandBrief: product.brandBrief ?? null,
   };
 }
 

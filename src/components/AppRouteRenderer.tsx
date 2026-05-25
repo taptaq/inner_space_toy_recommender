@@ -103,6 +103,7 @@ type AppRouteRendererProps = {
   recommendationProfiles: SavedRecommendationProfile[];
   isLoadingRecommendationProfiles: boolean;
   recommendationProfilesError: string | null;
+  allProducts: Product[];
   selectedKnowledgeTopicSlug?: KnowledgeNebulaTopicSlug;
   selectedKnowledgeSectionId?: string;
   onBackKnowledge: () => void;
@@ -172,6 +173,7 @@ export function AppRouteRenderer({
   recommendationProfiles,
   isLoadingRecommendationProfiles,
   recommendationProfilesError,
+  allProducts,
   selectedKnowledgeTopicSlug,
   selectedKnowledgeSectionId,
   onBackKnowledge,
@@ -276,6 +278,7 @@ export function AppRouteRenderer({
       {currentRoute === "/profiles" && (
         <ProfilesPage
           profiles={recommendationProfiles}
+          products={allProducts}
           isLoading={isLoadingRecommendationProfiles}
           error={recommendationProfilesError}
           userLabel={authPanel.userLabel}

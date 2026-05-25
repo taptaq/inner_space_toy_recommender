@@ -24,7 +24,7 @@ export type AppRoute =
 
 export const APP_STATE_STORAGE_KEY = "inner-space-recommender-app-state-v1";
 export const PRODUCTS_CACHE_STORAGE_KEY =
-  "inner-space-recommender-products-cache-v3";
+  "inner-space-recommender-products-cache-v4";
 const KNOWLEDGE_NEBULA_PATH_PATTERN = /^\/knowledge(?:\/|$)/;
 
 type ProductsCachePayload = {
@@ -54,7 +54,7 @@ type MinimalCachedProduct = Pick<
   | "link"
   | "sourceUrl"
 > &
-  Partial<Pick<Product, "rawDescription" | "tags">>;
+  Partial<Pick<Product, "rawDescription" | "tags" | "brandBrief">>;
 
 function isStoredAudienceGender(
   value: string | null | undefined,
@@ -238,6 +238,7 @@ function buildMinimalCachedProducts(products: Product[]): MinimalCachedProduct[]
     imagePlaceholder: product.imagePlaceholder,
     link: product.link,
     sourceUrl: product.sourceUrl,
+    brandBrief: product.brandBrief,
     tags: Array.isArray(product.tags) ? product.tags.slice(0, 8) : product.tags,
     rawDescription:
       typeof product.rawDescription === "string"

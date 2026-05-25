@@ -2458,6 +2458,7 @@ ${JSON.stringify(context.backupCandidates)}
           recommendationProfiles={recommendationProfiles}
           isLoadingRecommendationProfiles={isLoadingRecommendationProfiles}
           recommendationProfilesError={recommendationProfilesError}
+          allProducts={allProducts}
           selectedKnowledgeTopicSlug={selectedKnowledgeTopicSlug}
           selectedKnowledgeSectionId={selectedKnowledgeSectionId}
           onBackKnowledge={handleBackFromKnowledge}

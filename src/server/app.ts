@@ -22,6 +22,10 @@ import {
   ensureBodyPersonaSchema,
 } from "./body-persona-store.js";
 import {
+  createGetBrandKnowledgeHandler,
+  createListBrandKnowledgeHandler,
+} from "./brand-knowledge-route.js";
+import {
   createKnowledgeNebulaCreateCardHandler,
   createKnowledgeNebulaRecordCardViewHandler,
   createKnowledgeNebulaTopicHandler,
@@ -119,6 +123,12 @@ const getKnowledgeUpdateCardHandler = createLazyValue(() =>
 );
 const getKnowledgeRecordCardViewHandler = createLazyValue(() =>
   createKnowledgeNebulaRecordCardViewHandler({ store: getKnowledgeNebulaStore() }),
+);
+const getBrandKnowledgeHandler = createLazyValue(() =>
+  createGetBrandKnowledgeHandler({ pool }),
+);
+const getBrandKnowledgeListHandler = createLazyValue(() =>
+  createListBrandKnowledgeHandler({ pool }),
 );
 const getUserRecommendationStore = createLazyValue(() =>
   createUserRecommendationStore({ pool }),
@@ -409,6 +419,20 @@ app.get(
   withLazyRouteHandler(
     ensureKnowledgeRouteReady,
     getKnowledgeTopicHandler,
+  ),
+);
+app.get(
+  "/api/knowledge/brands",
+  withLazyRouteHandler(
+    ensureKnowledgeRouteReady,
+    getBrandKnowledgeListHandler,
+  ),
+);
+app.get(
+  "/api/knowledge/brands/:brandSlug",
+  withLazyRouteHandler(
+    ensureKnowledgeRouteReady,
+    getBrandKnowledgeHandler,
   ),
 );
 app.post(

@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { ArrowLeft, Clock, FileText, LockKeyhole, PackageSearch, X } from "lucide-react";
+import { BrandBriefCard } from "../components/BrandBriefCard.tsx";
+import type { Product } from "../data/mock.ts";
+import { resolveBrandBrief } from "../lib/brand-brief.ts";
 import type { SavedRecommendationProfile } from "../lib/user-recommendation-profile.ts";
 import { dedupeDisplayTags } from "../lib/display-tags.ts";
 import { getProductDisplayName } from "../lib/product-display-name.ts";
@@ -215,6 +218,7 @@ function buildProfileRecommendedRouteItems(profile: SavedRecommendationProfile) 
 
 export function ProfilesPage({
   profiles,
+  products = [],
   isLoading,
   error,
   userLabel,
@@ -223,6 +227,7 @@ export function ProfilesPage({
   onReload,
 }: {
   profiles: SavedRecommendationProfile[];
+  products?: Product[];
   isLoading: boolean;
   error: string | null;
   userLabel: string | null;
@@ -241,6 +246,22 @@ export function ProfilesPage({
   const selectedProfileRecommendedRouteItems = selectedProfile
     ? buildProfileRecommendedRouteItems(selectedProfile)
     : [];
+  const selectedProfilePrimaryProduct = selectedProfile
+    ? products.find((product) =>
+        product.id === selectedProfile.topProductIds[0] ||
+        product.originalId === selectedProfile.topProductIds[0],
+      )
+    : undefined;
+  const selectedProfileBrandBrief = selectedProfile
+    ? resolveBrandBrief(
+        selectedProfile.payload.topProducts[0]?.brandBrief ??
+          selectedProfilePrimaryProduct?.brandBrief ??
+          null,
+        selectedProfilePrimaryProduct?.brand ??
+          selectedProfile.payload.topProducts[0]?.name ??
+          null,
+      )
+    : null;
   const selectedAnswerEntries = selectedProfile
     ? ([
         ["性别", selectedProfile.payload.answers.gender],
@@ -372,7 +393,7 @@ export function ProfilesPage({
       {selectedProfile ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/86 px-4 py-6 backdrop-blur-xl">
           <div className="max-h-[92dvh] w-full max-w-4xl overflow-y-auto rounded-[1.75rem] border border-cyan-100/14 bg-slate-950 p-5 shadow-[0_24px_90px_rgba(8,47,73,0.34)] sm:p-6">
-            <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-5 flex items-start justify-between gap-4 border-b border-cyan-100/10 bg-slate-950/92 px-5 py-4 backdrop-blur-xl sm:-mx-6 sm:-mt-6 sm:px-6 sm:py-5">
+            <div className="sticky top-0 z-10 mb-5 flex items-start justify-between gap-4 rounded-t-[1.4rem] border-b border-cyan-100/10 bg-slate-950/92 px-1 py-4 backdrop-blur-xl sm:px-1 sm:py-5">
               <div className="min-w-0">
                 <p className="mb-2 text-[10px] tracking-[0.28em] text-cyan-200/45">
                   ARCHIVE DETAIL
@@ -415,6 +436,8 @@ export function ProfilesPage({
                     </div>
                   </section>
                 )}
+
+                <BrandBriefCard brief={selectedProfileBrandBrief} />
 
                 {selectedProfile.payload.matchInputMode === "natural-language" &&
                 typeof selectedProfile.payload.naturalLanguageQuery === "string" &&

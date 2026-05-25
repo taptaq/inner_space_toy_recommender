@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { AlertCircle, Heart, Sparkles } from "lucide-react";
 
+import { BrandBriefCard } from "../BrandBriefCard.tsx";
 import type { RankedProduct } from "../../lib/app-shell.ts";
+import { resolveBrandBrief } from "../../lib/brand-brief.ts";
 import {
   buildResultConfidenceSummary,
   buildResultRouteSummary,
@@ -105,6 +107,8 @@ export function ResultsPrimaryRecommendationPanel({
   isFavorited?: boolean;
   onToggleFavorite?: (product: RankedProduct) => void | Promise<void>;
 }) {
+  const resolvedBrandBrief = resolveBrandBrief(topProduct.brandBrief, topProduct.brand);
+
   return (
     <section className={className}>
       <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/45 to-transparent" />
@@ -201,6 +205,8 @@ export function ResultsPrimaryRecommendationPanel({
                 </p>
               </div>
             )}
+
+            <BrandBriefCard brief={resolvedBrandBrief} />
 
             {primaryConfidenceSummary && renderConfidenceSummary(primaryConfidenceSummary)}
 

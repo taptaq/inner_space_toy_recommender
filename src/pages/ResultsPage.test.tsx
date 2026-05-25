@@ -28,6 +28,13 @@ function makeProduct(overrides: Partial<RankedProduct>): RankedProduct {
     motorType: "gentle",
     gender: "female",
     brand: "Brand",
+    brandBrief: {
+      brandName: "Brand",
+      brandSlug: "brand",
+      countryLabel: "Germany",
+      positioning: "偏设计感与材质完成度的一线品牌。",
+      styleSummary: "整体风格更现代、克制，也更强调稳定体验。",
+    },
     material: "Silicone",
     imagePlaceholder: "",
     tags: ["静音"],
@@ -81,6 +88,35 @@ test("results page shows confidence, fit reasons, and caveats for the primary re
   assert.match(html, /主要参数与当前偏好吻合/);
   assert.match(html, /42dB 更贴近静音需求/);
   assert.match(html, /防水表现达到 IPX7/);
+});
+
+test("results page shows a short brand brief for the primary recommendation", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+    />,
+  );
+
+  assert.match(html, /当前品牌/);
+  assert.match(html, /Brand · Germany/);
+  assert.match(html, /偏设计感与材质完成度的一线品牌。/);
+  assert.match(html, /整体风格更现代、克制，也更强调稳定体验。/);
 });
 
 test("results page shows the original natural language request when matched from free text", () => {
@@ -578,18 +614,9 @@ test("results page groups comparison, alternatives, tuning, and regeneration int
     />,
   );
 
-  assert.match(html, /如果你想换个方向，也可以看看这些/);
   assert.ok(
-    html.indexOf("身体人格测试") < html.indexOf("如果你想换个方向，也可以看看这些"),
-    "body persona should appear before assistive alternative exploration",
-  );
-  assert.ok(
-    html.indexOf("如果你想换个方向，也可以看看这些") < html.indexOf("换个侧重点看看"),
-    "top-level alternative heading should lead the rational supplement area",
-  );
-  assert.ok(
-    html.indexOf("换个侧重点看看") < html.indexOf("主推荐横向对比"),
-    "alternatives should appear before detailed comparison",
+    html.indexOf("身体人格测试") < html.indexOf("主推荐横向对比"),
+    "body persona should appear before detailed comparison",
   );
   assert.ok(
     html.indexOf("快速微调结果") < html.indexOf("主推荐横向对比"),
@@ -635,10 +662,6 @@ test("results page adds a same-category library bridge for horizontal comparison
   assert.match(html, /想自己再横向比一比？/);
   assert.match(html, /去装备库继续看同类路线、价位区间和不同品牌差异/);
   assert.match(html, /查看同类装备/);
-  assert.ok(
-    html.indexOf("如果你想换个方向，也可以看看这些") < html.indexOf("查看同类装备"),
-    "library bridge should live inside the assistive comparison area",
-  );
 });
 
 test("results page keeps comparison and backup headings in the same Chinese tone", () => {
@@ -675,7 +698,7 @@ test("results page keeps comparison and backup headings in the same Chinese tone
   );
 
   assert.match(html, /主推荐横向对比/);
-  assert.match(html, /换个侧重点看看/);
+  assert.doesNotMatch(html, /换个侧重点看看/);
   assert.doesNotMatch(html, /Top 3 快速对比/);
 });
 
@@ -716,10 +739,6 @@ test("results page groups formal candidates together before adjustment actions a
   );
 
   assert.ok(
-    html.indexOf("探索备选") < html.indexOf("主推荐横向对比"),
-    "secondary formal candidates should appear before the comparison section",
-  );
-  assert.ok(
     html.indexOf("快速微调结果") < html.indexOf("身体人格测试"),
     "quick tuning should stay above the body persona upgrade layer",
   );
@@ -732,8 +751,8 @@ test("results page groups formal candidates together before adjustment actions a
     "parameter interpretation should stay ahead of the final purchase guidance block",
   );
   assert.ok(
-    html.indexOf("身体人格测试") < html.indexOf("如果你想换个方向，也可以看看这些"),
-    "body persona should sit between the decision layer and rational supplement layer",
+    html.indexOf("身体人格测试") < html.indexOf("主推荐横向对比"),
+    "body persona should sit before the comparison layer",
   );
 });
 
@@ -1300,4 +1319,33 @@ test("results page offers separate restart and return-home actions", () => {
 
   assert.match(html, /重新回答偏好问题/);
   assert.match(html, /返回首页/);
+});
+
+test("results page adapts the reset button copy for natural-language matching", () => {
+  const html = renderToStaticMarkup(
+    <ResultsPage
+      pageVariants={{}}
+      answers={{ tags: ["静音"] }}
+      topProducts={[makeProduct({ id: "p1", name: "Primary Pick" })]}
+      backupProducts={[]}
+      shoppingGuidance={[]}
+      recommendationTips={[]}
+      isRecalibratingResults={false}
+      resultRecalibrationError={null}
+      onRecalibrateResults={() => {}}
+      onTuneResults={() => {}}
+      onSaveRecommendationProfile={async () => {}}
+      onOpenRecommendationProfiles={() => {}}
+      onOpenKnowledgeNebula={() => {}}
+      isSavingRecommendationProfile={false}
+      saveRecommendationProfileMessage={null}
+      authPanel={authPanel}
+      onReset={() => {}}
+      matchInputMode="natural-language"
+      naturalLanguageQuery="想要静音、好清洁的"
+    />,
+  );
+
+  assert.match(html, /重新输入需求描述/);
+  assert.doesNotMatch(html, /重新回答偏好问题/);
 });

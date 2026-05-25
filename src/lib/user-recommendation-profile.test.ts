@@ -48,8 +48,20 @@ test("buildRecommendationProfilePayload keeps enough recommendation context for 
   assert.match(payload.summary, /静音/);
   assert.deepEqual(payload.topProductIds, ["item-1", "item-2"]);
   assert.deepEqual(payload.topProducts, [
-    { id: "item-1", name: "Top Pick", displayName: "Top Pick", score: 96 },
-    { id: "item-2", name: "Second Pick", displayName: "Second Pick", score: 88 },
+    {
+      id: "item-1",
+      name: "Top Pick",
+      displayName: "Top Pick",
+      score: 96,
+      brandBrief: null,
+    },
+    {
+      id: "item-2",
+      name: "Second Pick",
+      displayName: "Second Pick",
+      score: 88,
+      brandBrief: null,
+    },
   ]);
   assert.deepEqual(payload.recommendationTips, ["可以放宽预算"]);
   assert.deepEqual(payload.shoppingGuidance, ["优先看售后"]);
@@ -73,6 +85,7 @@ test("buildRecommendationProfilePayload persists displayName when raw name shoul
 
   assert.equal(payload.topProducts[0]?.name, "个人护理用品 A");
   assert.equal(payload.topProducts[0]?.displayName, "个人护理用品 A");
+  assert.equal(payload.topProducts[0]?.brandBrief, null);
 });
 
 test("buildRecommendationProfilePayload dedupes saved preference tags", () => {

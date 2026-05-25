@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 
+import { buildBrandBrief } from "../lib/brand-brief.js";
 import { buildSafeDisplayName } from "../lib/product-display-name.js";
 import {
   getParentLibraryTypeCodeForSubtype,
@@ -36,6 +37,11 @@ type QueryResultRow = {
   tags: string[] | null;
   persona_analysis: string | null;
   is_domestic: boolean | null;
+  competitor_country: string | null;
+  competitor_description: string | null;
+  competitor_focus: string | null;
+  competitor_philosophy: string[] | null;
+  competitor_major_user_group_profile: string | null;
 };
 
 type Queryable = {
@@ -157,6 +163,14 @@ function normalizeLibraryRows(rows: QueryResultRow[]) {
       });
     const safeDisplayName =
       toy.safe_display_name || buildSafeDisplayName(toy.name);
+    const brandBrief = buildBrandBrief({
+      brand: toy.brand,
+      country: toy.competitor_country,
+      description: toy.competitor_description,
+      focus: toy.competitor_focus,
+      philosophy: toy.competitor_philosophy,
+      majorUserGroupProfile: toy.competitor_major_user_group_profile,
+    });
 
     return {
       id: toy.id,
@@ -184,6 +198,7 @@ function normalizeLibraryRows(rows: QueryResultRow[]) {
       tags,
       personaAnalysis: toy.persona_analysis || undefined,
       isDomestic: toy.is_domestic ?? undefined,
+      brandBrief,
     };
   });
 }
@@ -249,7 +264,12 @@ export function createListRecommenderToysHandler({
           p.link,
           p.tags,
           p.persona_\x61nalysis AS persona_analysis,
-          c.is_domestic
+          c.is_domestic,
+          c.country AS competitor_country,
+          c.description AS competitor_description,
+          c.focus AS competitor_focus,
+          c.philosophy AS competitor_philosophy,
+          c.major_user_group_profile AS competitor_major_user_group_profile
         FROM public.recommender_toys t
         LEFT JOIN public.products p ON t.original_id = p.id
         LEFT JOIN public.competitors c ON p.competitor_id = c.id

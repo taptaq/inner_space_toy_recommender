@@ -1,6 +1,8 @@
 import { Heart, VolumeX, Droplets, Zap } from "lucide-react";
 import { Product } from "../data/mock.ts";
+import { resolveBrandBrief } from "../lib/brand-brief.ts";
 import { getProductDisplayName } from "../lib/product-display-name.ts";
+import { BrandBriefCard } from "./BrandBriefCard.tsx";
 import { ProductImage } from "./ProductImage.tsx";
 
 export function ProductCardContent({
@@ -25,6 +27,7 @@ export function ProductCardContent({
       : product.gender === "female"
         ? "border-rose-300/28 bg-rose-400/14 text-rose-50"
         : "border-violet-300/24 bg-violet-400/14 text-violet-50";
+  const resolvedBrandBrief = resolveBrandBrief(product.brandBrief, product.brand);
 
   return (
     <>
@@ -83,6 +86,10 @@ export function ProductCardContent({
             </span>
             <span>{audienceLabel}</span>
           </span>
+        </div>
+
+        <div className="mb-3">
+          <BrandBriefCard brief={resolvedBrandBrief} compact />
         </div>
 
         {product.personaAnalysis && (

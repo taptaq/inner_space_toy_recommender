@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ProfilesPage } from "./ProfilesPage.tsx";
 import type { SavedRecommendationProfile } from "../lib/user-recommendation-profile.ts";
+import type { Product } from "../data/mock.ts";
 
 const profile: SavedRecommendationProfile = {
   id: "profile-1",
@@ -18,7 +19,18 @@ const profile: SavedRecommendationProfile = {
     topProductIds: ["item-1", "item-2"],
     answers: { tags: ["静音", "入门级"] },
     topProducts: [
-      { id: "item-1", name: "Nebula Pick", score: 96 },
+      {
+        id: "item-1",
+        name: "Nebula Pick",
+        score: 96,
+        brandBrief: {
+          brandName: "LELO",
+          brandSlug: "lelo",
+          countryLabel: "Sweden",
+          positioning: "偏高完成度与整体质感的经典品牌。",
+          styleSummary: "风格更克制、稳定，也更强调长期复用体验。",
+        },
+      },
       { id: "item-2", name: "Second Pick", score: 88 },
     ],
     backupProducts: [],
@@ -65,6 +77,30 @@ const naturalLanguageProfile: SavedRecommendationProfile = {
       "想要一个更静音、预算 300 以内、适合女生新手、最好容易清洁的产品。",
   },
 };
+
+const fallbackProducts: Product[] = [
+  {
+    id: "item-1",
+    name: "Nebula Pick",
+    price: 699,
+    maxDb: 42,
+    waterproof: 7,
+    appearance: "normal",
+    physicalForm: "external",
+    motorType: "gentle",
+    gender: "female",
+    brand: "KISSTOY",
+    material: "硅胶",
+    imagePlaceholder: "",
+    brandBrief: {
+      brandName: "KISSTOY",
+      brandSlug: "kisstoy",
+      countryLabel: "China",
+      positioning: "偏电商场景与女性向快速决策的品牌。",
+      styleSummary: "风格更直接、货架化，也更强调快速理解和快速下单。",
+    },
+  },
+];
 
 test("profiles page renders saved equipment matching profiles", () => {
   const html = renderToStaticMarkup(
@@ -181,6 +217,25 @@ test("profiles detail frames the archive as a decision snapshot with next compar
   assert.doesNotMatch(html, /score/);
 });
 
+test("profiles detail shows a short brand brief for the saved primary recommendation", () => {
+  const html = renderToStaticMarkup(
+    <ProfilesPage
+      profiles={[detailedProfile]}
+      isLoading={false}
+      error={null}
+      userLabel="taptaq"
+      initialSelectedProfile={detailedProfile}
+      onBack={() => {}}
+      onReload={() => {}}
+    />,
+  );
+
+  assert.match(html, /当前品牌/);
+  assert.match(html, /LELO · Sweden/);
+  assert.match(html, /偏高完成度与整体质感的经典品牌。/);
+  assert.match(html, /风格更克制、稳定，也更强调长期复用体验。/);
+});
+
 test("profiles detail no longer renders a later-comparison candidate section", () => {
   const html = renderToStaticMarkup(
     <ProfilesPage
@@ -215,6 +270,32 @@ test("profiles detail shows original natural language request when the archive c
   assert.match(html, /想要一个更静音、预算 300 以内、适合女生新手、最好容易清洁的产品。/);
 });
 
+test("profiles detail can resolve brand brief from the current product pool when an old archive payload lacks it", () => {
+  const legacyProfile: SavedRecommendationProfile = {
+    ...detailedProfile,
+    payload: {
+      ...detailedProfile.payload,
+      topProducts: [{ id: "item-1", name: "Nebula Pick", score: 96 }],
+    },
+  };
+
+  const html = renderToStaticMarkup(
+    <ProfilesPage
+      profiles={[legacyProfile]}
+      products={fallbackProducts}
+      isLoading={false}
+      error={null}
+      userLabel="taptaq"
+      initialSelectedProfile={legacyProfile}
+      onBack={() => {}}
+      onReload={() => {}}
+    />,
+  );
+
+  assert.match(html, /当前品牌/);
+  assert.match(html, /KISSTOY · China/);
+});
+
 test("profiles page gives mobile users a calmer stacked archive layout and a wider detail sheet", () => {
   const html = renderToStaticMarkup(
     <ProfilesPage
@@ -231,7 +312,7 @@ test("profiles page gives mobile users a calmer stacked archive layout and a wid
   assert.match(html, /gap-3 sm:gap-4/);
   assert.match(html, /max-h-\[92dvh\] w-full max-w-4xl/);
   assert.match(html, /grid gap-3 xl:grid-cols-\[minmax\(0,1\.1fr\)_minmax\(0,0\.9fr\)\]/);
-  assert.match(html, /sticky top-0 z-10 -mx-5 -mt-5/);
+  assert.match(html, /sticky top-0 z-10 mb-5/);
   assert.match(html, /w-full sm:w-auto/);
 });
 

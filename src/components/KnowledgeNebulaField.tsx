@@ -393,6 +393,13 @@ export function KnowledgeNebulaField({
         <p className="mx-auto max-w-[17.5rem] text-[13px] leading-relaxed text-slate-300/88 sm:max-w-2xl sm:text-sm">
           在整片深空星幕中选择你想进入的主题星云
         </p>
+        <button
+          type="button"
+          onClick={() => onSelectTopic("brand")}
+          className="mx-auto mt-1 inline-flex items-center rounded-full border border-cyan-300/18 bg-cyan-300/10 px-4 py-2 text-[11px] tracking-[0.14em] text-cyan-50 transition-colors hover:border-cyan-200/35 hover:bg-cyan-300/16"
+        >
+          进入品牌星图
+        </button>
       </div>
 
       <div className="absolute inset-x-0 bottom-0 top-[10rem] mx-auto w-full overflow-hidden sm:top-[12.75rem]">

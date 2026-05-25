@@ -10,6 +10,10 @@ import { KnowledgeNebulaField } from "../components/KnowledgeNebulaField.tsx";
 import { KnowledgeNebulaTopicSections } from "../components/KnowledgeNebulaTopicSections.tsx";
 import { TopicDetailScene3D } from "../components/knowledge-nebula/TopicDetailScene3D.tsx";
 import {
+  buildBrandKnowledgeTopic,
+  type BrandKnowledgeSource,
+} from "../lib/knowledge-nebula-brand-topic.ts";
+import {
   buildTopicDetailSceneMeta,
   getTopicDetailViewport,
   type TopicDetailViewport,
@@ -59,7 +63,15 @@ export function KnowledgeNebulaPage({
   onBack: () => void;
   onSelectTopic: (slug: KnowledgeNebulaTopicSlug) => void;
 }) {
-  const topic = topicSlug ? getKnowledgeNebulaTopicBySlug(topicSlug) : undefined;
+  const baseTopic = topicSlug ? getKnowledgeNebulaTopicBySlug(topicSlug) : undefined;
+  const [brandSources, setBrandSources] = useState<BrandKnowledgeSource[]>([]);
+  const topic =
+    baseTopic && topicSlug === "brand"
+      ? buildBrandKnowledgeTopic(
+          baseTopic,
+          brandSources.length > 0 ? brandSources : undefined,
+        )
+      : baseTopic;
   const { shouldAnimate } = usePagePerformanceState();
   const isDetailPage = topic != null;
   const detailViewport = useTopicDetailViewport();
@@ -67,6 +79,42 @@ export function KnowledgeNebulaPage({
     () => (topic ? buildTopicDetailSceneMeta(topic) : undefined),
     [topic],
   );
+
+  useEffect(() => {
+    if (topicSlug !== "brand") {
+      setBrandSources([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadBrandSources = async () => {
+      try {
+        const response = await fetch(`/api/knowledge/brands`);
+        if (!response.ok) {
+          if (!cancelled) {
+            setBrandSources([]);
+          }
+          return;
+        }
+
+        const payload = (await response.json()) as { brands: BrandKnowledgeSource[] };
+        if (!cancelled) {
+          setBrandSources(Array.isArray(payload.brands) ? payload.brands : []);
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setBrandSources([]);
+        }
+      }
+    };
+
+    void loadBrandSources();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [topicSlug]);
 
   useEffect(() => {
     if (!isDetailPage || typeof document === "undefined") {
@@ -160,7 +208,7 @@ export function KnowledgeNebulaPage({
       ) : (
         <div>
           <KnowledgeNebulaField
-            topics={KNOWLEDGE_NEBULA_TOPICS}
+            topics={KNOWLEDGE_NEBULA_TOPICS.filter((candidate) => candidate.slug !== "brand")}
             selectedTopicSlug={topicSlug}
             onSelectTopic={onSelectTopic}
           />

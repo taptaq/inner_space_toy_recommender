@@ -18,6 +18,22 @@ test("knowledge detail opened from results returns directly to results", () => {
   );
 });
 
+test("knowledge nebula path can include a nested brand section slug", () => {
+  assert.equal(
+    knowledgeNebulaRoute.buildKnowledgeNebulaPath("brand", "lelo"),
+    "/knowledge/brand/lelo",
+  );
+
+  assert.deepEqual(
+    knowledgeNebulaRoute.parseKnowledgeNebulaPath("/knowledge/brand/lelo"),
+    {
+      route: "/knowledge",
+      topicSlug: "brand",
+      sectionId: "lelo",
+    },
+  );
+});
+
 test("knowledge detail opened from the hub still returns to the knowledge hub", () => {
   assert.deepEqual(
     knowledgeNebulaRoute.resolveKnowledgeBackNavigation?.("/", "science"),

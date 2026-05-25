@@ -92,11 +92,19 @@ test("normalizeProductsPayload preserves typeCode from cached products", () => {
       brand: "Womanizer",
       material: "硅胶",
       imagePlaceholder: "",
+      brandBrief: {
+        brandName: "Womanizer",
+        brandSlug: "womanizer",
+        countryLabel: "Germany",
+        positioning: "偏设计感与高完成度的女性向品牌。",
+        styleSummary: "风格更稳定、细腻，也更强调长期体验。",
+      },
     },
   ]);
 
   assert.equal(products[0]?.typeCode, "suction");
   assert.equal(products[0]?.subtypeCode, "suction_pure");
+  assert.equal(products[0]?.brandBrief?.brandSlug, "womanizer");
 });
 
 test("normalizeProductsPayload derives typeCode for cached legacy products that are missing it", () => {

@@ -49,6 +49,22 @@ test("knowledge topic detail page does not render TOPIC MAP", () => {
   assert.doesNotMatch(html, /TOPIC MAP/);
 });
 
+test("brand knowledge detail page can render a specific competitor long-form card", () => {
+  const html = renderToStaticMarkup(
+    <KnowledgeNebulaPage
+      pageVariants={{}}
+      topicSlug="brand"
+      sectionId="lelo"
+      onBack={() => {}}
+      onSelectTopic={() => {}}
+    />,
+  );
+
+  assert.match(html, /LELO/);
+  assert.match(html, /品牌星图/);
+  assert.match(html, /偏高完成度、设计感与整体质感的经典品牌/);
+});
+
 test("knowledge nebula landing page keeps a more compact mobile shell", () => {
   const html = renderToStaticMarkup(
     <KnowledgeNebulaPage
@@ -69,4 +85,5 @@ test("knowledge nebula landing page keeps a more compact mobile shell", () => {
   assert.match(html, /px-5/);
   assert.match(html, /text-center/);
   assert.match(html, /sm:px-6/);
+  assert.match(html, /进入品牌星图/);
 });

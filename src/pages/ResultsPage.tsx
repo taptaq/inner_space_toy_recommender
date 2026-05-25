@@ -18,8 +18,8 @@ import {
 } from "../components/BodyPersonaResultPanel.tsx";
 import { BodyPersonaFullReportDialog } from "../components/BodyPersonaFullReportDialog.tsx";
 import { BodyPersonaUnlockCard } from "../components/BodyPersonaUnlockCard.tsx";
-import { ResultsAlternativeProductsSection } from "../components/results/ResultsAlternativeProductsSection.tsx";
 import { ResultsNextStepsPanel } from "../components/results/ResultsNextStepsPanel.tsx";
+import { ResultsAlternativeProductsSection } from "../components/results/ResultsAlternativeProductsSection.tsx";
 import { ResultsParameterEducationSection } from "../components/results/ResultsParameterEducationSection.tsx";
 import { ResultsPrimaryRecommendationPanel } from "../components/results/ResultsPrimaryRecommendationPanel.tsx";
 import { ResultsRecalibrationPanel } from "../components/results/ResultsRecalibrationPanel.tsx";
@@ -435,6 +435,10 @@ export function ResultsPage({
   const normalizedBodyPersonaFullReport = normalizeBodyPersonaFullReport(
     bodyPersonaState?.fullReport ?? null,
   );
+  const resetButtonLabel =
+    matchInputMode === "natural-language"
+      ? "重新输入需求描述"
+      : "重新回答偏好问题";
   const [activeTuningMode, setActiveTuningMode] = useState<ResultTuningMode | null>(null);
   const relaxationTips = dedupeGuidanceItems(recommendationTips).slice(
     0,
@@ -608,10 +612,13 @@ export function ResultsPage({
             <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-cyan-200/80" />
             <div>
               <p className="text-xs font-medium text-cyan-50/88">
-                AI 正在润色备选说明和选购建议
+                本地备选说明先展示，AI 正在润色备选说明和选购建议
               </p>
               <p className="mt-1 text-[11px] leading-5 text-cyan-100/55">
                 主推荐已可先查看，下面的备选说明会在分析完成后自动更新。
+                {backupProducts[0]?.backupReason
+                  ? ` 当前先展示：${backupProducts[0].backupReason}`
+                  : ""}
               </p>
             </div>
           </div>
@@ -782,21 +789,18 @@ export function ResultsPage({
           topProducts={topProducts}
           canBrowseSimilarLibraryProducts={canBrowseSimilarLibraryProducts}
           onBrowseLibrary={onBrowseLibrary}
-          backupProducts={backupProducts}
-          isBackupPanelOpen={isBackupPanelOpen}
-          onToggleBackupPanel={() => setIsBackupPanelOpen((isOpen) => !isOpen)}
-          onOpenKnowledgeTopic={handleOpenKnowledgeTopic}
           renderProductImage={renderProductImage}
           renderClickableHint={renderClickableHint}
-          getMetricChips={getMetricChips}
           favoriteProductIds={favoriteProductIds}
           onToggleFavorite={onToggleFavorite}
         />
-      ) : (
+      ) : null}
+
+      {topProducts.length === 0 ? (
         <div className="glass-panel rounded-3xl p-8 text-center">
           <p className="text-slate-300">未找到完全匹配的装备，请尝试放宽条件。</p>
         </div>
-      )}
+      ) : null}
 
       {comparisonProducts.length >= 2 && (
         <section className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 sm:p-5">
@@ -1052,7 +1056,7 @@ export function ResultsPage({
           disabled={isRecalibratingResults}
           className="w-full rounded-xl bg-white/5 py-4 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
         >
-          重新校准匹配
+          {resetButtonLabel}
         </button>
       </div>
     </motion.div>
